@@ -1,0 +1,21 @@
+[client]
+showErrorDetails = "none"
+
+[theme]
+# The preset Streamlit theme that your custom theme inherits from.
+# This can be one of the following: "light" or "dark".
+base = "light"
+primaryColor = "#F63366"
+backgroundColor = "white"
+showWidgetBorder = true
+
+[theme.sidebar]
+
+# Primary accent color.
+primaryColor = "white"
+
+# Background color of the app.
+backgroundColor = "#0a1629"
+borderColor = "white"
+showWidgetBorder = true
+secondaryBackgroundColor = "#0a1629"
