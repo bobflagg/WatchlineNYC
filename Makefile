@@ -20,14 +20,14 @@ help: ## Show this help message
 
 download: ## Download KG dumps from Google Drive into dumps/ directories
 	@echo "Checking for gdown..."
-	@pip install -q gdown
+	@uv run pip install -q gdown
 	@echo "Creating dump directories..."
 	@mkdir -p $(DUMPS_DIR)/domain
 	@mkdir -p $(DUMPS_DIR)/epistemic
 	@echo "Downloading Domain KG dump..."
-	@gdown $(DOMAIN_GDRIVE_ID) -O $(DUMPS_DIR)/domain/neo4j.dump
+	@uv run gdown $(DOMAIN_GDRIVE_ID) -O $(DUMPS_DIR)/domain/neo4j.dump
 	@echo "Downloading Epistemic KG dump..."
-	@gdown $(EPISTEMIC_GDRIVE_ID) -O $(DUMPS_DIR)/epistemic/neo4j.dump
+	@uv run gdown $(EPISTEMIC_GDRIVE_ID) -O $(DUMPS_DIR)/epistemic/neo4j.dump
 	@echo "Downloads complete:"
 	@du -sh $(DUMPS_DIR)/domain/neo4j.dump
 	@du -sh $(DUMPS_DIR)/epistemic/neo4j.dump
@@ -42,9 +42,9 @@ load: ## Load knowledge graph dumps into containers
 
 test: ## Test that both KGs are up and returning data
 	@echo "Testing knowledge graph connections..."
-	@python3 $(DOCKER_DIR)/test_kg.py
+	@uv run python $(DOCKER_DIR)/test_kg.py
 
-kgs: download setup load ## Download, setup, load, and test in one step
+all: download setup load test ## Download, setup, load, and test in one step
 
 restart: ## Restart both Neo4j containers
 	@echo "Restarting containers..."
