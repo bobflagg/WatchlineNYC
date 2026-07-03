@@ -156,3 +156,71 @@ lsof -i :7474 -i :7475 -i :7687 -i :7688
 
 **Authentication errors when running `make test`**
 The Neo4j containers can take 10–15 seconds to finish initializing after `make setup`. Wait a moment and re-run `make test`.
+
+
+## 3. Connect the knowledge graphs to Claude Desktop via MCP
+
+The Neo4j MCP server ([`mcp-neo4j-cypher`](https://github.com/neo4j-contrib/mcp-neo4j)) is the official Model Context Protocol integration maintained by Neo4j Labs. Once configured, Claude Desktop can read the graph schema, run Cypher queries, and answer natural-language questions about the data — which is exactly how the Watchline conversational AI interface will work.
+
+### Prerequisites
+
+- [Claude Desktop](https://claude.ai/download) installed
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/) installed (`curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS/Linux, or see the `uv` docs for Windows)
+
+### Configuration
+
+Open the Claude Desktop configuration file:
+
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the following entries inside the `mcpServers` object, using the password you set in step 2:
+
+```json
+{
+  "mcpServers": {
+    "neo4j-watchline-domain": {
+      "command": "uvx",
+      "args": [
+        "mcp-neo4j-cypher",
+        "--db-url",
+        "neo4j://localhost:7687",
+        "--username",
+        "neo4j",
+        "--password",
+        "watchline",
+        "--database",
+        "neo4j"
+      ]
+    },
+    "neo4j-watchline-epistemic": {
+      "command": "uvx",
+      "args": [
+        "mcp-neo4j-cypher",
+        "--db-url",
+        "neo4j://localhost:7688",
+        "--username",
+        "neo4j",
+        "--password",
+        "watchline",
+        "--database",
+        "neo4j"
+      ]
+    }
+}
+```
+Save the file, then **quit and relaunch** Claude Desktop. The two connectors `neoj4-watchline-domain` and `neoj4-watchline-epistemic` should appeat in the connectors menu.
+
+### Sample system prompt
+
+Here's is a sample prompt to consider when starting a conversation in Claude Desktop about Watchline:
+
+```text
+Read the Watchline 
+[Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md) 
+and 
+[Ontology Specification](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/ontology-implementable.md) 
+to get oriented on the WatchlineNYC project then use the cypher command "SHOW CURRENT GRAPH TYPE" 
+to review the Neo4j KG structure, which you have access to via MCP at neo4j-watchline-epistemic.
+```
+
