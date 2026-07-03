@@ -44,7 +44,7 @@ test: ## Test that both KGs are up and returning data
 	@echo "Testing knowledge graph connections..."
 	@uv run python $(DOCKER_DIR)/test_kg.py
 
-all: download setup load test ## Download, setup, load, and test in one step
+kgs: download setup load ## Download, setup, load, and test in one step
 
 restart: ## Restart both Neo4j containers
 	@echo "Restarting containers..."
