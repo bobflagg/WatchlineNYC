@@ -352,3 +352,142 @@ body {
   color: #9ab0cc;
   margin-bottom: 0.3rem;
 }
+
+/* --- Summary hero block ---------------------------------------- */
+.wl-summary-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1.2rem 1.4rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.wl-hero-deteriorating {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+}
+
+.wl-hero-stable {
+  background: #eaf6ee;
+  border: 1.5px solid #7bcf9a;
+}
+
+.wl-hero-unknown {
+  background: #f5f5f5;
+  border: 1.5px solid #cccccc;
+}
+
+.wl-hero-icon {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 2.8rem;
+  text-align: center;
+}
+
+.wl-hero-deteriorating .wl-hero-icon { color: #991b1b; }
+.wl-hero-stable        .wl-hero-icon { color: #1a6b35; }
+.wl-hero-unknown       .wl-hero-icon { color: #555555; }
+
+.wl-hero-body { flex: 1; }
+
+.wl-hero-label {
+  font-family: 'Fraunces', serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.wl-hero-deteriorating .wl-hero-label { color: #991b1b; }
+.wl-hero-stable        .wl-hero-label { color: #1a6b35; }
+.wl-hero-unknown       .wl-hero-label { color: #444444; }
+
+.wl-hero-sub {
+  font-size: 0.8rem;
+  color: #6b7a99;
+  margin-top: 0.2rem;
+  letter-spacing: 0.02em;
+}
+
+/* --- Signal pills ---------------------------------------------- */
+.wl-signal-pills {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.wl-signal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.wl-pill-ok   { background: #eaf6ee; color: #1a6b35; border: 1px solid #7bcf9a; }
+.wl-pill-fail { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* --- Key facts strip ------------------------------------------- */
+.wl-facts-strip {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  border: 1px solid #dde3ec;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 1.4rem;
+  font-size: 0.82rem;
+}
+
+.wl-facts-strip span {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.55rem 1rem;
+  color: #2b2b2b;
+  border-right: 1px solid #dde3ec;
+  background: #ffffff;
+}
+
+.wl-facts-strip span:last-child { border-right: none; }
+
+.wl-facts-strip strong {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d4a017;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+/* --- Prose drop cap on first paragraph ------------------------- */
+.wl-prose p:first-of-type {
+  font-size: 1.06rem;
+  color: #111111;
+  font-weight: 500;
+  line-height: 1.75;
+}
+
+.wl-prose p:first-of-type::first-letter {
+  font-family: 'Fraunces', serif;
+  font-size: 3.2rem;
+  font-weight: 600;
+  float: left;
+  line-height: 0.78;
+  padding: 0.28rem 0.6rem 0 0;
+  color: #d4a017;
+}
+
+.wl-prose p {
+  font-size: 0.97rem;
+  line-height: 1.8;
+  color: #2b2b2b;
+  margin-bottom: 1rem;
+}

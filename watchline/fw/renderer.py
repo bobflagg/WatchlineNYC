@@ -295,11 +295,86 @@ def _render_deterioration(tr: dict, prose: str) -> dict:
         .replace("{{SIGNAL_B_EARLY_VAL}}", _esc(f"{sb['early_avg_rate']:.0%}" if sb.get("early_avg_rate") is not None else "—"))
         .replace("{{SIGNAL_B_RECENT_YEARS}}", _esc(_years_str(sb.get("recent_years", []))))
         .replace("{{SIGNAL_B_RECENT_VAL}}", _esc(f"{sb['recent_avg_rate']:.0%}" if sb.get("recent_avg_rate") is not None else "—"))
+        .replace("{{AUTHORITY}}", _esc(rule_eval.get("authority", "Watchline editorial judgment")))
+        .replace("{{AUTHOR}}", _esc(rule_eval.get("author", "Watchline NYC project team")))
+        .replace("{{EFFECTIVE_DATE}}", _esc(rule_eval.get("effective_date", "")))
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule_eval.get("falsification_conditions", "")))
+    )
+
+    # --- Summary panel hero block ---
+    rule_eval   = tr.get("rule_evaluation", {}) or {}
+    row0        = (tr.get("raw_results") or [{}])[0]
+
+    # Verdict hero
+    deteriorating = rule_eval.get("deteriorating")
+    insufficient  = rule_eval.get("insufficient_data", False)
+    if insufficient:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "⚠"
+        hero_label = "Insufficient data to evaluate"
+        hero_sub   = "Fewer than 3 full calendar years of Class C violation history available."
+    elif deteriorating is True:
+        hero_class = "wl-hero-deteriorating"
+        hero_icon  = "↓"
+        hero_label = "Deteriorating"
+        hero_sub   = f"Satisfies Rule {_esc(rule_eval.get('rule_id', 'DT-001'))} · Interpretive status: Inferred"
+    elif deteriorating is False:
+        hero_class = "wl-hero-stable"
+        hero_icon  = "✓"
+        hero_label = "Not deteriorating"
+        hero_sub   = f"Does not satisfy Rule {_esc(rule_eval.get('rule_id', 'DT-001'))} · Interpretive status: Inferred"
+    else:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "—"
+        hero_label = "No rule evaluation"
+        hero_sub   = ""
+
+    # Signal pills (only when rule was evaluated)
+    signal_pills = ""
+    if not insufficient and deteriorating is not None:
+        sa = rule_eval.get("signal_a_satisfied")
+        sb = rule_eval.get("signal_b_satisfied")
+        def _pill(label, satisfied):
+            cls = "wl-pill-ok" if satisfied else "wl-pill-fail"
+            icon = "✓" if satisfied else "✗"
+            return f'<span class="wl-signal-pill {cls}">{icon} {label}</span>'
+        signal_pills = (
+            f'<div class="wl-signal-pills">'
+            f'{_pill("Signal A: Issuance rising", sa)}'
+            f'{_pill("Signal B: Resolution declining", sb)}'
+            f'</div>'
+        )
+
+    # Key facts strip
+    address  = _esc(row0.get("address", ""))
+    borough  = _esc(row0.get("borough", ""))
+    bbl      = _esc(row0.get("bbl", ""))
+    units    = _esc(row0.get("residential_units", ""))
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {address}, {borough}</span>'
+        f'<span><strong>BBL</strong> {bbl}</span>'
+        f'<span><strong>Units</strong> {units}</span>'
+        f'<span><strong>Source</strong> HPD</span>'
+        f'</div>'
+    )
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{hero_label}</div>'
+        f'    <div class="wl-hero-sub">{hero_sub}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{signal_pills}'
+        f'{facts}'
     )
 
     return {
-        # Summary panel: prose only, built directly — no template fragment needed
+        # Summary panel: verdict hero + key facts + prose
         "SUMMARY_PANEL": (
+            hero_html +
             f'<div class="wl-prose">{_prose_to_html(prose)}</div>'
         ),
         "EVIDENCE_PANEL": evidence_html,
