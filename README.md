@@ -12,9 +12,9 @@ Watchline does not make legal findings or editorial judgments. It is infrastruct
 
 The immediate goal is to make the kind of research that currently takes an expert hours available in minutes, and to make it available not just to specialists, but to the tenant in a deteriorating building who needs to understand who actually controls it, and why that matters.
 
-# Installion
+# Installation
 
-## Prerequisites
+## 0. Install prerequisites
 
 Before you begin, make sure you have the following installed:
 
@@ -24,20 +24,20 @@ Before you begin, make sure you have the following installed:
 - API keys for [Anthropic](https://console.anthropic.com/) and [Tavily](https://app.tavily.com/)
 
 
-### 1. Clone the repository
+## 1. Clone the repository
 
 ```bash
 git clone git@github.com:bobflagg/WatchlineNYC.git
 cd WatchlineNYC
 ```
 
-### 2. Install dependencies
+## 2. Install dependencies
 
 ```bash
 uv sync
 ```
 
-### 3. Configure environment variables
+## 3. Configure environment variables
 
 Copy the example environment file and fill in your API keys:
 
@@ -67,7 +67,7 @@ ANTHROPIC_API_KEY=your-key-here
 TAVILY_API_KEY=your-key-here
 ```
 
-### 4. Set up and load the knowledge graphs
+## 4. Set up and load the knowledge graphs
 
 This downloads the Neo4j dumps from Google Drive, creates the Docker containers, and loads the data:
 
@@ -89,7 +89,9 @@ Verify the KGs are up and running:
 make test
 ```
 
-### 5. Start the application
+# Usage
+
+## Start the application
 
 ```bash
 make serve
@@ -103,28 +105,26 @@ This starts both services in the background:
 | FastAPI server | http://localhost:8080 |
 | FastAPI docs | http://localhost:8080/docs |
 
-## Usage
-
-### Stopping the application
+## Stop the application
 
 ```bash
 make serve-stop
 ```
 
-### Checking application status
+## Check application status
 
 ```bash
 make serve-status
 ```
 
-### Viewing logs
+## View logs
 
 ```bash
 make api-logs       # FastAPI logs
 make ui-logs        # Streamlit logs
 ```
 
-### Neo4j browser
+## Review the KGs with Neo4j browser
 
 Both graph databases are accessible via the Neo4j browser UI:
 
@@ -135,7 +135,7 @@ Both graph databases are accessible via the Neo4j browser UI:
 
 Login with username `neo4j` and password `watchline`.
 
-## All make targets
+## Review make targets
 
 Run `make help` to see all available targets:
 
@@ -143,7 +143,7 @@ Run `make help` to see all available targets:
 make help
 ```
 
-## Troubleshooting
+## Troubleshoot
 
 **Docker out of disk space during `make load`**
 Neo4j expands dumps significantly on load. Make sure Docker Desktop has at least 60GB of virtual disk space allocated under Settings → Resources → Advanced.
@@ -158,16 +158,16 @@ lsof -i :7474 -i :7475 -i :7687 -i :7688
 The Neo4j containers can take 10–15 seconds to finish initializing after `make setup`. Wait a moment and re-run `make test`.
 
 
-## 3. Connect the knowledge graphs to Claude Desktop via MCP
+# Connect to Claude Desktop
 
 The Neo4j MCP server ([`mcp-neo4j-cypher`](https://github.com/neo4j-contrib/mcp-neo4j)) is the official Model Context Protocol integration maintained by Neo4j Labs. Once configured, Claude Desktop can read the graph schema, run Cypher queries, and answer natural-language questions about the data — which is exactly how the Watchline conversational AI interface will work.
 
-### Prerequisites
+## Prerequisites
 
 - [Claude Desktop](https://claude.ai/download) installed
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/) installed (`curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS/Linux, or see the `uv` docs for Windows)
 
-### Configuration
+## Configuration
 
 Open the Claude Desktop configuration file:
 
@@ -211,7 +211,7 @@ Add the following entries inside the `mcpServers` object, using the password you
 ```
 Save the file, then **quit and relaunch** Claude Desktop. The two connectors `neoj4-watchline-domain` and `neoj4-watchline-epistemic` should appeat in the connectors menu.
 
-### Sample system prompt
+## Sample system prompt
 
 Here's is a sample prompt to consider when starting a conversation in Claude Desktop about Watchline:
 
