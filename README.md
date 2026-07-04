@@ -1,20 +1,15 @@
 ![Picture](header.png)
 
-# Mission
+Watchline is accountability infrastructure for NYC housing enforcement. It is a shared public capability that enables journalists, tenant advocates, and watchdog agencies to conduct rigorous, evidence-based investigation into NYC housing conditions and ownership accountability. The immediate goal is to make the kind of research that currently takes an expert hours available in minutes, and to make it available not just to specialists, but to the tenant in a deteriorating building who needs to understand who actually controls it, and why that matters.
 
-New York City's housing enforcement data is public, but accountability is not. Violations are recorded. Inspections happen. Deeds are filed. Yet the questions that matter most are also the hardest to answer quickly, systematically, and with evidence that holds up to scrutiny: who is ultimately responsible for this building, why have conditions persisted, and what is the full pattern across a portfolio.
-
-Watchline NYC is being built to change that. It is an integrated knowledge graph linking every major housing enforcement dataset: HPD violations, DOB complaints and permits, ECB/OATH judgments, ACRIS deed records, DHCR rent stabilization filings, tax liens, and beneficial ownership disclosures. These datasets are connected through a principled model of building identity, ownership chains, and enforcement history. Over that graph sits an AI agent that interprets investigative questions in plain language, retrieves structured evidence from the graph, and returns answers in which every claim is explicitly linked to the records that support it.
-
-The animating principle is that answers must be *defensible*, not merely plausible. Watchline distinguishes between what the records show, what can be reasonably inferred, and what remains uncertain. Every conclusion the system produces can be traced back through its reasoning to the primary sources that justify it. When the underlying data changes, because a deed is corrected, a violation is resolved, or an ownership structure is updated, the conclusions update with it.
-
-Watchline does not make legal findings or editorial judgments. It is infrastructure: a shared capability that makes rigorous, evidence-based investigation faster and more accessible for the journalists, tenant advocates, legal services organizations, policy analysts, and watchdog agencies whose work depends on knowing who is responsible and what the record shows.
-
-The immediate goal is to make the kind of research that currently takes an expert hours available in minutes, and to make it available not just to specialists, but to the tenant in a deteriorating building who needs to understand who actually controls it, and why that matters.
+ - [Mission Statement](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/mission.pdf)
+ - [Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md)
+ - [Design Rationale](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/design-rationale.md)
+ - [Ontology Specification](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/ontology-conceptual.md)
 
 # Installation
 
-## 0. Install prerequisites
+## Prerequisites
 
 Before you begin, make sure you have the following installed:
 
