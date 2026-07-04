@@ -39,6 +39,29 @@ def _load(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+_logo_b64_cache: str | None = None
+
+def _logo_img_tag() -> str:
+    """
+    Return an <img> tag with the logo base64-embedded for self-contained output.
+    Reads logo_b64.txt (pre-encoded at deploy time) and caches in module scope.
+    Falls back to empty string gracefully if file is absent.
+    """
+    global _logo_b64_cache
+    if _logo_b64_cache is not None:
+        return _logo_b64_cache
+    logo_path = _TMPL_DIR / "logo_b64.txt"
+    if logo_path.exists():
+        b64 = logo_path.read_text(encoding="ascii").strip()
+        _logo_b64_cache = (
+            f'<img src="data:image/png;base64,{b64}" '
+            f'class="wl-header-logo" alt="Watchline NYC logo" />'
+        )
+    else:
+        _logo_b64_cache = ""
+    return _logo_b64_cache
+
+
 def _css() -> str:
     return _load(_CSS_FILE)
 
@@ -464,6 +487,7 @@ def render_dashboard(state: WatchlineState) -> dict:
         _base()
         .replace("{{INJECTED_CSS}}",     _css())
         .replace("{{DASHBOARD_TITLE}}",  _esc(entity_title))
+        .replace("{{LOGO_IMG}}",         _logo_img_tag())
         .replace("{{INTENT_LABEL}}",     _esc(intent_label))
         .replace("{{ENTITY_TITLE}}",     _esc(entity_title))
         .replace("{{ENTITY_META}}",      _esc(entity_meta))

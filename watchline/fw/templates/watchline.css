@@ -491,3 +491,23 @@ body {
   color: #2b2b2b;
   margin-bottom: 1rem;
 }
+
+/* --- Header logo layout --------------------------------------- */
+.wl-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+.wl-header-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 8px;
+  opacity: 0.92;
+}
+
+.wl-header-text {
+  flex: 1;
+}
