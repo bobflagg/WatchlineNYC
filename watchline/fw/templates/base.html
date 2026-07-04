@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watchline NYC — {{DASHBOARD_TITLE}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet" />
+  <style>
+    {{INJECTED_CSS}}
+  </style>
+</head>
+<body>
+<div class="wl-dashboard">
+
+  <!-- Header -->
+  <div class="wl-header">
+    <div class="wl-header-eyebrow">{{INTENT_LABEL}}</div>
+    <div class="wl-header-title">{{ENTITY_TITLE}}</div>
+    <div class="wl-header-meta">{{ENTITY_META}}</div>
+  </div>
+
+  <!-- Verdict badge -->
+  {{VERDICT_BADGE}}
+
+  <!-- Tab navigation -->
+  <div class="wl-tabs">
+    <button class="wl-tab-btn active" onclick="switchTab(event, 'summary')">Summary</button>
+    <button class="wl-tab-btn" onclick="switchTab(event, 'evidence')">Evidence</button>
+    <button class="wl-tab-btn" onclick="switchTab(event, 'rules')">Rules</button>
+    <button class="wl-tab-btn" onclick="switchTab(event, 'query')">Query</button>
+  </div>
+
+  <!-- Summary panel -->
+  <div id="panel-summary" class="wl-panel active">
+    {{SUMMARY_PANEL}}
+    <div class="wl-disclaimer">
+      This answer is based on public records as of the last data ingestion date.
+      It does not constitute legal advice or a finding of wrongdoing.
+    </div>
+  </div>
+
+  <!-- Evidence panel -->
+  <div id="panel-evidence" class="wl-panel">
+    {{EVIDENCE_PANEL}}
+  </div>
+
+  <!-- Rules panel -->
+  <div id="panel-rules" class="wl-panel">
+    {{RULES_PANEL}}
+  </div>
+
+  <!-- Query panel -->
+  <div id="panel-query" class="wl-panel">
+    <div class="wl-section-head">Cypher Query Executed</div>
+    <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+      This is the exact query run against the Watchline knowledge graph to
+      retrieve the data behind this answer.
+    </p>
+    <div class="wl-cypher">{{CYPHER_HIGHLIGHTED}}</div>
+    <div class="wl-meta-row">
+      <span class="wl-meta-key">Traversal type</span>
+      <span class="wl-meta-val">{{TRAVERSAL_TYPE}}</span>
+    </div>
+    <div class="wl-meta-row">
+      <span class="wl-meta-key">Parameters</span>
+      <span class="wl-meta-val">{{QUERY_PARAMS}}</span>
+    </div>
+    <div class="wl-meta-row">
+      <span class="wl-meta-key">Records returned</span>
+      <span class="wl-meta-val">{{RECORD_COUNT}}</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="wl-footer">
+    <div class="wl-wordmark">Watchline NYC</div>
+    <div class="wl-footer-values">
+      Evidence<span class="dot">•</span>Transparency<span class="dot">•</span>Accountability
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(event, name) {
+    document.querySelectorAll('.wl-tab-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    document.querySelectorAll('.wl-panel').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+</script>
+</body>
+</html>
