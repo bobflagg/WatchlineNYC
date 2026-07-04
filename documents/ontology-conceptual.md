@@ -13,7 +13,7 @@ This is not a database schema. It does not specify field names, data types, stor
 
 Every component of the system, including the knowledge graph, the ingestion pipelines, the entity resolution engine, and the AI agent, should be understood as an implementation of this conceptual model. When implementation decisions conflict with the model, the model governs. When the model needs to change, it should be amended here first.
 
-This document should be read alongside the Watchline Founding Charter, which governs the purposes and principles of the system. The Charter answers why. This document answers what.
+This document should be read alongside the [Watchline Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md), which governs the purposes and principles of the system. The Charter answers why. This document answers what.
 
 ---
 
