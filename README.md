@@ -1,11 +1,8 @@
 ![Picture](header.png)
 
-Watchline is accountability infrastructure for NYC housing enforcement. It is a shared public capability that enables journalists, tenant advocates, and watchdog agencies to conduct rigorous, evidence-based investigation into NYC housing conditions and ownership accountability. The immediate goal is to make the kind of research that currently takes an expert hours available in minutes, and to make it available not just to specialists, but to the tenant in a deteriorating building who needs to understand who actually controls it, and why that matters.
+Watchline is a public investigation platform for NYC housing accountability. It connects HPD violations, ownership registrations, and court records so that journalists, tenant advocates, and enforcement agencies can trace patterns of abuse across a landlord's entire portfolio. It exists to put rigorous, evidence-based investigation within reach of anyone who needs to understand who controls a building and what the record shows — in minutes rather than hours. See the [Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md) for details.
 
- - [Mission Statement](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/mission.pdf)
- - [Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md)
- - [Design Rationale](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/design-rationale.md)
- - [Ontology Specification](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/ontology-conceptual.md)
+
 
 # Installation
 
