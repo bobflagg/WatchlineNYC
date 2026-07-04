@@ -9,6 +9,9 @@ import uuid
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
 
+if "last_dashboard" not in st.session_state:
+    st.session_state.last_dashboard = None
+
 st.set_page_config(
     page_title="Watchline NYC",
     page_icon="⚖️",
@@ -206,6 +209,34 @@ import json
 API_BASE = "http://localhost:8080"
 
 # ---------------------------------------------------------------------------
+# Dashboard panel
+# ---------------------------------------------------------------------------
+
+def _render_dashboard_panel():
+    """Render the latest investigator dashboard with a download button."""
+    html_str = st.session_state.get("last_dashboard", "")
+    if not html_str:
+        return
+
+    st.divider()
+
+    col_label, col_dl = st.columns([0.85, 0.15], vertical_alignment="center")
+    with col_label:
+        st.caption("📊 Watchline Dashboard — Evidence · Rules · Query")
+    with col_dl:
+        st.download_button(
+            label="⬇ Download",
+            data=html_str.encode("utf-8"),
+            file_name="watchline_dashboard.html",
+            mime="text/html",
+            use_container_width=True,
+            key=f"dl_{st.session_state.thread_id}",
+        )
+
+    st.components.v1.html(html_str, height=700, scrolling=True)
+
+
+# ---------------------------------------------------------------------------
 # Streaming helpers
 # ---------------------------------------------------------------------------
 
@@ -247,13 +278,26 @@ def render(prompt: str, graph: str) -> str:
             if s := active.get(event["run_id"]):
                 s.write(f"Result: `{event['output']}`")
                 s.update(label=f"✅ `{event['name']}`", state="complete")
+        elif t == "dashboard":
+            # Dashboard HTML arrives base64-encoded to guarantee SSE safety.
+            encoded = event.get("html", "")
+            if encoded:
+                st.session_state.last_dashboard = base64.b64decode(
+                    encoded.encode("ascii")
+                ).decode("utf-8")
         elif t == "error":
             events_panel.error(event["message"])
             events_panel.update(label="Error", state="error", expanded=True)
         elif t == "done":
             break
 
-    placeholder.markdown(text)
+    # Only render the placeholder if tokens actually arrived (DeedWatch path).
+    # For the investigator, text is empty and the dashboard is the answer.
+    if text:
+        placeholder.markdown(text)
+    else:
+        placeholder.empty()
+
     label = f"✅ {event_count} steps" if event_count else "✅ Done"
     events_panel.update(label=label, state="complete", expanded=False)
     return text
@@ -305,9 +349,20 @@ else:
 
     prompt = typed or pending
     if prompt:
+        # Clear the previous dashboard so a stale result never shows
+        # below a new question while the pipeline is still running.
+        st.session_state.last_dashboard = None
         messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
         with st.chat_message("assistant"):
             answer = render(prompt, cfg["graph"])
-        messages.append({"role": "assistant", "content": answer})
+        # For investigator responses the answer text is empty — store a
+        # placeholder so the transcript shows something on replay.
+        transcript_entry = answer if answer else "_(See dashboard below)_"
+        messages.append({"role": "assistant", "content": transcript_entry})
+
+    # Render the dashboard if the investigator produced one.
+    # Displayed outside the chat message so it gets full width.
+    if st.session_state.get("last_dashboard") and cfg["graph"] == "investigator":
+        _render_dashboard_panel()
 

@@ -1,0 +1,104 @@
+<!--
+  intents/deterioration.html
+  Panel fragments for DeteriorationTrajectory (DT-001).
+  Sections are delimited by MARKER lines containing PERCENT-PERCENT SECTIONNAME PERCENT-PERCENT.
+  Do not use the percent-percent sequence anywhere else in this file.
+  Do not add html/head/body tags.
+-->
+%%EVIDENCE%%
+  <div class="wl-section-head">Annual Class C Violation Trajectory (2021–2025)</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Class C violations are classified by HPD as <strong>immediately hazardous</strong>.
+    The resolution rate measures what fraction of violations open more than 180 days
+    were eventually resolved — the denominator used by Rule DT-001.
+  </p>
+
+  <table class="wl-table">
+    <thead>
+      <tr>
+        <th>Year</th>
+        <th>Issued</th>
+        <th>Open 180+ days</th>
+        <th>Resolved</th>
+        <th>Resolution rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{TRAJECTORY_ROWS}}
+    </tbody>
+  </table>
+
+  {{CURRENT_YEAR_BLOCK}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD (NYC Housing Preservation &amp; Development)</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule DT-001 — Deterioration Trajectory</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">DT-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Evaluation window</span>
+    <span class="wl-meta-val">5 most recent full calendar years ({{WINDOW_YEARS}})</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+
+    <div class="wl-signal-card {{SIGNAL_A_CLASS}}">
+      <div class="wl-signal-label">Signal A — Issuance trend</div>
+      <div class="wl-signal-verdict">{{SIGNAL_A_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        Early avg ({{SIGNAL_A_EARLY_YEARS}}): <strong>{{SIGNAL_A_EARLY_VAL}}</strong> violations/year<br/>
+        Recent avg ({{SIGNAL_A_RECENT_YEARS}}): <strong>{{SIGNAL_A_RECENT_VAL}}</strong> violations/year
+      </div>
+    </div>
+
+    <div class="wl-signal-card {{SIGNAL_B_CLASS}}">
+      <div class="wl-signal-label">Signal B — Resolution rate</div>
+      <div class="wl-signal-verdict">{{SIGNAL_B_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        Early avg ({{SIGNAL_B_EARLY_YEARS}}): <strong>{{SIGNAL_B_EARLY_VAL}}</strong><br/>
+        Recent avg ({{SIGNAL_B_RECENT_YEARS}}): <strong>{{SIGNAL_B_RECENT_VAL}}</strong>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="wl-section-head">Editorial Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The thresholds used in Rule DT-001 reflect Watchline editorial judgment,
+    not a statutory definition. A different threshold would produce a different
+    result. Both signals must be satisfied for the rule to fire — uncertainty
+    in either signal is treated conservatively.
+  </p>

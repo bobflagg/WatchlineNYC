@@ -114,10 +114,11 @@ async def deedwatch_events(message: str, thread_id: str):
 # client's collapsible activity panel) and emit the answer once when the
 # answer-producing node finishes.
 _INVESTIGATOR_NODE_LABELS = {
-    "identify_intent": "Identifying intent",
-    "select_rules": "Selecting traversal rules",
-    "execute_traversal": "Querying the knowledge graph",
-    "present_results": "Composing the answer",
+    "identify_intent":       "Identifying intent",
+    "select_rules":          "Selecting traversal rules",
+    "execute_traversal":     "Querying the knowledge graph",
+    "present_results":       "Composing the answer",
+    "render_dashboard":      "Rendering dashboard",
     "request_clarification": "Preparing a clarification",
 }
 
@@ -163,16 +164,35 @@ async def investigator_events(message: str, thread_id: str):
                         "output": note or "done",
                     })
 
-                    # Emit the final answer as a single token block when ready.
-                    if isinstance(out, dict) and out.get("answer") and not answer_emitted:
-                        yield sse({"type": "token",
-                                   "content": content_to_text(out["answer"])})
-                        answer_emitted = True
+                    # Emit the dashboard HTML when render_dashboard finishes.
+                    # The dashboard Summary tab is the answer -- no plain-text
+                    # token stream is emitted for the investigator pipeline.
+                    # Base64-encoded to guarantee the JSON payload is safe
+                    # regardless of embedded quotes or special characters.
+                    if node == "render_dashboard" and isinstance(out, dict):
+                        dashboard_html = out.get("dashboard_html")
+                        if dashboard_html:
+                            import base64
+                            yield sse({
+                                "type":     "dashboard",
+                                "encoding": "base64",
+                                "html":     base64.b64encode(
+                                                dashboard_html.encode("utf-8")
+                                            ).decode("ascii"),
+                            })
+                            answer_emitted = True
 
-        # Fallback: if no node surfaced an answer (shouldn't happen), say so.
+                    # Clarification path: no dashboard, surface the text answer.
+                    elif node == "request_clarification" and isinstance(out, dict):
+                        if out.get("answer") and not answer_emitted:
+                            yield sse({"type": "token",
+                                       "content": content_to_text(out["answer"])})
+                            answer_emitted = True
+
+        # Fallback: pipeline finished without a dashboard or clarification.
         if not answer_emitted:
             yield sse({"type": "error",
-                       "message": "The pipeline finished without producing an answer."})
+                       "message": "The pipeline finished without producing a dashboard."})
     except Exception as e:
         yield sse({"type": "error", "message": str(e)})
     yield sse({"type": "done"})
