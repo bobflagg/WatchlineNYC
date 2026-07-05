@@ -88,7 +88,8 @@ def build_pipeline():
 if __name__ == "__main__":
     import sys
     question = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else (
-        "Is 122 West 97th Street in Manhattan getting worse?"
+        #"Is 122 West 97th Street in Manhattan getting worse?"
+        "Who controls 530 East 169th Street in the Bronx?"
     )
     print(f"\nQuestion: {question}\n" + "-" * 60)
     pipeline = build_pipeline()

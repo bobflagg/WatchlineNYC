@@ -123,6 +123,48 @@ _INVESTIGATOR_NODE_LABELS = {
 }
 
 
+def _investigator_note(node: str, out: dict) -> str | None:
+    """Extract a human-readable one-line summary from a node's output dict."""
+    if not isinstance(out, dict):
+        return None
+
+    if node == "identify_intent":
+        intent   = out.get("intent") or {}
+        category = intent.get("intent_category", "")
+        entity   = intent.get("entity_raw") or intent.get("actor_name") or ""
+        if not category:
+            return None
+        return f"{category} · {entity}" if entity else category
+
+    elif node in ("select_rules", "execute_traversal"):
+        tr  = out.get("traversal_results") or {}
+        if not isinstance(tr, dict):
+            return None
+        re_ = tr.get("resolved_entity") or {}
+        tt  = tr.get("traversal_type", "")
+        raw = tr.get("raw_results") or []
+        rc  = len(raw) if isinstance(raw, list) else 0
+
+        if re_.get("bbl"):
+            addr = re_.get("address", "—")
+            bbl  = re_["bbl"]
+            note = f"Resolved: {addr} (BBL {bbl})"
+            if rc:
+                note += f" · {rc} record{'s' if rc != 1 else ''}"
+            return note
+        if re_.get("canonical_id"):
+            note = f"Actor: {re_.get('display_name', '—')}"
+            if rc:
+                note += f" · {rc} record{'s' if rc != 1 else ''}"
+            return note
+        return tt or None
+
+    elif node == "render_dashboard":
+        return "Dashboard ready"
+
+    return None
+
+
 async def investigator_events(message: str, thread_id: str):
     graph = state["investigator"]
     inputs = {"question": message}
@@ -137,31 +179,23 @@ async def investigator_events(message: str, thread_id: str):
                 node = event.get("name", "")
                 if node in _INVESTIGATOR_NODE_LABELS:
                     yield sse({
-                        "type": "tool_start",
-                        "name": _INVESTIGATOR_NODE_LABELS[node],
+                        "type":   "tool_start",
+                        "name":   _INVESTIGATOR_NODE_LABELS[node],
                         "run_id": event["run_id"],
-                        "input": message if node == "identify_intent" else None,
+                        "input":  None,
                     })
 
             # Node end -> close the step, and if it produced the answer, send it.
             elif kind == "on_chain_end":
                 node = event.get("name", "")
                 if node in _INVESTIGATOR_NODE_LABELS:
-                    out = event["data"].get("output") or {}
-                    note = None
-                    if isinstance(out, dict):
-                        # Surface a resolved BBL or traversal type as the step result.
-                        tr = out.get("traversal_results") or {}
-                        if isinstance(tr, dict) and tr.get("resolved_building"):
-                            rb = tr["resolved_building"]
-                            note = f"Resolved {rb.get('address')} (BBL {rb.get('bbl')})"
-                        elif isinstance(tr, dict) and tr.get("traversal_type"):
-                            note = tr["traversal_type"]
+                    out  = event["data"].get("output") or {}
+                    note = _investigator_note(node, out)
                     yield sse({
-                        "type": "tool_end",
-                        "name": _INVESTIGATOR_NODE_LABELS[node],
+                        "type":   "tool_end",
+                        "name":   _INVESTIGATOR_NODE_LABELS[node],
                         "run_id": event["run_id"],
-                        "output": note or "done",
+                        "output": note,
                     })
 
                     # Emit the dashboard HTML when render_dashboard finishes.

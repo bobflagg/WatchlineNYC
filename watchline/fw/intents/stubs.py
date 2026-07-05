@@ -24,11 +24,6 @@ class _Stub(IntentHandler):
         return None
 
 
-class PortfolioIdentificationHandler(_Stub):
-    intent_category = "PortfolioIdentification"
-    entity_class    = "building"
-
-
 class PortfolioConditionHandler(_Stub):
     intent_category = "PortfolioCondition"
     entity_class    = "actor"
@@ -61,11 +56,6 @@ class GeographicConcentrationHandler(_Stub):
 
 class OwnershipChangeHandler(_Stub):
     intent_category = "OwnershipChange"
-    entity_class    = "building"
-
-
-class BuildingDueDiligenceHandler(_Stub):
-    intent_category = "BuildingDueDiligence"
     entity_class    = "building"
 
 

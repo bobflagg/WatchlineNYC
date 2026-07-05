@@ -1,0 +1,77 @@
+<!--
+  intents/portfolio_identification.html
+  Panel fragments for PortfolioIdentification (PBC-001 / RUL-00002).
+  Sections are delimited by MARKER lines containing PERCENT-PERCENT SECTIONNAME PERCENT-PERCENT.
+  Do not use the percent-percent sequence anywhere else in this file.
+  Do not add html/head/body tags.
+-->
+%%EVIDENCE%%
+  <div class="wl-section-head">Probable Beneficial Controller(s)</div>
+  {{CONTROLLER_CARDS}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">PHC flag</span>
+    <span class="wl-meta-val">{{PHC_FLAG}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD (NYC Housing Preservation &amp; Development)</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule PBC-001 — Probable Beneficial Control</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">PBC-001 (RUL-00002)</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Claim Text (verbatim)</div>
+  {{CLAIM_TEXT_BLOCKS}}
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Editorial Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The probable beneficial control inference is based on patterns in HPD registration
+    data, not a legal determination of ownership. It should be treated as an
+    investigative starting point requiring further verification, not as established fact.
+  </p>

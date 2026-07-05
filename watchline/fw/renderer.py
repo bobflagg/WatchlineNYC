@@ -405,9 +405,497 @@ def _render_deterioration(tr: dict, prose: str) -> dict:
     }
 
 
+def _render_portfolio_identification(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for PortfolioIdentification (PBC-001 / RUL-00002).
+    Returns a dict of placeholder -> html_string for injection into base.html.
+    """
+    import re as _re
+    from watchline.fw.intents.portfolio_identification import _load_rule_from_graph
+
+    raw  = tr.get("raw_results", [])
+    rule = _load_rule_from_graph()
+
+    def _parse_claim(claim_text: str) -> dict:
+        """Extract structured fields from the PBC claim_text."""
+        if not claim_text:
+            return {}
+        portfolio = _re.search(r"These (\d+) properties", claim_text)
+        addr_conn = _re.search(r"(\d+) shared business address connection", claim_text)
+        name_conn = _re.search(r"(\d+) shared name connection", claim_text)
+        confidence = _re.search(r"confidence of this grouping is (\w+)", claim_text)
+        return {
+            "portfolio_size":      int(portfolio.group(1))  if portfolio  else None,
+            "address_connections": int(addr_conn.group(1))  if addr_conn  else None,
+            "name_connections":    int(name_conn.group(1))  if name_conn  else None,
+            "confidence":          confidence.group(1)       if confidence else None,
+        }
+
+    def _confidence_pill(conf: str | None) -> str:
+        cls = {
+            "High":   "wl-status-observed",
+            "Medium": "wl-status-stipulated",
+            "Low":    "wl-status-disputed",
+        }.get(conf or "", "wl-status-inferred")
+        return f'<span class="wl-status-pill {cls}">{_esc(conf or "Unknown")}</span>'
+
+    # De-duplicate by canonical_id — one card per distinct controller
+    seen: set = set()
+    controllers = []
+    for row in raw:
+        cid = row.get("controller_id")
+        if cid not in seen:
+            seen.add(cid)
+            controllers.append(row)
+
+    row0 = raw[0] if raw else {}
+    building_has_phc = any(r.get("building_has_phc") for r in raw)
+
+    # --- Controller cards (Evidence tab) ---
+    cards_html = ""
+    claim_text_blocks = ""
+    for ctrl in controllers:
+        parsed      = _parse_claim(ctrl.get("pbc_claim", ""))
+        conf        = parsed.get("confidence")
+        portfolio   = parsed.get("portfolio_size")
+        addr_c      = parsed.get("address_connections")
+        name_c      = parsed.get("name_connections")
+
+        portfolio_str  = f"{portfolio} properties" if portfolio is not None else "—"
+        connections_str = (
+            f"{addr_c} address-based, {name_c} name-based"
+            if addr_c is not None else "—"
+        )
+
+        cards_html += (
+            f'<div class="wl-signal-card satisfied" style="margin-bottom:1rem;">'
+            f'  <div class="wl-signal-label">{_esc(ctrl.get("controller_name", "Unknown"))}</div>'
+            f'  <div class="wl-meta-row" style="margin-top:0.6rem;">'
+            f'    <span class="wl-meta-key">Actor ID</span>'
+            f'    <span class="wl-meta-val" style="font-family:monospace;font-size:0.8rem;">'
+            f'      {_esc(ctrl.get("controller_id", "—"))}'
+            f'    </span>'
+            f'  </div>'
+            f'  <div class="wl-meta-row">'
+            f'    <span class="wl-meta-key">Type</span>'
+            f'    <span class="wl-meta-val">{_esc(ctrl.get("actor_type", "—"))}</span>'
+            f'  </div>'
+            f'  <div class="wl-meta-row">'
+            f'    <span class="wl-meta-key">Portfolio size</span>'
+            f'    <span class="wl-meta-val">{_esc(portfolio_str)}</span>'
+            f'  </div>'
+            f'  <div class="wl-meta-row">'
+            f'    <span class="wl-meta-key">Connections</span>'
+            f'    <span class="wl-meta-val">{_esc(connections_str)}</span>'
+            f'  </div>'
+            f'  <div class="wl-meta-row">'
+            f'    <span class="wl-meta-key">Confidence</span>'
+            f'    <span class="wl-meta-val">{_confidence_pill(conf)}</span>'
+            f'  </div>'
+            f'  <div class="wl-meta-row">'
+            f'    <span class="wl-meta-key">Interpretive status</span>'
+            f'    <span class="wl-meta-val">'
+            f'      <span class="wl-status-pill wl-status-inferred">Inferred</span>'
+            f'    </span>'
+            f'  </div>'
+            f'</div>'
+        )
+
+        if ctrl.get("pbc_claim"):
+            claim_text_blocks += (
+                f'<div class="wl-threshold" style="margin-bottom:0.8rem;">'
+                f'{_esc(ctrl["pbc_claim"])}'
+                f'</div>'
+            )
+
+    if not cards_html:
+        cards_html = (
+            '<p style="color:#555;">No beneficial controller identified in the '
+            'graph for this building.</p>'
+        )
+
+    phc_flag_html = (
+        '<span class="wl-status-pill wl-status-disputed">'
+        'Yes — Persistent Hazardous Conditions flagged</span>'
+        if building_has_phc else
+        '<span class="wl-status-pill wl-status-observed">No PHC flag</span>'
+    )
+
+    # --- Load and split template ---
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl = _intent_tmpl("portfolio_identification")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{CONTROLLER_CARDS}}",  cards_html)
+        .replace("{{ADDRESS}}",           _esc(row0.get("address")))
+        .replace("{{BOROUGH}}",           _esc(row0.get("borough")))
+        .replace("{{BBL}}",               _esc(row0.get("bbl")))
+        .replace("{{RESIDENTIAL_UNITS}}", _esc(row0.get("residential_units")))
+        .replace("{{PHC_FLAG}}",          phc_flag_html)
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_VERSION}}",          _esc(rule.get("version", "1.0")))
+        .replace("{{AUTHORITY}}",             _esc(rule.get("authority", "")))
+        .replace("{{AUTHOR}}",                _esc(rule.get("author", "")))
+        .replace("{{EFFECTIVE_DATE}}",        _esc(rule.get("effective_date", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",   _esc(rule.get("threshold_description", "")))
+        .replace("{{CLAIM_TEXT_BLOCKS}}",     claim_text_blocks)
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule.get("falsification_conditions", "")))
+    )
+
+    # --- Summary panel hero ---
+    if controllers:
+        if len(controllers) == 1:
+            hero_label = _esc(controllers[0].get("controller_name", "Unknown"))
+        else:
+            names = ", ".join(_esc(c.get("controller_name", "Unknown")) for c in controllers)
+            hero_label = f"Multiple controllers: {names}"
+
+        first_parsed = _parse_claim(controllers[0].get("pbc_claim", ""))
+        portfolio_n  = first_parsed.get("portfolio_size")
+        conf_label   = first_parsed.get("confidence", "—")
+        hero_sub = (
+            f"Portfolio: {portfolio_n} properties · "
+            f"Confidence: {conf_label} · "
+            f"Interpretive status: Inferred · "
+            f"Rule PBC-001"
+        )
+        hero_class = "wl-hero-identified"
+        hero_icon  = "→"
+    else:
+        hero_label = "No controller identified"
+        hero_sub   = "No BeneficialControl relationship found for this building."
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "?"
+
+    phc_pill = (
+        '<span class="wl-signal-pill wl-pill-fail">PHC flagged</span>'
+        if building_has_phc else ""
+    )
+
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {_esc(row0.get("address", ""))}, '
+        f'{_esc(row0.get("borough", ""))}</span>'
+        f'<span><strong>BBL</strong> {_esc(row0.get("bbl", ""))}</span>'
+        f'<span><strong>Units</strong> {_esc(row0.get("residential_units", ""))}</span>'
+        f'<span><strong>Source</strong> HPD</span>'
+        f'</div>'
+    )
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{hero_label}</div>'
+        f'    <div class="wl-hero-sub">{hero_sub}</div>'
+        f'  </div>'
+        f'</div>'
+        f'<div class="wl-signal-pills">{phc_pill}</div>'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL": hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
+def _render_building_due_diligence(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for BuildingDueDiligence (data retrieval, no rule).
+    """
+    raw  = tr.get("raw_results", [{}])
+    row0 = raw[0] if raw else {}
+
+    open_c       = row0.get("open_c", 0) or 0
+    open_b       = row0.get("open_b", 0) or 0
+    open_a       = row0.get("open_a", 0) or 0
+    total_viol   = row0.get("total_violations", 0) or 0
+    total_fil    = row0.get("total_filings", 0) or 0
+    open_fil     = row0.get("open_filings", 0) or 0
+    harassment   = row0.get("harassment_findings", 0) or 0
+    total_ecb    = row0.get("total_ecb", 0) or 0
+    balance_due  = row0.get("total_balance_due", 0.0) or 0.0
+    has_phc      = row0.get("has_phc", False)
+    phc_claim    = row0.get("phc_claim") or ""
+    controllers  = row0.get("controllers") or []
+
+    def _stat_card(label: str, value, danger: bool = False) -> str:
+        color    = "#991b1b" if danger else "#0a1629"
+        bg       = "#fef2f2" if danger else "#f8f9fb"
+        border   = "#fca5a5" if danger else "#dde3ee"
+        return (
+            f'<div style="background:{bg};border:1.5px solid {border};'
+            f'border-radius:6px;padding:0.9rem 1rem;">'
+            f'  <div style="font-size:1.55rem;font-weight:700;color:{color};'
+            f'font-family:\'Fraunces\',serif;">{_esc(value)}</div>'
+            f'  <div style="font-size:0.75rem;color:#6b7a99;margin-top:0.2rem;'
+            f'text-transform:uppercase;letter-spacing:0.06em;">{_esc(label)}</div>'
+            f'</div>'
+        )
+
+    violation_cards = (
+        _stat_card("Open Class C", open_c, danger=open_c > 0) +
+        _stat_card("Open Class B", open_b, danger=open_b > 0) +
+        _stat_card("Open Class A", open_a) +
+        _stat_card("Total HPD violations", total_viol) +
+        _stat_card("PHC flagged",
+                   "Yes" if has_phc else "No", danger=has_phc) +
+        _stat_card("Rent-stabilized units", row0.get("rs_units_current", "—"))
+    )
+
+    enforcement_cards = (
+        _stat_card("Court filings (total)", total_fil) +
+        _stat_card("Open filings", open_fil, danger=open_fil > 0) +
+        _stat_card("Harassment findings", harassment, danger=harassment > 0) +
+        _stat_card("ECB judgments", total_ecb) +
+        _stat_card("ECB balance due",
+                   f"${balance_due:,.0f}", danger=balance_due > 0)
+    )
+
+    # Controller list
+    ctrl_names = ", ".join(
+        c.get("name", "—") for c in controllers if c.get("name")
+    ) or "Not identified"
+
+    # PHC claim block for Rules tab
+    phc_block = ""
+    if phc_claim:
+        phc_block = (
+            f'<div class="wl-section-head">PHC-001 Claim (verbatim)</div>'
+            f'<div class="wl-threshold">{_esc(phc_claim)}</div>'
+        )
+
+    # Load and split template
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl     = _intent_tmpl("building_due_diligence")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{VIOLATION_CARDS}}",   violation_cards)
+        .replace("{{ENFORCEMENT_CARDS}}", enforcement_cards)
+        .replace("{{ADDRESS}}",           _esc(row0.get("address")))
+        .replace("{{BOROUGH}}",           _esc(row0.get("borough")))
+        .replace("{{BBL}}",               _esc(row0.get("bbl")))
+        .replace("{{YEAR_BUILT}}",        _esc(row0.get("year_built")))
+        .replace("{{BUILDING_CLASS}}",    _esc(row0.get("building_class")))
+        .replace("{{RESIDENTIAL_UNITS}}", _esc(row0.get("residential_units")))
+        .replace("{{RS_UNITS}}",          _esc(row0.get("rs_units_current")))
+        .replace("{{RS_DEREGULATING}}",   "Yes" if row0.get("rs_deregulating") else "No")
+        .replace("{{CONTROLLERS}}",       _esc(ctrl_names))
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{PHC_CLAIM_BLOCK}}", phc_block)
+    )
+
+    # Summary hero
+    phc_pill = (
+        '<span class="wl-signal-pill wl-pill-fail">PHC flagged</span>'
+        if has_phc else ""
+    )
+    deregulating_pill = (
+        '<span class="wl-signal-pill wl-pill-fail">Deregulating</span>'
+        if row0.get("rs_deregulating") else ""
+    )
+    pills_html = ""
+    if phc_pill or deregulating_pill:
+        pills_html = (
+            f'<div class="wl-signal-pills">{phc_pill}{deregulating_pill}</div>'
+        )
+
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {_esc(row0.get("address", ""))}, '
+        f'{_esc(row0.get("borough", ""))}</span>'
+        f'<span><strong>BBL</strong> {_esc(row0.get("bbl", ""))}</span>'
+        f'<span><strong>Units</strong> {_esc(row0.get("residential_units", ""))}</span>'
+        f'<span><strong>Built</strong> {_esc(row0.get("year_built", ""))}</span>'
+        f'</div>'
+    )
+
+    hero_sub = (
+        f'Open C: {open_c} · Open B: {open_b} · '
+        f'Court filings: {total_fil} · '
+        f'ECB balance: ${balance_due:,.0f}'
+    )
+    hero_html = (
+        f'<div class="wl-summary-hero wl-hero-identified">'
+        f'  <div class="wl-hero-icon">◎</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{_esc(row0.get("address", "—"))}</div>'
+        f'    <div class="wl-hero-sub">{_esc(hero_sub)}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{pills_html}'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL": hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
+def _render_network_exposure(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for NetworkExposure (NE-001 / RUL-00008).
+    """
+    from watchline.fw.intents.network_exposure import _load_rule_from_graph
+
+    raw       = tr.get("raw_results", [])
+    rule_eval = tr.get("rule_evaluation") or {}
+    rule      = _load_rule_from_graph()
+
+    combined_portfolio = rule_eval.get("combined_portfolio", 0)
+    combined_phc       = rule_eval.get("combined_phc", 0)
+    combined_units     = rule_eval.get("combined_units", 0)
+    combined_phc_rate  = rule_eval.get("combined_phc_rate", 0.0)
+    affiliation_basis  = rule_eval.get("affiliation_basis", "")
+    network_size       = rule_eval.get("network_size", len(raw))
+    insufficient       = rule_eval.get("insufficient_data", False)
+
+    # --- Actor table rows ---
+    rows_html = ""
+    for r in raw:
+        size     = r.get("portfolio_size", 0) or 0
+        phc      = r.get("phc_buildings", 0)  or 0
+        units    = r.get("total_units", 0)     or 0
+        phc_rate = round(phc / size, 3) if size > 0 else 0.0
+        role     = "Named actor" if r.get("is_named_actor") else "Affiliated actor"
+        rows_html += (
+            f"<tr>"
+            f"<td><strong>{_esc(r.get('actor_name', '—'))}</strong></td>"
+            f"<td>{_esc(role)}</td>"
+            f"<td>{size:,}</td>"
+            f"<td>{phc}</td>"
+            f"<td>{_rate_display(phc_rate)}</td>"
+            f"<td>{units:,}</td>"
+            f"</tr>"
+        )
+
+    combined_rate_html = _rate_display(combined_phc_rate)
+    combined_row = (
+        f'<tr style="font-weight:600;background:#f0f4fa;">'
+        f'<td colspan="2">Combined network</td>'
+        f'<td>{combined_portfolio:,}</td>'
+        f'<td>{combined_phc}</td>'
+        f'<td>{combined_rate_html}</td>'
+        f'<td>{combined_units:,}</td>'
+        f'</tr>'
+    ) if not insufficient else ""
+
+    # --- Load and split template ---
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl     = _intent_tmpl("network_exposure")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{ACTOR_ROWS}}",       rows_html)
+        .replace("{{COMBINED_ROW}}",     combined_row)
+        .replace("{{AFFILIATION_BASIS}}", _esc(affiliation_basis))
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_VERSION}}",             _esc(rule.get("version", "1.0")))
+        .replace("{{AUTHORITY}}",                _esc(rule.get("authority", "")))
+        .replace("{{AUTHOR}}",                   _esc(rule.get("author", "")))
+        .replace("{{EFFECTIVE_DATE}}",           _esc(rule.get("effective_date", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",      _esc(rule.get("threshold_description", "")))
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule.get("falsification_conditions", "")))
+    )
+
+    # --- Summary hero ---
+    named_row  = next((r for r in raw if r.get("is_named_actor")), raw[0] if raw else {})
+    named_name = _esc(named_row.get("actor_name", "—"))
+
+    if insufficient:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "⚠"
+        hero_label = "No affiliated network found"
+        hero_sub   = "No ProbableAffiliation relationships found for this actor."
+        verdict_pills = ""
+    else:
+        hero_class = "wl-hero-identified"
+        hero_icon  = "⬡"
+        hero_label = f"{named_name} — {network_size}-actor network"
+        hero_sub   = (
+            f"Combined portfolio: {combined_portfolio:,} buildings · "
+            f"{combined_phc} PHC ({combined_phc_rate:.0%}) · "
+            f"{combined_units:,} units · Rule NE-001 · Confidence: Medium"
+        )
+        verdict_pills = (
+            f'<div class="wl-signal-pills">'
+            f'<span class="wl-signal-pill wl-pill-fail">'
+            f'{combined_phc} PHC buildings ({combined_phc_rate:.0%})</span>'
+            f'<span class="wl-signal-pill" style="background:#e8f0fe;color:#1a4aab;'
+            f'border:1px solid #4a7aba;">NE-001 · Inferred · Medium confidence</span>'
+            f'</div>'
+        )
+
+    actor_names = " · ".join(
+        _esc(r.get("actor_name", "")) for r in raw
+    )
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Actors</strong> {actor_names}</span>'
+        f'<span><strong>Buildings</strong> {combined_portfolio:,}</span>'
+        f'<span><strong>Units</strong> {combined_units:,}</span>'
+        f'<span><strong>Source</strong> HPD</span>'
+        f'</div>'
+    ) if not insufficient else ""
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{hero_label}</div>'
+        f'    <div class="wl-hero-sub">{hero_sub}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{verdict_pills}'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL":  hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
 # Registry: intent_category -> panel renderer function
 _PANEL_RENDERERS = {
-    "DeteriorationTrajectory": _render_deterioration,
+    "DeteriorationTrajectory":  _render_deterioration,
+    "PortfolioIdentification":  _render_portfolio_identification,
+    "BuildingDueDiligence":     _render_building_due_diligence,
+    "NetworkExposure":          _render_network_exposure,
 }
 
 

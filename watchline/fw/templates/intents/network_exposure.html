@@ -1,0 +1,101 @@
+<!--
+  intents/network_exposure.html
+  Panel fragments for NetworkExposure (NE-001 / RUL-00008).
+  Sections are delimited by MARKER lines containing PERCENT-PERCENT SECTIONNAME PERCENT-PERCENT.
+  Do not use the percent-percent sequence anywhere else in this file.
+  Do not add html/head/body tags.
+-->
+%%EVIDENCE%%
+  <div class="wl-section-head">Probable Affiliated Network</div>
+  <table class="wl-table">
+    <thead>
+      <tr>
+        <th>Actor</th>
+        <th>Role</th>
+        <th>Portfolio</th>
+        <th>PHC buildings</th>
+        <th>PHC rate</th>
+        <th>Residential units</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ACTOR_ROWS}}
+    </tbody>
+    <tfoot>
+      {{COMBINED_ROW}}
+    </tfoot>
+  </table>
+
+  <div class="wl-section-head">Affiliation Basis</div>
+  <div class="wl-threshold">{{AFFILIATION_BASIS}}</div>
+
+  <div class="wl-meta-row" style="margin-top:1rem;">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Confidence</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-stipulated">Medium</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD registration data · Watchline WCC and Louvain analysis</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule NE-001 — Network Exposure</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">NE-001 (RUL-00008)</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Confidence</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-stipulated">Medium — weaker than PBC-001</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Epistemic note: ProbableAffiliation vs BeneficialControl</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    ProbableAffiliation (NE-001) is a weaker inference than ProbableBeneficialControl (PBC-001).
+    BeneficialControl is asserted when two registrations share enough direct connections
+    (shared addresses or names) to be placed in the same ownership network.
+    ProbableAffiliation is asserted when two <em>separate</em> ownership networks share
+    structural origin in the same Weakly Connected Component — meaning they were connected
+    indirectly, through intermediary registrations, before community detection divided them.
+    The combined portfolio shown in this report should be treated as an investigative
+    starting point, not as a proven ownership structure. Each actor's individual portfolio
+    is supported by PBC-001; the connection between actors is supported only by NE-001.
+  </p>

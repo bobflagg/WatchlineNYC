@@ -10,8 +10,10 @@ To add a new intent:
 """
 
 from watchline.fw.intents.deterioration import DeteriorationTrajectoryHandler
+from watchline.fw.intents.portfolio_identification import PortfolioIdentificationHandler
+from watchline.fw.intents.building_due_diligence import BuildingDueDiligenceHandler
+from watchline.fw.intents.network_exposure import NetworkExposureHandler
 from watchline.fw.intents.stubs import (
-    PortfolioIdentificationHandler,
     PortfolioConditionHandler,
     RecidivismHandler,
     WorstFirstHandler,
@@ -19,7 +21,6 @@ from watchline.fw.intents.stubs import (
     EnforcementAccountabilityHandler,
     GeographicConcentrationHandler,
     OwnershipChangeHandler,
-    BuildingDueDiligenceHandler,
     RentStabilizationHandler,
     FineEvasionHandler,
     GeneralHandler,
@@ -41,6 +42,7 @@ REGISTRY: dict[str, object] = {
         BuildingDueDiligenceHandler(),
         RentStabilizationHandler(),
         FineEvasionHandler(),
+        NetworkExposureHandler(),
         GeneralHandler(),
     ]
 }

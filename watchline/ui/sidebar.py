@@ -24,6 +24,10 @@ MODES = {
         "input_placeholder": "Ask about a building or landlord",
         "samples": [
             "Is 122 West 97th Street in Manhattan getting worse?",
+            "Who controls 530 East 169th Street in the Bronx?",
+            "What is the full record on 122 West 97th Street in Manhattan?",
+            "Are Michael Bennett and Ryan Hiller operating as a coordinated network?",
+            ## -----
             "Has the landlord been keeping up with repairs at 10 Halletts Point?",
             "What's the BBL for 1071 Franklin Avenue, Bronx?",
             "How many of Mark Engel's buildings have persistent hazardous conditions?",
@@ -44,6 +48,10 @@ MODES = {
         "input_placeholder": "Ask a follow-up — it remembers context",
         "samples": [
             "Is 122 West 97th Street in Manhattan getting worse?",
+            "Who controls 530 East 169th Street in the Bronx?",
+            "What is the full record on 122 West 97th Street in Manhattan?",
+            "Are Michael Bennett and Ryan Hiller operating as a coordinated network?",
+            ## -----
             "Has the landlord been keeping up with repairs at 10 Halletts Point?",
             "What's the BBL for 1071 Franklin Avenue, Bronx?",
             "Who is the worse landlord in NYC?",

@@ -27,12 +27,12 @@ JSON schema:
   "address": "<street address if mentioned, else null>",
   "borough": "<borough name if mentioned, else null>",
   "bbl": "<10-digit BBL if user provided it directly, else null>",
-  "actor_name": "<landlord or owner name if mentioned, else null>",
+  "actor_name": "<landlord or owner name if mentioned, else null. For NetworkExposure: use the FIRST named actor only — the graph discovers affiliates automatically>",
   "intent_category": "PortfolioIdentification" | "PortfolioCondition" | "Recidivism" |
                      "WorstFirst" | "ConcealmentDetection" | "DeteriorationTrajectory" |
                      "EnforcementAccountability" | "GeographicConcentration" |
                      "OwnershipChange" | "BuildingDueDiligence" |
-                     "RentStabilization" | "FineEvasion" | "General",
+                     "RentStabilization" | "FineEvasion" | "NetworkExposure" | "General",
   "confidence": "High" | "Medium" | "Low"
 }
 
@@ -49,6 +49,7 @@ Intent category definitions:
 - BuildingDueDiligence:       full record on a specific building
 - RentStabilization:          rent-stabilized unit counts and deregulation trajectory
 - FineEvasion:                outstanding ECB/OATH fines and payment patterns
+- NetworkExposure:             are two or more apparently separate landlords operating as a coordinated network
 - General:                    simple factual questions not covered by the above
 """
 

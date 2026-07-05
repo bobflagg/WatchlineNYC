@@ -1,0 +1,79 @@
+<!--
+  intents/building_due_diligence.html
+  Panel fragments for BuildingDueDiligence (data retrieval, no rule).
+  Sections are delimited by MARKER lines containing PERCENT-PERCENT SECTIONNAME PERCENT-PERCENT.
+  Do not use the percent-percent sequence anywhere else in this file.
+  Do not add html/head/body tags.
+-->
+%%EVIDENCE%%
+  <div class="wl-section-head">Violation Summary</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.4rem;">
+    {{VIOLATION_CARDS}}
+  </div>
+
+  <div class="wl-section-head">Enforcement Record</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.4rem;">
+    {{ENFORCEMENT_CARDS}}
+  </div>
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Year built</span>
+    <span class="wl-meta-val">{{YEAR_BUILT}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Building class</span>
+    <span class="wl-meta-val">{{BUILDING_CLASS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rent-stabilized units</span>
+    <span class="wl-meta-val">{{RS_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Deregulating</span>
+    <span class="wl-meta-val">{{RS_DEREGULATING}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Probable controller</span>
+    <span class="wl-meta-val">{{CONTROLLERS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data sources</span>
+    <span class="wl-meta-val">HPD · ECB/OATH · Watchline knowledge graph</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">About this report</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Building Due Diligence is a data-retrieval intent. No Watchline Rule is applied
+    to produce a verdict. The figures above are aggregated directly from HPD violation
+    records, ECB/OATH judgment records, and HPD court filing records in the knowledge
+    graph. Counts reflect current graph state and update when the underlying data is refreshed.
+  </p>
+
+  {{PHC_CLAIM_BLOCK}}
+
+  <div class="wl-section-head">Violation class definitions</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Class C</span>
+    <span class="wl-meta-val">Immediately hazardous — most severe</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Class B</span>
+    <span class="wl-meta-val">Hazardous</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Class A</span>
+    <span class="wl-meta-val">Non-hazardous</span>
+  </div>

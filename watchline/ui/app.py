@@ -255,7 +255,7 @@ def iter_events(prompt: str, graph: str):
 def render(prompt: str, graph: str) -> str:
     # One collapsible panel holds the whole event stream. While it's running,
     # st.status shows a spinner in the title; we flip it to "complete" at the end.
-    events_panel = st.status("Investigating…", expanded=False)
+    events_panel = st.status("Investigating…", expanded=True)
     active = {}            # run_id -> sub-status inside the panel
     event_count = 0
 
@@ -271,13 +271,16 @@ def render(prompt: str, graph: str) -> str:
         elif t == "tool_start":
             event_count += 1
             events_panel.update(label=f"Investigating… ({event_count} steps)")
-            s = events_panel.status(f"🔧 `{event['name']}`", expanded=False)
-            s.write(f"Input: `{event['input']}`")
+            s = events_panel.status(f"🔧 {event['name']}", expanded=True)
+            if event.get("input"):
+                s.caption(event["input"])
             active[event["run_id"]] = s
         elif t == "tool_end":
             if s := active.get(event["run_id"]):
-                s.write(f"Result: `{event['output']}`")
-                s.update(label=f"✅ `{event['name']}`", state="complete")
+                output = event.get("output")
+                if output:
+                    s.write(output)
+                s.update(label=f"✅ {event['name']}", state="complete")
         elif t == "dashboard":
             # Dashboard HTML arrives base64-encoded to guarantee SSE safety.
             encoded = event.get("html", "")
@@ -299,7 +302,7 @@ def render(prompt: str, graph: str) -> str:
         placeholder.empty()
 
     label = f"✅ {event_count} steps" if event_count else "✅ Done"
-    events_panel.update(label=label, state="complete", expanded=False)
+    events_panel.update(label=label, state="complete")
     return text
 
 
