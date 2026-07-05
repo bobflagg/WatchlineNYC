@@ -1,8 +1,10 @@
 ![Picture](header.png)
 
-Watchline is a public investigation platform for NYC housing accountability. It connects HPD violations, ownership registrations, and court records so that journalists, tenant advocates, and enforcement agencies can trace patterns of abuse across a landlord's entire portfolio. It exists to put rigorous, evidence-based investigation within reach of anyone who needs to understand who controls a building and what the record shows, in minutes rather than hours.
+Watchline is accountability infrastructure for New York City housing. It enables journalists, tenant advocates, watchdog agencies, and the public to investigate housing conditions and ownership accountability using evidence from the city’s public record.
 
-The [Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md) describes the full design. A [live example](https://bobflagg.github.io/WatchlineNYC/) shows Watchline's response to: *Is 122 West 97th Street in Manhattan getting worse?*
+Watchline builds on the foundational work of [JustFix](https://www.justfix.org/en/) by adding an AI interface that lets anyone ask a question in plain English and receive an evidence-based answer. The AI is an orchestrator, not a reasoner. It translates questions into structured queries, retrieves evidence from a knowledge graph, applies explicit Rules, and explains the results in plain language. This makes public housing data accessible to everyone without sacrificing transparency or accountability.
+
+The [Founding Charter](https://github.com/bobflagg/WatchlineNYC/blob/main/documents/charter.md) describes the principles behind the project. A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) shows Watchline answering the question: “Is 122 West 97th Street in Manhattan getting worse?”
 
 # Installation
 
