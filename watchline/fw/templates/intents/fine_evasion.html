@@ -1,0 +1,93 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">ECB/OATH Judgment Summary</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Source: NYC Environmental Control Board (ECB) / Office of Administrative Trials
+    and Hearings (OATH). Shows judgments where <code>balance_due</code> is not null.
+    A positive balance indicates a civil penalty that has not been fully paid.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.4rem;">
+    {{STAT_CARDS}}
+  </div>
+
+  {{OUTSTANDING_TABLE}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">NYC OATH / Environmental Control Board (ECB)</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule FE-001 — Fine Evasion</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">FE-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Threshold</span>
+    <span class="wl-meta-val">Outstanding ECB balance &gt; $10,000</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+    <div class="wl-signal-card {{SIGNAL_CLASS}}">
+      <div class="wl-signal-label">Outstanding ECB balance vs. $10,000 threshold</div>
+      <div class="wl-signal-verdict">{{SIGNAL_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        Total outstanding balance: <strong>{{TOTAL_BALANCE_DISPLAY}}</strong><br/>
+        Judgments with balance: <strong>{{JUDGMENTS_WITH_BALANCE}}</strong>
+        of <strong>{{TOTAL_JUDGMENTS}}</strong> total
+      </div>
+    </div>
+  </div>
+
+  <div class="wl-section-head">Editorial Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The $10,000 threshold is a single-building signal intended to flag persistent
+    non-payment of civil penalties rather than routine small-balance situations.
+    A future version of this rule will evaluate outstanding balances across an
+    actor's full portfolio, which is a stronger evasion signal. ECB balance data
+    reflects OATH records and may not capture payments made after the last data
+    refresh.
+  </p>

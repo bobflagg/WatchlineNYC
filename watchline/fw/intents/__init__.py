@@ -12,17 +12,17 @@ To add a new intent:
 from watchline.fw.intents.deterioration import DeteriorationTrajectoryHandler
 from watchline.fw.intents.portfolio_identification import PortfolioIdentificationHandler
 from watchline.fw.intents.building_due_diligence import BuildingDueDiligenceHandler
+from watchline.fw.intents.rent_stabilization import RentStabilizationHandler
+from watchline.fw.intents.fine_evasion import FineEvasionHandler
+from watchline.fw.intents.portfolio_condition import PortfolioConditionHandler
+from watchline.fw.intents.worst_first import WorstFirstHandler
+from watchline.fw.intents.enforcement_accountability import EnforcementAccountabilityHandler
+from watchline.fw.intents.recidivism import RecidivismHandler
+from watchline.fw.intents.concealment_detection import ConcealmentDetectionHandler
+from watchline.fw.intents.geographic_concentration import GeographicConcentrationHandler
 from watchline.fw.intents.network_exposure import NetworkExposureHandler
 from watchline.fw.intents.stubs import (
-    PortfolioConditionHandler,
-    RecidivismHandler,
-    WorstFirstHandler,
-    ConcealmentDetectionHandler,
-    EnforcementAccountabilityHandler,
-    GeographicConcentrationHandler,
     OwnershipChangeHandler,
-    RentStabilizationHandler,
-    FineEvasionHandler,
     GeneralHandler,
 )
 
@@ -36,12 +36,12 @@ REGISTRY: dict[str, object] = {
         RecidivismHandler(),
         WorstFirstHandler(),
         ConcealmentDetectionHandler(),
-        EnforcementAccountabilityHandler(),
         GeographicConcentrationHandler(),
         OwnershipChangeHandler(),
         BuildingDueDiligenceHandler(),
         RentStabilizationHandler(),
         FineEvasionHandler(),
+        EnforcementAccountabilityHandler(),
         NetworkExposureHandler(),
         GeneralHandler(),
     ]

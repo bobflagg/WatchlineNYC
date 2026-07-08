@@ -24,48 +24,8 @@ class _Stub(IntentHandler):
         return None
 
 
-class PortfolioConditionHandler(_Stub):
-    intent_category = "PortfolioCondition"
-    entity_class    = "actor"
-
-
-class RecidivismHandler(_Stub):
-    intent_category = "Recidivism"
-    entity_class    = "actor"
-
-
-class WorstFirstHandler(_Stub):
-    intent_category = "WorstFirst"
-    entity_class    = "actor"
-
-
-class ConcealmentDetectionHandler(_Stub):
-    intent_category = "ConcealmentDetection"
-    entity_class    = "actor"
-
-
-class EnforcementAccountabilityHandler(_Stub):
-    intent_category = "EnforcementAccountability"
-    entity_class    = "building"
-
-
-class GeographicConcentrationHandler(_Stub):
-    intent_category = "GeographicConcentration"
-    entity_class    = "building"
-
-
 class OwnershipChangeHandler(_Stub):
     intent_category = "OwnershipChange"
-    entity_class    = "building"
-
-
-class RentStabilizationHandler(_Stub):
-    intent_category = "RentStabilization"
-    entity_class    = "building"
-
-
-class FineEvasionHandler(_Stub):
-    intent_category = "FineEvasion"
     entity_class    = "building"
 
 

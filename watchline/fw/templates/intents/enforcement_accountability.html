@@ -1,0 +1,46 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Long-Open Class C Violations</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Class C violations are the highest severity category in the HPD system, representing
+    immediately hazardous conditions. These violations have been open for more than
+    365 days. Source: HPD violation data via Watchline.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.2rem;">
+    {{STAT_CARDS}}
+  </div>
+
+  {{STALE_TABLE}}
+
+  <div class="wl-meta-strip">
+    <span>Building: {{ADDRESS}}, {{BOROUGH}}</span>
+    <span>BBL: {{BBL}}</span>
+    <span>Residential units: {{UNITS}}</span>
+    <span>Source: HPD Violations + HPD Litigations</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule EA-001 — {{RULE_TITLE}}</div>
+
+  <table class="wl-rule-meta">
+    <tr><th>Rule ID</th><td>{{RULE_ID}} ({{GRAPH_RULE_ID}})</td></tr>
+    <tr><th>Version</th><td>{{RULE_VERSION}}</td></tr>
+    <tr><th>Authority</th><td>{{AUTHORITY}}</td></tr>
+    <tr><th>Interpretive status</th><td>Inferred</td></tr>
+    <tr><th>Threshold</th><td>{{THRESHOLD_LOGIC}}</td></tr>
+  </table>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Signal Evaluation</div>
+  {{SIGNAL_CARD}}
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Threshold Statement</div>
+  <blockquote class="wl-threshold-quote">{{THRESHOLD_STATEMENT}}</blockquote>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Data Limitations</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Court action data is sourced from HPD litigations only. OCA (Office of Court
+    Administration) housing court data, which would capture filings by tenants and
+    other parties, has not yet been ingested into the Watchline graph. HPD also
+    enforces through the Alternative Enforcement Program (AEP) and Emergency Repair
+    Program (ERP), which are not captured as court filings. A zero court action count
+    reflects the HPD litigations record, not necessarily the complete enforcement history.
+  </p>

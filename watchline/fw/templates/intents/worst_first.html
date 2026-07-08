@@ -1,0 +1,53 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Top Landlords by PHC Building Count</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Ranked by number of buildings satisfying Rule PHC-001 (Persistent Hazardous
+    Conditions). Only landlords with portfolios of 5 or more buildings are included.
+    PHC rate is the share of a landlord's portfolio with persistent hazardous conditions.
+    Source: Watchline epistemic knowledge graph derived from HPD violation data.
+  </p>
+
+  <table class="wl-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Landlord</th>
+        <th>Portfolio</th>
+        <th>PHC buildings</th>
+        <th>PHC rate</th>
+        <th>Units</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{RANKING_ROWS}}
+    </tbody>
+  </table>
+
+  {{AGGREGATE_BLOCK}}
+%%RULES%%
+  <div class="wl-section-head">Ranking Methodology</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    This ranking applies no new rule. It aggregates pre-computed findings from
+    Rule PHC-001 (Persistent Hazardous Conditions, RUL-00001) across each
+    landlord's probable beneficial control portfolio (Rule PBC-001, RUL-00002).
+    Rank is determined by raw PHC building count, not PHC rate — a large landlord
+    with many PHC buildings ranks higher than a small landlord with a 100% PHC
+    rate. Both metrics are shown so the reader can weight them appropriately.
+  </p>
+
+  <div class="wl-section-head">Minimum Portfolio Filter</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Landlords with fewer than 5 buildings in the Watchline graph are excluded.
+    Small portfolios often satisfy PHC-001 on all buildings by coincidence of
+    scale rather than systemic neglect.
+  </p>
+
+  <div class="wl-section-head">Epistemic Limitations</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Portfolio boundaries are determined by Rule PBC-001, which infers probable
+    beneficial control from HPD registration patterns. Actors whose portfolios
+    are misidentified or split across multiple network nodes will appear with
+    incomplete counts. This ranking reflects the state of the Watchline graph
+    at last build and should be treated as a starting point for investigation,
+    not a definitive finding.
+  </p>

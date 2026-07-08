@@ -1,0 +1,49 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Portfolio Recidivism Signals</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Recidivism is evaluated across two signals: geographic spread of persistent
+    hazardous conditions (PHC-001 buildings across boroughs) and temporal persistence
+    (buildings with Class C violations open for 3 or more years).
+    Source: HPD violation data and Watchline PHC-001 claims.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.2rem;">
+    {{STAT_CARDS}}
+  </div>
+
+  {{SIGNAL_SUMMARY}}
+
+  {{NOTABLE_TABLE}}
+
+  <div class="wl-meta-strip">
+    <span>Actor: {{ACTOR_NAME}}</span>
+    <span>Portfolio: {{PORTFOLIO_SIZE}} buildings</span>
+    <span>PHC boroughs: {{PHC_BOROUGHS}}</span>
+    <span>Source: HPD via Watchline</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule RCV-001 — {{RULE_TITLE}}</div>
+
+  <table class="wl-rule-meta">
+    <tr><th>Rule ID</th><td>{{RULE_ID}} ({{GRAPH_RULE_ID}})</td></tr>
+    <tr><th>Version</th><td>{{RULE_VERSION}}</td></tr>
+    <tr><th>Authority</th><td>{{AUTHORITY}}</td></tr>
+    <tr><th>Interpretive status</th><td>Inferred</td></tr>
+    <tr><th>Threshold</th><td>{{THRESHOLD_LOGIC}}</td></tr>
+  </table>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Signal Evaluation</div>
+  {{SIGNAL_CARDS}}
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Threshold Statement</div>
+  <blockquote class="wl-threshold-quote">{{THRESHOLD_STATEMENT}}</blockquote>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Methodological Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The multi-year signal uses the year of the oldest currently-open Class C violation
+    as a proxy for years with persistent conditions. It does not verify that Class C
+    violations were continuously open in each intervening year, only that at least one
+    has remained open since the threshold year. A violation opened in 2022 and still
+    open in 2026 counts as 4 years, but the building may have had periods with fewer
+    active violations in between. This is a conservative approximation.
+  </p>

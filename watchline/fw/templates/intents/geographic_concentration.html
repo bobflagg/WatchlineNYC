@@ -1,0 +1,46 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">PHC Buildings by Borough</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Buildings satisfying Rule PHC-001 (Persistent Hazardous Conditions), grouped
+    by borough. PHC-001 fires when a building has 3 or more open Class C
+    (immediately hazardous) violations with the oldest open for more than 180 days.
+    Source: Watchline epistemic knowledge graph derived from HPD violation data.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.2rem;">
+    {{SUMMARY_CARDS}}
+  </div>
+
+  {{BOROUGH_TABLE}}
+
+  {{TOP_BUILDINGS_SECTION}}
+
+  <div class="wl-meta-strip">
+    <span>Filter: {{BOROUGH_FILTER}}</span>
+    <span>Rule: PHC-001 (RUL-00001)</span>
+    <span>Source: HPD via Watchline</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Methodology</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    This view aggregates pre-computed PHC-001 (Persistent Hazardous Conditions)
+    claims by borough. PHC-001 is evaluated at the building level by a separate
+    pipeline; this query counts how many PHC-flagged buildings exist per borough
+    and how many residential units they contain.
+  </p>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Geographic Resolution</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Current resolution is borough-level only. Building nodes contain
+    latitude and longitude fields which could support finer-grained spatial
+    clustering (e.g., by community district or NTA) in a future version.
+    Borough boundaries are as recorded in HPD registration data.
+  </p>
+
+  <div class="wl-section-head" style="margin-top:1.2rem;">Epistemic Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    PHC counts reflect the state of the Watchline graph at last build.
+    Buildings without HPD violation history (e.g., newer buildings or
+    those with only DOB violations) are not included. The PHC-001 threshold
+    is Watchline editorial judgment, not a statutory enforcement classification.
+  </p>

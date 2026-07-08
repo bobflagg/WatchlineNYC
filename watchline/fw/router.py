@@ -49,6 +49,31 @@ def select_rules(state: WatchlineState) -> dict:
             },
         }
 
+    # WorstFirst is a dataset-level query — no entity needed
+    if intent_cat == "WorstFirst":
+        return {
+            "needs_clarification": False,
+            "traversal_results": {
+                "handler":         handler,
+                "traversal_type":  handler.traversal_key(),
+                "params":          {},
+                "resolved_entity": None,
+            },
+        }
+
+    # GeographicConcentration is a geographic query — no named entity needed;
+    # passes optional borough from the intent extractor's borough field
+    if intent_cat == "GeographicConcentration":
+        return {
+            "needs_clarification": False,
+            "traversal_results": {
+                "handler":         handler,
+                "traversal_type":  handler.traversal_key(),
+                "params":          handler.get_params(intent),
+                "resolved_entity": None,
+            },
+        }
+
     # Cannot proceed without any entity signal
     if entity_type == "Unknown" or not any([
         intent.get("address"),

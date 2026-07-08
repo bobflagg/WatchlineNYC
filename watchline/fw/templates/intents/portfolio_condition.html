@@ -1,0 +1,80 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Portfolio Summary</div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.4rem;">
+    {{SUMMARY_CARDS}}
+  </div>
+
+  {{PBC_CLAIM_BLOCK}}
+
+  {{PHC_TABLE}}
+
+  <div class="wl-section-head">Actor Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Actor name</span>
+    <span class="wl-meta-val">{{ACTOR_NAME}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Actor ID</span>
+    <span class="wl-meta-val" style="font-family:monospace;font-size:0.82rem;">{{CANONICAL_ID}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD (NYC Housing Preservation &amp; Development) registration data via Watchline portfolio detection</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule PHC-001 — Persistent Hazardous Conditions</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">PHC-001 (RUL-00001)</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">PHC-001 Threshold (per building)</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Portfolio-level signal</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    PortfolioCondition aggregates pre-computed PHC-001 Claims across all buildings
+    under the actor's probable beneficial control (PBC-001 / RUL-00002). The 50%
+    PHC rate flag is Watchline editorial judgment, not a formal rule — it identifies
+    actors whose portfolios show a pattern of persistent hazardous conditions rather
+    than isolated incidents.
+  </p>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">PHC buildings</span>
+    <span class="wl-meta-val">{{PHC_BUILDINGS}} of {{PORTFOLIO_SIZE}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">PHC rate</span>
+    <span class="wl-meta-val">{{PHC_RATE_DISPLAY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">High-PHC-rate flag (&ge;50%)</span>
+    <span class="wl-meta-val">{{HIGH_PHC_LABEL}}</span>
+  </div>
+
+  <div class="wl-section-head">Falsification Conditions (PHC-001)</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>

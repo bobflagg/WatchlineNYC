@@ -1,0 +1,117 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Rent-Stabilized Unit History</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Source: DHCR rent registration records via the Furman Center for Real Estate
+    and Urban Policy. Years with no data indicate the building was not registered
+    as rent-stabilized for that year or data was unavailable.
+  </p>
+
+  <table class="wl-table">
+    <thead>
+      <tr>
+        <th>Year</th>
+        <th>RS Units</th>
+        <th>Change from prior year</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{RS_YEAR_ROWS}}
+    </tbody>
+  </table>
+
+  {{RS_SUMMARY_BLOCK}}
+
+  {{PDFSOA_LINK}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units (total)</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">RS units (current)</span>
+    <span class="wl-meta-val">{{RS_CURRENT}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">DHCR (NYS Division of Housing and Community Renewal) via Furman Center for Real Estate and Urban Policy</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule RS-001 — Rent Stabilization Loss</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">RS-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data window</span>
+    <span class="wl-meta-val">{{EARLIEST_YEAR}} — {{LATEST_YEAR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+
+    <div class="wl-signal-card {{SIGNAL_A_CLASS}}">
+      <div class="wl-signal-label">Signal A — Unit count declining</div>
+      <div class="wl-signal-verdict">{{SIGNAL_A_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        rs_units_change: <strong>{{RS_CHANGE}}</strong><br/>
+        Earliest data: <strong>{{EARLIEST_YEAR}}</strong> &nbsp;·&nbsp; Latest data: <strong>{{LATEST_YEAR}}</strong>
+      </div>
+    </div>
+
+    <div class="wl-signal-card {{SIGNAL_B_CLASS}}">
+      <div class="wl-signal-label">Signal B — DHCR deregistration flag</div>
+      <div class="wl-signal-verdict">{{SIGNAL_B_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        rs_deregulating: <strong>{{DEREGULATING_FLAG}}</strong>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="wl-section-head">Editorial Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The rs_deregulating flag is derived from Furman Center analysis of DHCR records.
+    Watchline does not independently compute this flag. A building can show a negative
+    unit change due to legitimate vacancies, rehabilitation exemptions, or data
+    corrections. Requiring the deregistration flag is intended to distinguish systematic
+    removal of units from the stabilization registry from transient fluctuations.
+    Both signals must be satisfied for the rule to fire.
+  </p>
