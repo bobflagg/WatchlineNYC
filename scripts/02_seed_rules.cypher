@@ -363,8 +363,34 @@ SET
   r.deprecated                 = false;
 
 
+// RUL-00014: OC-001 -- Ownership Change Deterioration
+// Interpretation layer. Evaluates whether building conditions worsened after
+// an arm's-length deed transfer, using ACRIS deed records as the change date
+// and HPD Class C violation rates as the condition signal.
+// Evaluated by the OwnershipChange intent handler.
+// -----------------------------------------------------------------------------
+MERGE (r:Rule:WatchlineNode:VersionedObject:AuditableRecord {rule_id: 'RUL-00014'})
+SET
+  r.name                       = 'OC-001',
+  r.title                      = 'Ownership Change Deterioration',
+  r.version                    = '1.0',
+  r.author                     = 'Watchline NYC project team',
+  r.authority                  = 'ACRIS deed transfer records (NYC Department of Finance) establish the ownership change date. HPD violation data establishes the Class C violation rate before and after the transfer. The deterioration signal is Watchline editorial judgment: a 50% or greater increase in the annualized Class C violation rate after an arm\'s-length sale indicates that the new owner has allowed conditions to worsen. This is not a statutory or regulatory determination.',
+  r.interpretive_concept       = 'OwnershipChange',
+  r.input_types                = 'Building|Event[DeedTransfer, ACRIS]|Event[HPD Violation, Class C]',
+  r.threshold_description      = 'A building satisfies Watchline Rule OC-001 (Ownership Change Deterioration) if: (1) at least one arm\'s-length deed transfer is recorded in ACRIS since 2010, defined as doc_type DEED with doc_amount greater than zero and pct_transferred of 50 or more; AND (2) the annualized rate of Class C (immediately hazardous) HPD violations in the period after the most recent qualifying transfer is at least 50% higher than the annualized rate in the period before the transfer; AND (3) at least 180 days have elapsed since the transfer (insufficient post-transfer data otherwise). A building with no Class C violations before the transfer and at least one after also satisfies the rule. Minimum pre-transfer data requirement: 365 days of violation history. The 50% rate-increase threshold and the 180-day minimum post-transfer window are initial calibration choices.',
+  r.threshold_logic            = 'has_qualifying_deed AND days_after >= 180 AND (rate_after >= rate_before * 1.5 OR (rate_before == 0 AND c_after > 0))',
+  r.output_interpretive_status = 'Inferred',
+  r.effective_date             = date('2026-07-08'),
+  r.expiry_date                = null,
+  r.explanation_template       = 'The building at {address} {verdict} Watchline Rule OC-001 (Ownership Change Deterioration). The most recent qualifying deed transfer occurred on {deed_date} from {grantor} to {grantee}. In the {days_before}-day period before the transfer, {c_before} Class C violations were issued ({rate_before} per year). In the {days_after}-day period after the transfer, {c_after} Class C violations were issued ({rate_after} per year). The interpretive status is Inferred.',
+  r.falsification_conditions   = 'No qualifying deed transfer found in ACRIS since 2010 (data constraint: earlier deeds not ingested). Or: the annualized Class C rate after the transfer does not exceed the before rate by 50% or more. Or: fewer than 180 days have elapsed since the transfer (insufficient data). Or: the deed transfer was a legal instrument change (trust, LLC restructuring) rather than a change of beneficial control — in which case grantee_canonical_id reconciliation to an existing Actor node would indicate continuity of control.',
+  r.amendment_notes            = 'Initial version. Uses ACRIS deed date as the change event. Arm\'s-length filter (doc_amount > 0, pct_transferred >= 50) excludes trust transfers, intra-family transfers, and partial interest sales. ACRIS coverage starts 2010; deed transfers before 2010 are not in the graph, which means some buildings will show a shorter before-period than their actual history. The 50% rate-increase threshold was chosen to reduce false positives from buildings with naturally high violation rates before sale. A future version should account for building size (violations per residential unit rather than raw count).',
+  r.deprecated                 = false;
+
+
 // =============================================================================
-// Verification query -- run after seeding to confirm all thirteen rules are present
+// Verification query -- run after seeding to confirm all fourteen rules are present
 // =============================================================================
 //
 // MATCH (r:Rule)

@@ -24,11 +24,6 @@ class _Stub(IntentHandler):
         return None
 
 
-class OwnershipChangeHandler(_Stub):
-    intent_category = "OwnershipChange"
-    entity_class    = "building"
-
-
 class GeneralHandler(_Stub):
     intent_category = "General"
     entity_class    = "building"

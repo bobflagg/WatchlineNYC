@@ -21,8 +21,8 @@ from watchline.fw.intents.recidivism import RecidivismHandler
 from watchline.fw.intents.concealment_detection import ConcealmentDetectionHandler
 from watchline.fw.intents.geographic_concentration import GeographicConcentrationHandler
 from watchline.fw.intents.network_exposure import NetworkExposureHandler
+from watchline.fw.intents.ownership_change import OwnershipChangeHandler
 from watchline.fw.intents.stubs import (
-    OwnershipChangeHandler,
     GeneralHandler,
 )
 

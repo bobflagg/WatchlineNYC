@@ -2388,6 +2388,163 @@ def _render_recidivism(tr: dict, prose: str) -> dict:
 
 
 # Registry: intent_category -> panel renderer function
+def _render_ownership_change(tr: dict, prose: str) -> dict:
+    """Render panel content for OwnershipChange (Rule OC-001)."""
+    raw = tr.get("raw_results", [])
+    ev  = tr.get("rule_evaluation") or {}
+
+    r             = raw[0] if raw else {}
+    address       = _esc(r.get("address", "—"))
+    borough       = _esc(r.get("borough", "—"))
+    units         = int(r.get("residential_units") or 0)
+    no_deed       = bool(ev.get("no_deed_found", False))
+    insufficient  = bool(ev.get("insufficient_data", False))
+    signal        = bool(ev.get("deterioration_signal", False))
+
+    deed_date     = _esc(str(ev.get("deed_date") or "—"))
+    grantor       = _esc(str(ev.get("grantor_names") or "—"))
+    grantee       = _esc(str(ev.get("grantee_names") or "—"))
+    deed_amount   = ev.get("deed_amount") or 0
+    pct           = ev.get("pct_transferred") or 0
+    c_before      = int(ev.get("c_before") or 0)
+    c_after       = int(ev.get("c_after")  or 0)
+    c_open_after  = int(ev.get("c_open_after") or 0)
+    days_before   = int(ev.get("days_before") or 0)
+    days_after    = int(ev.get("days_after")  or 0)
+    rate_before   = ev.get("rate_before") or 0.0
+    rate_after    = ev.get("rate_after")  or 0.0
+    rate_pct      = ev.get("rate_increase_pct")
+    threshold     = _esc(ev.get("threshold_statement", ""))
+
+    tmpl     = _intent_tmpl("ownership_change")
+    sections = tmpl.split("%%")
+    _KNOWN   = {"EVIDENCE", "RULES"}
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN:
+            tmpl_map[key] = sections[i + 1]
+
+    # --- Deed stat cards ---
+    years_before = round(days_before / 365, 1) if days_before else 0
+    years_after  = round(days_after  / 365, 1) if days_after  else 0
+    amount_fmt   = f"${deed_amount:,.0f}" if deed_amount else "$0"
+
+    deed_cards = (
+        _stat_mini("Latest qualifying sale", deed_date)
+        + _stat_mini("Sale price", amount_fmt)
+        + _stat_mini("% transferred", f"{int(pct)}%")
+        + _stat_mini("Building units", str(units))
+    )
+
+    # --- Rate comparison cards ---
+    rate_arrow = ""
+    if rate_before > 0 and rate_after > 0:
+        if rate_after >= rate_before * 1.5:
+            rate_arrow = "↑"
+        elif rate_after < rate_before:
+            rate_arrow = "↓"
+        else:
+            rate_arrow = "→"
+
+    rate_cards = (
+        _stat_mini(f"Class C / yr before ({years_before:.1f} yrs)", str(rate_before),
+                   danger=(rate_before > 0 and rate_after >= rate_before * 1.5))
+        + _stat_mini(f"Class C / yr after ({years_after:.1f} yrs)", f"{rate_after} {rate_arrow}",
+                     danger=signal)
+        + _stat_mini("Currently open (after)", str(c_open_after), danger=c_open_after > 0)
+        + _stat_mini("Rate change", (
+            f"+{rate_pct}%" if rate_pct is not None else "∞" if c_after > 0 else "—"
+        ), danger=signal)
+    )
+
+    # --- Signal banner ---
+    if no_deed:
+        signal_color = "#6b7a99"
+        signal_label = "No qualifying deed transfer found in ACRIS since 2010"
+        signal_detail = ev.get("insufficient_data_reason", "")
+    elif insufficient:
+        signal_color = "#e67e22"
+        signal_label = "Insufficient data — OC-001 cannot be evaluated"
+        reason_parts = []
+        if days_after < 180:
+            reason_parts.append(f"only {days_after} days since transfer (minimum: 180)")
+        if days_before < 365 and c_before == 0:
+            reason_parts.append("no violation history before the transfer")
+        signal_detail = "; ".join(reason_parts) if reason_parts else ""
+    elif signal:
+        signal_color = "#c0392b"
+        signal_label = "Deterioration signal detected — OC-001 SATISFIED"
+        signal_detail = (
+            f"Annualized Class C rate increased from {rate_before}/yr to {rate_after}/yr "
+            f"after the {deed_date} sale"
+        )
+    else:
+        signal_color = "#27ae60"
+        signal_label = "No deterioration signal — OC-001 NOT satisfied"
+        signal_detail = (
+            f"Annualized Class C rate: {rate_before}/yr before, {rate_after}/yr after"
+        )
+
+    signal_html = (
+        f'<div class="wl-signal-card" style="border-left:4px solid {signal_color};'
+        f'padding:12px 16px;margin:12px 0;background:#fff;">'
+        f'<div style="color:{signal_color};font-weight:700;font-size:0.95rem;">'
+        f'{signal_label}</div>'
+        f'<div style="color:#2b2b2b;font-size:0.85rem;margin-top:4px;">{_esc(str(signal_detail))}</div>'
+        f'</div>'
+    )
+
+    # --- Deed history table rows ---
+    deed_history = [d for d in (ev.get("deed_history") or []) if d and d.get("deed_date")]
+    if deed_history:
+        rows = ""
+        for d in deed_history[:10]:
+            amt = d.get("amount") or 0
+            rows += (
+                f"<tr>"
+                f"<td>{_esc(str(d.get('deed_date','—')))}</td>"
+                f"<td style='font-size:0.82rem;'>{_esc(str(d.get('grantor','—')))}</td>"
+                f"<td style='font-size:0.82rem;'>{_esc(str(d.get('grantee','—')))}</td>"
+                f"<td>${amt:,.0f}</td>"
+                f"<td>{int(d.get('pct') or 0)}%</td>"
+                f"</tr>"
+            )
+        deed_rows_html = rows
+    else:
+        deed_rows_html = (
+            '<tr><td colspan="5" style="color:#6b7a99;font-size:0.85rem;">'
+            'No qualifying deed transfers found since 2010.</td></tr>'
+        )
+
+    # --- Rule metadata ---
+    rule_meta_html = (
+        f'Rule ID: RUL-00014 &nbsp;|&nbsp; Version: 1.0 &nbsp;|&nbsp; '
+        f'Effective: 2026-07-08 &nbsp;|&nbsp; '
+        f'Interpretive status: Inferred'
+    )
+
+    # Populate template
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{DEED_STAT_CARDS}}", deed_cards)
+        .replace("{{RATE_STAT_CARDS}}", rate_cards)
+        .replace("{{SIGNAL_BANNER}}", signal_html)
+        .replace("{{DEED_HISTORY_ROWS}}", deed_rows_html)
+    )
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_META}}", rule_meta_html)
+        .replace("{{THRESHOLD_STATEMENT}}", threshold)
+    )
+
+    return {
+        "SUMMARY_PANEL":  f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
 _PANEL_RENDERERS = {
     "DeteriorationTrajectory":      _render_deterioration,
     "PortfolioIdentification":      _render_portfolio_identification,
@@ -2401,6 +2558,7 @@ _PANEL_RENDERERS = {
     "GeographicConcentration":      _render_geographic_concentration,
     "Recidivism":                   _render_recidivism,
     "NetworkExposure":              _render_network_exposure,
+    "OwnershipChange":              _render_ownership_change,
 }
 
 
