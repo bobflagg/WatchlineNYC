@@ -198,7 +198,7 @@ serve-status: ## Show whether FastAPI and Streamlit are running
 # KG build pipeline -- full build from scratch
 # ---------------------------------------------------------------------------
 
-build: schema seed-rules indexes hpd dob ecb hpd-lit rentstab portfolio agents reconcile phc001 ## Full KG build from scratch
+build: schema seed-rules indexes hpd dob ecb hpd-lit rentstab portfolio agents acris reconcile phc001 ## Full KG build from scratch
 	@echo ""
 	@echo "Full Watchline KG build complete. Run 'make verify' to confirm."
 
@@ -264,6 +264,12 @@ agents: ## Ingest managing agents from HPD registration contacts
 	$(PYTHON) -m $(INGEST).agents.pipeline --step load
 	$(PYTHON) -m $(INGEST).agents.pipeline --step store
 	@echo "Agents pipeline complete."
+
+acris: ## Ingest ACRIS deed transfer records (DEED + CORRD, 2010–present)
+	@echo "Ingesting ACRIS deed transfer records..."
+	$(PYTHON) -m $(INGEST).acris.pipeline --step load
+	$(PYTHON) -m $(INGEST).acris.pipeline --step store
+	@echo "ACRIS pipeline complete."
 
 
 # ---------------------------------------------------------------------------
