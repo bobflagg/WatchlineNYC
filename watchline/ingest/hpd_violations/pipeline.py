@@ -1,0 +1,554 @@
+"""
+Watchline HPD Violations Ingestion Pipeline
+watchline/ingest/hpd_violations/pipeline.py
+
+Ingests HPD violations from the deedwatch PostgreSQL database into
+the Watchline Neo4j knowledge graph.
+
+What this pipeline creates:
+  Layer 1 (Domain):
+    - Building nodes (one per distinct BBL, enriched from MapPLUTO)
+    - Event nodes of event_type=Violation (one per HPD violation)
+    - HAS_EVENT edges linking Buildings to their Violations
+
+  Layer 2 (Evidence):
+    - Source node for HPD Violations (created/updated on every run)
+    - Observation nodes (one per violation row)
+    - ORIGINATES_IN edges from Observations to Source
+
+  After this pipeline completes, run:
+    uv run python -m watchline.ingest.portfolio.pipeline --step reconcile
+
+Scope: all violations (open and closed). Class I (informational notices)
+       are included and flagged via violation_class = 'I'.
+       Event.status distinguishes Open from Closed violations.
+
+Usage:
+    uv run python -m watchline.ingest.hpd_violations.pipeline
+    uv run python -m watchline.ingest.hpd_violations.pipeline --step source
+    uv run python -m watchline.ingest.hpd_violations.pipeline --step buildings
+    uv run python -m watchline.ingest.hpd_violations.pipeline --step violations
+"""
+
+import argparse
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterator, List
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from neo4j import GraphDatabase
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+NEO4J_DATABASE = os.environ.get("NEO4J_DATABASE", "neo4j")
+
+BUILDING_BATCH_SIZE = 500
+VIOLATION_BATCH_SIZE = 500
+OBSERVATION_BATCH_SIZE = 500
+
+HPD_VIOLATIONS_SOURCE = {
+    "source_id":        "SRC-HPD-VIOLATIONS-001",
+    "source_name":      "HPD Online Violations",
+    "producing_agency": "NYC Department of Housing Preservation and Development",
+    "legal_authority": (
+        "New York City Administrative Code, Housing Maintenance Code. "
+        "HPD is empowered to issue notices of violation (NOVs) for conditions "
+        "that violate the Housing Maintenance Code. Class A: non-hazardous. "
+        "Class B: hazardous. Class C: immediately hazardous. "
+        "Class I: informational notices (not violations in the legal sense)."
+    ),
+    "data_url": (
+        "https://data.cityofnewyork.us/Housing-Development/"
+        "Housing-Maintenance-Code-Violations/wvxf-dwi5"
+    ),
+    "description": (
+        "HPD Housing Maintenance Code violations. Legally empowered to assert: "
+        "that an HPD inspector observed a condition at a specific address on a "
+        "specific date that violates the Housing Maintenance Code, and the class "
+        "of that violation (A/B/C/I). Does NOT assert that the condition persists "
+        "today, that the owner is responsible, or that any enforcement action "
+        "has been or will be taken. Includes all violations: open and closed. "
+        "Event.status distinguishes current state. Class I records are "
+        "informational notices, not violations in the legal sense."
+    ),
+}
+
+PLUTO_SOURCE = {
+    "source_id":        "SRC-PLUTO-001",
+    "source_name":      "MapPLUTO",
+    "producing_agency": "NYC Department of City Planning",
+    "legal_authority": (
+        "NYC Department of City Planning authoritative tax lot dataset. "
+        "Derived from NYC Department of Finance RPAD data and other city sources."
+    ),
+    "data_url": "https://www.nyc.gov/site/planning/data-maps/open-data/dwn-pluto-mappluto.page",
+    "description": (
+        "MapPLUTO tax lot data. Used to enrich Building nodes with address, "
+        "coordinates, residential unit count, year built, and building class. "
+        "Legally empowered to assert: the physical and administrative "
+        "characteristics of a tax lot as recorded by NYC. Does NOT assert "
+        "current ownership."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Connections
+# ---------------------------------------------------------------------------
+
+def pg_conn():
+    return psycopg2.connect(
+        host=os.environ["PGHOST"],
+        port=os.environ["PGPORT"],
+        dbname=os.environ["PGDATABASE"],
+        user=os.environ["PGUSER"],
+        password=os.environ["PGPASSWORD"],
+    )
+
+
+def neo4j_driver():
+    return GraphDatabase.driver(
+        os.environ["NEO4J_URI"],
+        auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# BBL normalization
+# ---------------------------------------------------------------------------
+
+def normalize_bbl(row: dict) -> str:
+    """
+    Return a canonical 10-digit BBL string.
+    Falls back to constructing from boroid/block/lot when bbl field is blank.
+    """
+    bbl = (row.get("bbl") or "").strip()
+    if len(bbl) == 10:
+        return bbl
+    # Reconstruct from components
+    boroid = str(row.get("boroid") or "").strip().lstrip("0") or "0"
+    block  = str(row.get("block")  or 0)
+    lot    = str(row.get("lot")    or 0)
+    return boroid.zfill(1) + block.zfill(5) + lot.zfill(4)
+
+
+# ---------------------------------------------------------------------------
+# Step 1: Source nodes
+# ---------------------------------------------------------------------------
+
+def create_source_nodes(session) -> None:
+    """Create or update Source nodes for HPD Violations and PLUTO."""
+    now  = datetime.now(timezone.utc).isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    for src in (HPD_VIOLATIONS_SOURCE, PLUTO_SOURCE):
+        session.run(
+            """
+            MERGE (s:Source:WatchlineNode {source_id: $source_id})
+            SET s.source_name      = $source_name,
+                s.producing_agency = $producing_agency,
+                s.legal_authority  = $legal_authority,
+                s.data_url         = $data_url,
+                s.description      = $description,
+                s.retrieval_date   = date($today),
+                s.updated_at       = datetime($now),
+                s.created_at       = CASE WHEN s.created_at IS NULL
+                                         THEN datetime($now)
+                                         ELSE s.created_at END
+            """,
+            today=today,
+            now=now,
+            **src,
+        )
+        print(f"  Source node created/updated: {src['source_name']}")
+
+
+# ---------------------------------------------------------------------------
+# Step 2: Building nodes
+# ---------------------------------------------------------------------------
+
+BUILDINGS_SQL = """
+SELECT
+    v.bbl_canonical,
+    MAX(v.housenumber)  AS housenumber,
+    MAX(v.streetname)   AS streetname,
+    MAX(v.borough)      AS borough,
+    MAX(v.postcode)     AS postcode,
+    MAX(v.bin)          AS bin,
+    MAX(v.latitude)     AS latitude,
+    MAX(v.longitude)    AS longitude,
+    -- PLUTO enrichment (preferred over HPD address fields)
+    MAX(p.address)      AS pluto_address,
+    MAX(p.unitsres)     AS residential_units,
+    MAX(p.yearbuilt)    AS year_built,
+    MAX(p.bldgclass)    AS building_class,
+    MAX(p.latitude)     AS pluto_latitude,
+    MAX(p.longitude)    AS pluto_longitude
+FROM (
+    SELECT
+        CASE
+            WHEN trim(bbl) = '' OR bbl IS NULL
+            THEN lpad(boroid::text,1,'0')||lpad(block::text,5,'0')||lpad(lot::text,4,'0')
+            ELSE trim(bbl)
+        END AS bbl_canonical,
+        housenumber,
+        streetname,
+        borough,
+        postcode,
+        trim(bin) AS bin,
+        latitude::float,
+        longitude::float
+    FROM hpd_violations
+    WHERE bbl IS NOT NULL
+) v
+LEFT JOIN pluto_latest p ON p.bbl = v.bbl_canonical
+GROUP BY v.bbl_canonical
+"""
+
+BOROUGH_MAP = {
+    "MANHATTAN":     "Manhattan",
+    "BROOKLYN":      "Brooklyn",
+    "QUEENS":        "Queens",
+    "BRONX":         "Bronx",
+    "STATEN ISLAND": "Staten Island",
+}
+
+
+def _building_batches(conn) -> Iterator[List[dict]]:
+    """Yield batches of building dicts from the joined query."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        print("  Querying distinct buildings from hpd_violations + pluto_latest ...")
+        cur.execute(BUILDINGS_SQL)
+        batch = []
+        for row in cur:
+            raw_borough = (row["borough"] or "").upper().strip()
+            borough = BOROUGH_MAP.get(raw_borough, raw_borough.title())
+            address = (
+                row["pluto_address"]
+                or f"{row['housenumber'] or ''} {row['streetname'] or ''}".strip()
+                or ""
+            )
+            lat = row["pluto_latitude"] or row["latitude"]
+            lon = row["pluto_longitude"] or row["longitude"]
+
+            batch.append({
+                "bbl":               row["bbl_canonical"],
+                "address":           address,
+                "borough":           borough,
+                "bin":               (row["bin"] or "").strip() or None,
+                "postcode":          (row["postcode"] or "").strip() or None,
+                "latitude":          float(lat) if lat else None,
+                "longitude":         float(lon) if lon else None,
+                "residential_units": row["residential_units"],
+                "year_built":        row["year_built"],
+                "building_class":    (row["building_class"] or "").strip() or None,
+            })
+            if len(batch) == BUILDING_BATCH_SIZE:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
+
+def load_buildings(session, conn) -> int:
+    """
+    Write Building nodes to Neo4j. Uses MERGE on bbl so re-runs are safe.
+    Returns total buildings written.
+    """
+    cypher = """
+    UNWIND $batch AS b
+    MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
+    SET bld.address           = b.address,
+        bld.borough           = b.borough,
+        bld.bin               = b.bin,
+        bld.latitude          = b.latitude,
+        bld.longitude         = b.longitude,
+        bld.residential_units = b.residential_units,
+        bld.year_built        = b.year_built,
+        bld.building_class    = b.building_class,
+        bld.updated_at        = datetime($now),
+        bld.created_at        = CASE WHEN bld.created_at IS NULL
+                                     THEN datetime($now)
+                                     ELSE bld.created_at END
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    total = 0
+    for batch in _building_batches(conn):
+        session.run(cypher, batch=batch, now=now)
+        total += len(batch)
+        if total % 10_000 == 0:
+            print(f"    {total:,} buildings written ...")
+    return total
+
+
+# ---------------------------------------------------------------------------
+# Step 3: Violation Events + Observations
+# ---------------------------------------------------------------------------
+
+VIOLATIONS_SQL = """
+SELECT
+    violationid,
+    CASE
+        WHEN trim(bbl) = '' OR bbl IS NULL
+        THEN lpad(boroid::text,1,'0')||lpad(block::text,5,'0')||lpad(lot::text,4,'0')
+        ELSE trim(bbl)
+    END AS bbl_canonical,
+    class,
+    inspectiondate,
+    novissueddate,
+    currentstatus,
+    currentstatusdate,
+    violationstatus,
+    novdescription,
+    ordernumber,
+    originalcorrectbydate,
+    newcorrectbydate,
+    certifieddate,
+    rentimpairing,
+    apartment,
+    story,
+    novtype
+FROM hpd_violations
+WHERE bbl IS NOT NULL
+ORDER BY violationid
+"""
+
+STATUS_MAP = {
+    "Open":  "Open",
+    "Close": "Closed",
+}
+
+CLASS_MAP = {
+    "A": "A",
+    "B": "B",
+    "C": "C",
+    "I": "I",
+}
+
+
+def _violation_batches(conn) -> Iterator[List[dict]]:
+    """Yield batches of violation dicts using a server-side cursor for streaming."""
+    with conn.cursor(name="hpd_violations_cursor",
+                     cursor_factory=RealDictCursor) as cur:
+        cur.itersize = 2000
+        print("  Querying all violations (open and closed) ...")
+        cur.execute(VIOLATIONS_SQL)
+        batch = []
+        for row in cur:
+            def d(col):
+                v = row.get(col)
+                return v.isoformat() if v else None
+
+            batch.append({
+                "event_id":              f"EVT-HPD-{row['violationid']}",
+                "bbl":                   row["bbl_canonical"],
+                "source_record_id":      str(row["violationid"]),
+                "event_type":            "Violation",
+                "source_name":           "HPD",
+                "event_date":            d("novissueddate") or d("inspectiondate"),
+                "status":                STATUS_MAP.get(row["violationstatus"], "Unknown"),
+                "violation_class":       CLASS_MAP.get((row["class"] or "").strip(), None),
+                "open_date":             d("novissueddate"),
+                "inspection_date":       d("inspectiondate"),
+                "current_status":        row["currentstatus"],
+                "current_status_date":   d("currentstatusdate"),
+                "original_correct_by":   d("originalcorrectbydate"),
+                "new_correct_by":        d("newcorrectbydate"),
+                "certified_date":        d("certifieddate"),
+                "description":           row["novdescription"],
+                "order_number":          row["ordernumber"],
+                "rent_impairing":        row["rentimpairing"],
+                "apartment":             row["apartment"],
+                "story":                 row["story"],
+                "nov_type":              row["novtype"],
+                "legal_authority":       "NYC Housing Maintenance Code",
+                "raw_record":            json.dumps({
+                    "violationid":       row["violationid"],
+                    "class":             row["class"],
+                    "currentstatus":     row["currentstatus"],
+                    "violationstatus":   row["violationstatus"],
+                    "novdescription":    row["novdescription"],
+                }),
+            })
+            if len(batch) == VIOLATION_BATCH_SIZE:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
+
+def load_violations(session, conn) -> int:
+    """
+    Write Event nodes and Observation nodes to Neo4j.
+    Links each Event to its Building via HAS_EVENT.
+    Links each Observation to the HPD Violations Source via ORIGINATES_IN.
+
+    Uses MERGE on event_id so re-runs are safe.
+    Skips events whose Building node does not exist (BBL not in graph).
+    Returns total violations written.
+    """
+    event_cypher = """
+    UNWIND $batch AS v
+    MATCH (bld:Building {bbl: v.bbl})
+    MERGE (e:Event:WatchlineNode {event_id: v.event_id})
+    SET e.event_type            = v.event_type,
+        e.source_id             = $source_id,
+        e.source_name           = v.source_name,
+        e.source_record_id      = v.source_record_id,
+        e.event_date            = CASE WHEN v.event_date IS NOT NULL
+                                       THEN date(v.event_date) ELSE null END,
+        e.status                = v.status,
+        e.violation_class       = v.violation_class,
+        e.open_date             = CASE WHEN v.open_date IS NOT NULL
+                                       THEN date(v.open_date) ELSE null END,
+        e.inspection_date       = CASE WHEN v.inspection_date IS NOT NULL
+                                       THEN date(v.inspection_date) ELSE null END,
+        e.current_status        = v.current_status,
+        e.current_status_date   = CASE WHEN v.current_status_date IS NOT NULL
+                                       THEN date(v.current_status_date) ELSE null END,
+        e.original_correct_by   = CASE WHEN v.original_correct_by IS NOT NULL
+                                       THEN date(v.original_correct_by) ELSE null END,
+        e.new_correct_by        = CASE WHEN v.new_correct_by IS NOT NULL
+                                       THEN date(v.new_correct_by) ELSE null END,
+        e.certified_date        = CASE WHEN v.certified_date IS NOT NULL
+                                       THEN date(v.certified_date) ELSE null END,
+        e.description           = v.description,
+        e.order_number          = v.order_number,
+        e.rent_impairing        = v.rent_impairing,
+        e.apartment             = v.apartment,
+        e.story                 = v.story,
+        e.nov_type              = v.nov_type,
+        e.legal_authority       = v.legal_authority,
+        e.raw_record            = v.raw_record,
+        e.created_at            = CASE WHEN e.created_at IS NULL
+                                       THEN datetime($now) ELSE e.created_at END
+    MERGE (bld)-[:HAS_EVENT]->(e)
+    WITH e, v
+    MATCH (s:Source {source_id: $source_id})
+    MERGE (obs:Observation:WatchlineNode {
+        observation_id: 'OBS-HPD-' + v.source_record_id
+    })
+    SET obs.source_id        = $source_id,
+        obs.raw_content      = v.raw_record,
+        obs.source_record_id = v.source_record_id,
+        obs.ingested_at      = CASE WHEN obs.ingested_at IS NULL
+                                    THEN datetime($now) ELSE obs.ingested_at END
+    MERGE (obs)-[:ORIGINATES_IN]->(s)
+    MERGE (e)-[:ORIGINATES_IN]->(s)
+    """
+
+    now = datetime.now(timezone.utc).isoformat()
+    total = 0
+    skipped = 0
+
+    for batch in _violation_batches(conn):
+        # Count how many buildings exist for this batch before writing
+        result = session.run(
+            """
+            UNWIND $bbls AS bbl
+            MATCH (b:Building {bbl: bbl})
+            RETURN count(b) AS found
+            """,
+            bbls=list({v["bbl"] for v in batch}),
+        ).single()
+        found = result["found"] if result else 0
+        missing = len({v["bbl"] for v in batch}) - found
+        skipped += missing
+
+        session.run(
+            event_cypher,
+            batch=batch,
+            source_id=HPD_VIOLATIONS_SOURCE["source_id"],
+            now=now,
+        )
+        total += len(batch)
+        if total % 10_000 == 0:
+            print(f"    {total:,} violations written ...")
+
+    return total, skipped
+
+
+# ---------------------------------------------------------------------------
+# Pipeline steps
+# ---------------------------------------------------------------------------
+
+def step_source(driver):
+    print("Step 1 -- Creating/updating Source nodes ...")
+    with driver.session(database=NEO4J_DATABASE) as session:
+        create_source_nodes(session)
+    print("  Done.")
+
+
+def step_buildings(driver):
+    print("Step 2 -- Writing Building nodes ...")
+    conn = pg_conn()
+    try:
+        with driver.session(database=NEO4J_DATABASE) as session:
+            total = load_buildings(session, conn)
+        print(f"  {total:,} Building nodes written.")
+    finally:
+        conn.close()
+
+
+def step_violations(driver):
+    print("Step 3 -- Writing Violation Event nodes ...")
+    conn = pg_conn()
+    try:
+        with driver.session(database=NEO4J_DATABASE) as session:
+            total, skipped = load_violations(session, conn)
+        print(f"  {total:,} Violation Events written.")
+        if skipped:
+            print(f"  {skipped:,} BBLs in violations had no Building node (unexpected).")
+    finally:
+        conn.close()
+
+
+def run_all(driver):
+    step_source(driver)
+    step_buildings(driver)
+    step_violations(driver)
+    print("")
+    print("HPD violations ingestion complete.")
+    print("Now run:")
+    print("  uv run python -m watchline.ingest.portfolio.pipeline --step reconcile")
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Watchline HPD violations ingestion")
+    parser.add_argument(
+        "--step",
+        choices=["source", "buildings", "violations"],
+        help="Run a single step (omit to run all steps in order)",
+    )
+    args = parser.parse_args()
+
+    driver = neo4j_driver()
+    try:
+        if args.step is None:
+            run_all(driver)
+        elif args.step == "source":
+            step_source(driver)
+        elif args.step == "buildings":
+            step_buildings(driver)
+        elif args.step == "violations":
+            step_violations(driver)
+    finally:
+        driver.close()
+
+
+if __name__ == "__main__":
+    main()
