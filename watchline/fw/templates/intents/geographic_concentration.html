@@ -15,10 +15,18 @@
 
   {{TOP_BUILDINGS_SECTION}}
 
-  <div class="wl-meta-strip">
-    <span>Filter: {{BOROUGH_FILTER}}</span>
-    <span>Rule: PHC-001 (RUL-00001)</span>
-    <span>Source: HPD via Watchline</span>
+  <div class="wl-section-head">Query Parameters</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Borough filter</span>
+    <span class="wl-meta-val">{{BOROUGH_FILTER}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule</span>
+    <span class="wl-meta-val">PHC-001 (RUL-00001)</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD via Watchline</span>
   </div>
 %%RULES%%
   <div class="wl-section-head">Methodology</div>
@@ -29,7 +37,7 @@
     and how many residential units they contain.
   </p>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Geographic Resolution</div>
+  <div class="wl-section-head">Geographic Resolution</div>
   <p style="font-size:0.85rem;color:#555;line-height:1.7;">
     Current resolution is borough-level only. Building nodes contain
     latitude and longitude fields which could support finer-grained spatial
@@ -37,7 +45,7 @@
     Borough boundaries are as recorded in HPD registration data.
   </p>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Epistemic Note</div>
+  <div class="wl-section-head">Epistemic Note</div>
   <p style="font-size:0.85rem;color:#555;line-height:1.7;">
     PHC counts reflect the state of the Watchline graph at last build.
     Buildings without HPD violation history (e.g., newer buildings or

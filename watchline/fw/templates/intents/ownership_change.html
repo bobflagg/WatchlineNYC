@@ -1,56 +1,97 @@
 %%EVIDENCE%%
-<div class="wl-section-label">Deed Transfer History</div>
-<div class="wl-stat-grid">
-{{DEED_STAT_CARDS}}
-</div>
-
-<div class="wl-section-label">Violation Rate Comparison</div>
-<div class="wl-stat-grid">
-{{RATE_STAT_CARDS}}
-</div>
-
-{{SIGNAL_BANNER}}
-
-<div class="wl-section-label">Deed Transfer History</div>
-<table class="wl-table">
-  <thead>
-    <tr>
-      <th>Deed Date</th>
-      <th>Grantor (Seller)</th>
-      <th>Grantee (Buyer)</th>
-      <th>Sale Price</th>
-      <th>% Transferred</th>
-    </tr>
-  </thead>
-  <tbody>
-{{DEED_HISTORY_ROWS}}
-  </tbody>
-</table>
-<p class="wl-source-note">Source: NYC ACRIS (NYC Department of Finance). Arm's-length transfers only (DEED, amount &gt; $0, ≥ 50% transferred). Trust transfers and partial interest sales excluded.</p>
-%%RULES%%
-<div class="wl-section-label">Rule Applied</div>
-<div class="wl-rule-card">
-  <div class="wl-rule-id">OC-001 &mdash; Ownership Change Deterioration</div>
-  <div class="wl-rule-meta">{{RULE_META}}</div>
-  <div class="wl-rule-threshold">
-    <strong>Threshold (quoted verbatim from graph):</strong><br>
-    {{THRESHOLD_STATEMENT}}
+  <div class="wl-section-head">Deed Transfer</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1.2rem;">
+    {{DEED_STAT_CARDS}}
   </div>
-</div>
 
-<div class="wl-section-label">Data Limitations</div>
-<div class="wl-note">
-  <strong>ACRIS coverage starts 2010.</strong> Deed transfers before 2010 are not in the graph.
-  Buildings sold before 2010 will show a shorter before-period than their actual history,
-  which may understate the pre-transfer violation rate and produce false negatives.
-  <br><br>
-  <strong>Arm's-length filter.</strong> Trust transfers ($0 deeds), intra-family transfers,
-  and partial interest sales (&lt; 50% transferred) are excluded. The filter is conservative:
-  some legitimate sales involve below-market prices (e.g. family sales, estate transfers)
-  that would be excluded.
-  <br><br>
-  <strong>Rate comparison does not account for building size.</strong> A building with 100
-  units will naturally have higher violation counts than one with 10 units. A future version
-  should normalize by residential unit count.
-</div>
-%%
+  <div class="wl-section-head">Violation Rate Comparison</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1.2rem;">
+    {{RATE_STAT_CARDS}}
+  </div>
+
+  {{SIGNAL_BANNER}}
+
+  <div class="wl-section-head">Deed Transfer History</div>
+  <table class="wl-table">
+    <thead>
+      <tr>
+        <th>Deed Date</th>
+        <th>Grantor (Seller)</th>
+        <th>Grantee (Buyer)</th>
+        <th>Sale Price</th>
+        <th>% Transferred</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{DEED_HISTORY_ROWS}}
+    </tbody>
+  </table>
+  <p style="font-size:0.82rem;color:#6b7a99;margin-top:0.4rem;">
+    Source: NYC ACRIS (NYC Department of Finance). Arm's-length transfers only
+    (DEED, amount &gt; $0, ≥ 50% transferred). Trust transfers and partial
+    interest sales excluded.
+  </p>
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Building</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD Violations + NYC ACRIS</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule OC-001 — Ownership Change Deterioration</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">OC-001 (RUL-00014)</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val"><span class="wl-status-pill wl-status-inferred">Inferred</span></span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Data Limitations</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    ACRIS coverage starts 2010. Deed transfers before 2010 are not in the graph.
+    Buildings sold before 2010 will show a shorter before-period than their actual
+    history, which may understate the pre-transfer violation rate and produce false
+    negatives.
+    <br><br>
+    Arm's-length filter: trust transfers ($0 deeds), intra-family transfers, and
+    partial interest sales (&lt; 50% transferred) are excluded. The filter is
+    conservative — some legitimate sales involve below-market prices that would
+    be excluded.
+    <br><br>
+    Rate comparison does not account for building size. A building with 100 units
+    will naturally have higher raw violation counts than one with 10 units. A future
+    version should normalize by residential unit count.
+  </p>

@@ -12,30 +12,54 @@
 
   {{STALE_TABLE}}
 
-  <div class="wl-meta-strip">
-    <span>Building: {{ADDRESS}}, {{BOROUGH}}</span>
-    <span>BBL: {{BBL}}</span>
-    <span>Residential units: {{UNITS}}</span>
-    <span>Source: HPD Violations + HPD Litigations</span>
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Building</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD Violations + HPD Litigations</span>
   </div>
 %%RULES%%
   <div class="wl-section-head">Rule EA-001 — {{RULE_TITLE}}</div>
 
-  <table class="wl-rule-meta">
-    <tr><th>Rule ID</th><td>{{RULE_ID}} ({{GRAPH_RULE_ID}})</td></tr>
-    <tr><th>Version</th><td>{{RULE_VERSION}}</td></tr>
-    <tr><th>Authority</th><td>{{AUTHORITY}}</td></tr>
-    <tr><th>Interpretive status</th><td>Inferred</td></tr>
-    <tr><th>Threshold</th><td>{{THRESHOLD_LOGIC}}</td></tr>
-  </table>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">{{RULE_ID}} ({{GRAPH_RULE_ID}})</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val"><span class="wl-status-pill wl-status-inferred">Inferred</span></span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Threshold logic</span>
+    <span class="wl-meta-val">{{THRESHOLD_LOGIC}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Signal Evaluation</div>
+  <div class="wl-section-head">Signal Evaluation</div>
   {{SIGNAL_CARD}}
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Threshold Statement</div>
-  <blockquote class="wl-threshold-quote">{{THRESHOLD_STATEMENT}}</blockquote>
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Data Limitations</div>
+  <div class="wl-section-head">Data Limitations</div>
   <p style="font-size:0.85rem;color:#555;line-height:1.7;">
     Court action data is sourced from HPD litigations only. OCA (Office of Court
     Administration) housing court data, which would capture filings by tenants and

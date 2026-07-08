@@ -17,31 +17,49 @@
 
   {{NAMES_TABLE}}
 
-  <div class="wl-meta-strip">
-    <span>Actor: {{ACTOR_NAME}}</span>
-    <span>Portfolio: {{PORTFOLIO_SIZE}} buildings</span>
-    <span>PBC confidence: {{CONFIDENCE}}</span>
-    <span>Source: HPD Registration</span>
+  <div class="wl-section-head">Actor Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Actor</span>
+    <span class="wl-meta-val">{{ACTOR_NAME}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Portfolio</span>
+    <span class="wl-meta-val">{{PORTFOLIO_SIZE}} buildings</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">PBC confidence</span>
+    <span class="wl-meta-val">{{CONFIDENCE}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">HPD Registration</span>
   </div>
 %%RULES%%
   <div class="wl-section-head">Connection Rules</div>
 
-  <table class="wl-rule-meta">
-    <tr><th>RMT-001 (RUL-00003)</th><td>HPD Name-Based Connection — buildings linked by matching registrant name</td></tr>
-    <tr><th>RMT-002 (RUL-00004)</th><td>HPD Address-Based Connection — buildings linked by matching registered business address</td></tr>
-    <tr><th>Interpretive status</th><td>Inferred</td></tr>
-  </table>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">RMT-001 (RUL-00003)</span>
+    <span class="wl-meta-val">HPD Name-Based Connection — buildings linked by matching registrant name</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">RMT-002 (RUL-00004)</span>
+    <span class="wl-meta-val">HPD Address-Based Connection — buildings linked by matching registered business address</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val"><span class="wl-status-pill wl-status-inferred">Inferred</span></span>
+  </div>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Concealment Signal Evaluation</div>
+  <div class="wl-section-head">Concealment Signal Evaluation</div>
   {{SIGNAL_CARD}}
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Threshold Statement</div>
-  <blockquote class="wl-threshold-quote">{{THRESHOLD_STATEMENT}}</blockquote>
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Network Assembly Rationale</div>
+  <div class="wl-section-head">Network Assembly Rationale</div>
   <p style="font-size:0.85rem;color:#555;line-height:1.7;">{{RATIONALE}}</p>
 
-  <div class="wl-section-head" style="margin-top:1.2rem;">Epistemic Limitations</div>
+  <div class="wl-section-head">Epistemic Limitations</div>
   <p style="font-size:0.85rem;color:#555;line-height:1.7;">
     A high address-to-name ratio is a necessary but not sufficient indicator of
     concealment. Legitimate portfolio structures may also use shared business

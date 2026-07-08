@@ -2458,41 +2458,41 @@ def _render_ownership_change(tr: dict, prose: str) -> dict:
         ), danger=signal)
     )
 
-    # --- Signal banner ---
+    # --- Signal banner (uses wl-signal-card CSS classes, not inline styles) ---
     if no_deed:
-        signal_color = "#6b7a99"
-        signal_label = "No qualifying deed transfer found in ACRIS since 2010"
-        signal_detail = ev.get("insufficient_data_reason", "")
+        card_class    = "unknown"
+        signal_label  = "No qualifying deed transfer found in ACRIS since 2010"
+        signal_detail = _esc(str(ev.get("insufficient_data_reason", "")))
     elif insufficient:
-        signal_color = "#e67e22"
-        signal_label = "Insufficient data — OC-001 cannot be evaluated"
-        reason_parts = []
+        card_class    = "unknown"
+        signal_label  = "Insufficient data — OC-001 cannot be evaluated"
+        reason_parts  = []
         if days_after < 180:
             reason_parts.append(f"only {days_after} days since transfer (minimum: 180)")
         if days_before < 365 and c_before == 0:
             reason_parts.append("no violation history before the transfer")
-        signal_detail = "; ".join(reason_parts) if reason_parts else ""
+        signal_detail = _esc("; ".join(reason_parts)) if reason_parts else ""
     elif signal:
-        signal_color = "#c0392b"
-        signal_label = "Deterioration signal detected — OC-001 SATISFIED"
-        signal_detail = (
+        card_class    = "not-satisfied"
+        signal_label  = "Deterioration signal detected — OC-001 SATISFIED"
+        signal_detail = _esc(
             f"Annualized Class C rate increased from {rate_before}/yr to {rate_after}/yr "
             f"after the {deed_date} sale"
         )
     else:
-        signal_color = "#27ae60"
-        signal_label = "No deterioration signal — OC-001 NOT satisfied"
-        signal_detail = (
+        card_class    = "satisfied"
+        signal_label  = "No deterioration signal — OC-001 NOT satisfied"
+        signal_detail = _esc(
             f"Annualized Class C rate: {rate_before}/yr before, {rate_after}/yr after"
         )
 
     signal_html = (
-        f'<div class="wl-signal-card" style="border-left:4px solid {signal_color};'
-        f'padding:12px 16px;margin:12px 0;background:#fff;">'
-        f'<div style="color:{signal_color};font-weight:700;font-size:0.95rem;">'
-        f'{signal_label}</div>'
-        f'<div style="color:#2b2b2b;font-size:0.85rem;margin-top:4px;">{_esc(str(signal_detail))}</div>'
-        f'</div>'
+        f'<div class="wl-signals">'
+        f'<div class="wl-signal-card {card_class}">'
+        f'<div class="wl-signal-label">OC-001 Signal</div>'
+        f'<div class="wl-signal-verdict">{signal_label}</div>'
+        f'<div class="wl-signal-detail">{signal_detail}</div>'
+        f'</div></div>'
     )
 
     # --- Deed history table rows ---
@@ -2517,25 +2517,30 @@ def _render_ownership_change(tr: dict, prose: str) -> dict:
             'No qualifying deed transfers found since 2010.</td></tr>'
         )
 
-    # --- Rule metadata ---
-    rule_meta_html = (
-        f'Rule ID: RUL-00014 &nbsp;|&nbsp; Version: 1.0 &nbsp;|&nbsp; '
-        f'Effective: 2026-07-08 &nbsp;|&nbsp; '
-        f'Interpretive status: Inferred'
-    )
+    # --- Load rule metadata from graph for Rules tab ---
+    from watchline.fw.intents.ownership_change import _load_rule_from_graph as _oc_rule
+    oc_rule = _oc_rule()
 
     # Populate template
+    bbl = _esc(r.get("bbl", "—"))
     evidence_html = (
         tmpl_map.get("EVIDENCE", "")
         .replace("{{DEED_STAT_CARDS}}", deed_cards)
         .replace("{{RATE_STAT_CARDS}}", rate_cards)
         .replace("{{SIGNAL_BANNER}}", signal_html)
         .replace("{{DEED_HISTORY_ROWS}}", deed_rows_html)
+        .replace("{{ADDRESS}}", address)
+        .replace("{{BOROUGH}}", borough)
+        .replace("{{BBL}}", bbl)
+        .replace("{{UNITS}}", f"{units:,}" if units else "—")
     )
     rules_html = (
         tmpl_map.get("RULES", "")
-        .replace("{{RULE_META}}", rule_meta_html)
-        .replace("{{THRESHOLD_STATEMENT}}", threshold)
+        .replace("{{RULE_VERSION}}",          _esc(oc_rule.get("version", "1.0")))
+        .replace("{{EFFECTIVE_DATE}}",        _esc(str(oc_rule.get("effective_date", "2026-07-08"))))
+        .replace("{{AUTHORITY}}",             _esc(oc_rule.get("authority", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",   threshold)
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(oc_rule.get("falsification_conditions", "")))
     )
 
     return {
