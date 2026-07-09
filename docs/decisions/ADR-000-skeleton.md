@@ -158,7 +158,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | N/A (no equivalent `fw/` layer). |
 | **Principle** | P-5 (shared helpers), P-7 (idempotency — configuration drift is a runtime error source) |
 | **Recommended resolution** | Align `fw/connections.py` to use `NEO4J_EVIDENTIARY_DATABASE` (the settled name from `.env`). `NEO4J_EPISTEMIC_URI/USER/PASSWORD` can be retained as aliases for the same endpoint (both the ingest and the query path hit the same Neo4j instance for the evidentiary KG), or unified to `NEO4J_URI/USER/PASSWORD` with the database distinguished by the `_EVIDENTIARY_DATABASE`/`_DISCOVERY_DATABASE` suffix. Decide on one canonical naming convention in Phase 1 before writing any new pipeline. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 3). Updated `fw/connections.py` to use `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_EVIDENTIARY_DATABASE` (default `"evidentiary"`). Updated `Makefile.evidentiary` `EV_CYPHER_ARGS` to match. `.env` must carry `NEO4J_URI/USER/PASSWORD` alongside or instead of `NEO4J_EPISTEMIC_*`; any deployment using the old names must update its `.env`. |
 
 ---
 

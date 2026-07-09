@@ -17,11 +17,11 @@
 EV_INGEST    = watchline.evidentiary.ingest
 EV_SCRIPTS   = scripts
 
-# Uses NEO4J_EPISTEMIC_* vars exported from .env by the top-level Makefile.
-EV_CYPHER_ARGS = -a "$(NEO4J_EPISTEMIC_URI)" \
-                 -u "$(NEO4J_EPISTEMIC_USER)" \
-                 -p "$(NEO4J_EPISTEMIC_PASSWORD)" \
-                 -d "$(NEO4J_EPISTEMIC_DATABASE)"
+# Uses canonical NEO4J_* vars exported from .env by the top-level Makefile.
+EV_CYPHER_ARGS = -a "$(NEO4J_URI)" \
+                 -u "$(NEO4J_USER)" \
+                 -p "$(NEO4J_PASSWORD)" \
+                 -d "$(NEO4J_EVIDENTIARY_DATABASE)"
 
 .PHONY: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
         evidentiary-buildings \
