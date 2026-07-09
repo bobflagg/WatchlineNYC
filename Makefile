@@ -44,6 +44,7 @@ UI_LOG       := .ui.log
 .PHONY: help install \
         download setup load test kgs restart stop start \
         logs-discovery logs-evidentiary status clean-docker \
+        verify \
         api api-stop api-logs \
         ui ui-stop ui-logs \
         serve serve-stop serve-status
@@ -75,6 +76,9 @@ help: ## Show all available targets
 
 install: ## Install Python dependencies (uv)
 	uv sync
+
+verify: ## Run Phase 5 cross-graph consistency checks against both live KGs
+	$(PYTHON) scripts/verify_consistency.py
 
 
 # ---------------------------------------------------------------------------
