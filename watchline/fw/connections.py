@@ -25,10 +25,10 @@ def get_llm() -> ChatAnthropic:
 def neo4j_query(cypher: str, params: dict = None) -> list:
     """Run a read-only Cypher query and return results as a list of dicts."""
     driver = GraphDatabase.driver(
-        os.environ["NEO4J_URI"],
+        os.environ["NEO4J_EVIDENTIARY_URI"],
         auth=(
-            os.environ["NEO4J_USER"],
-            os.environ["NEO4J_PASSWORD"],
+            os.environ["NEO4J_EVIDENTIARY_USER"],
+            os.environ["NEO4J_EVIDENTIARY_PASSWORD"],
         ),
     )
     database = os.environ.get("NEO4J_EVIDENTIARY_DATABASE", "evidentiary")

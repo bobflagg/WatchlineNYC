@@ -57,6 +57,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+from watchline.shared.connections import neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
 
 
 NEO4J_DATABASE = NEO4J_EVIDENTIARY_DATABASE
@@ -66,8 +67,6 @@ MIN_VIOLATIONS = 3
 MIN_DAYS_OPEN = 180
 BATCH_SIZE = 200  # smaller: each batch does significant graph work
 
-
-from watchline.shared.connections import neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
 
 
 # ---------------------------------------------------------------------------

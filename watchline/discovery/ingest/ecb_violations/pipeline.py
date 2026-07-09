@@ -68,6 +68,7 @@ from typing import Iterator, List, Optional
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 # ---------------------------------------------------------------------------
@@ -82,12 +83,6 @@ LEGAL_AUTHORITY = "NYC Environmental Control Board (Admin Code)"
 
 INFRACTION_PAIRS = 10
 
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 def _now() -> str:

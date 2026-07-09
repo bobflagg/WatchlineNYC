@@ -94,6 +94,7 @@ from typing import Iterator, List, Optional
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 # ---------------------------------------------------------------------------
@@ -109,12 +110,6 @@ LEGAL_AUTHORITY = "NY Real Property Law (ACRIS-recorded deed conveyance)"
 
 _ROLE_BY_PARTYTYPE = {1: "Grantor", 2: "Grantee", 3: "Other"}
 
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 def _now() -> str:

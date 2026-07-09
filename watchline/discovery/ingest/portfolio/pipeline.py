@@ -47,6 +47,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from . import algorithms
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 # ---------------------------------------------------------------------------
@@ -74,12 +75,6 @@ ADDRESS_WEIGHT_MULTIPLIER = 1.0
 # fix for the A&E / "Margaret Brunn" over-clustering. Set to None to disable.
 MAX_ADDR_DEGREE = 50
 
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 def _now() -> str:

@@ -47,6 +47,10 @@ from typing import Iterator, List
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from watchline.shared.batching import BATCH_SIZE, CURSOR_ITERSIZE
+from watchline.shared.bbl import borough_from_bbl
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -128,14 +132,6 @@ WORK_WITHOUT_PERMIT_CATEGORIES = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.batching import BATCH_SIZE, CURSOR_ITERSIZE
-from watchline.shared.bbl import borough_from_bbl
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
-
 
 # ---------------------------------------------------------------------------
 # BBL normalization
@@ -205,6 +201,7 @@ _MERGE_BUILDING_STUB = """
 UNWIND $batch AS b
 MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
 SET bld.borough    = CASE WHEN bld.borough IS NULL THEN b.borough ELSE bld.borough END,
+    bld.address    = CASE WHEN bld.address IS NULL THEN "Unknown" ELSE bld.address END,
     bld.updated_at = datetime($now),
     bld.created_at = CASE WHEN bld.created_at IS NULL THEN datetime($now) ELSE bld.created_at END
 """

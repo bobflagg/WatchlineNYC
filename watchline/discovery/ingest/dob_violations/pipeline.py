@@ -64,6 +64,7 @@ from typing import Iterator, List, Optional
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 # ---------------------------------------------------------------------------
@@ -76,12 +77,6 @@ EVENT_BATCH_SIZE = 2000
 
 LEGAL_AUTHORITY = "NYC Construction Codes (Admin Code Title 28)"
 
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 def _now() -> str:

@@ -49,6 +49,7 @@ from typing import Iterator, List
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 # ---------------------------------------------------------------------------
@@ -60,12 +61,6 @@ NEO4J_DATABASE = NEO4J_DISCOVERY_DATABASE
 ACTOR_BATCH_SIZE = 1000
 EDGE_BATCH_SIZE = 1000
 
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
-from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
 def _now() -> str:

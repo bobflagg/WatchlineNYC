@@ -64,6 +64,7 @@ _MERGE_BACKFILL = """
 UNWIND $batch AS b
 MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
 SET bld.borough    = b.borough,
+    bld.address    = CASE WHEN bld.address IS NULL THEN "Unknown" ELSE bld.address END,
     bld.updated_at = datetime($now),
     bld.created_at = CASE WHEN bld.created_at IS NULL
                           THEN datetime($now) ELSE bld.created_at END
@@ -85,7 +86,7 @@ def _pluto_batches(conn) -> Iterator[List[dict]]:
             bc = (row["building_class"] or "").strip() or None
             batch.append({
                 "bbl":               bbl,
-                "address":           (row["address"] or "").strip() or None,
+                "address":           (row["address"] or "").strip() or "Unknown",
                 "borough":           borough_from_bbl(bbl),
                 "latitude":          float(row["latitude"]) if row["latitude"] is not None else None,
                 "longitude":         float(row["longitude"]) if row["longitude"] is not None else None,

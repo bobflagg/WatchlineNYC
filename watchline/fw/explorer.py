@@ -221,10 +221,10 @@ def run_cypher(query: str, params: dict | None = None) -> str:
     """
     from neo4j import GraphDatabase
 
-    uri      = os.environ["NEO4J_DOMAIN_URI"]
-    user     = os.environ.get("NEO4J_DOMAIN_USER", "neo4j")
-    password = os.environ["NEO4J_DOMAIN_PASSWORD"]
-    db = os.environ.get("NEO4J_DOMAIN_DATABASE", "neo4j")
+    uri      = os.environ["NEO4J_DISCOVERY_URI"]
+    user     = os.environ.get("NEO4J_DISCOVERY_USER", "neo4j")
+    password = os.environ["NEO4J_DISCOVERY_PASSWORD"]
+    db = os.environ.get("NEO4J_DISCOVERY_DATABASE", "neo4j")
     driver = GraphDatabase.driver(uri, auth=(user, password))
     try:
         with driver.session(database=db, default_access_mode="READ") as session:

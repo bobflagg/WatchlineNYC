@@ -97,7 +97,7 @@ discovery-acris-deeds: ## [dc] ACRIS deeds -> Event(DeedTransfer) + grantor/gran
 	$(PYTHON) -m $(DC_MOD).acris_deeds.pipeline
 
 discovery-events: discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
-                  discovery-hpd-litigations discovery-oca-evictions \
+                  discovery-hpd-litigations \
                   discovery-marshal-evictions discovery-acris-deeds ## [dc] All event datasets
 
 
