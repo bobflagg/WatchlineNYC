@@ -49,7 +49,6 @@ import os
 
 NEO4J_DATABASE = NEO4J_EVIDENTIARY_DATABASE
 
-BUILDING_BATCH_SIZE   = BATCH_SIZE
 VIOLATION_BATCH_SIZE  = BATCH_SIZE
 OBSERVATION_BATCH_SIZE = BATCH_SIZE
 
@@ -162,73 +161,38 @@ def create_source_nodes(session) -> None:
 # Step 2: Building nodes
 # ---------------------------------------------------------------------------
 
-BUILDINGS_SQL = """
-SELECT
-    v.bbl_canonical,
-    MAX(v.housenumber)  AS housenumber,
-    MAX(v.streetname)   AS streetname,
-    MAX(v.borough)      AS borough,
-    MAX(v.postcode)     AS postcode,
-    MAX(v.bin)          AS bin,
-    MAX(v.latitude)     AS latitude,
-    MAX(v.longitude)    AS longitude,
-    -- PLUTO enrichment (preferred over HPD address fields)
-    MAX(p.address)      AS pluto_address,
-    MAX(p.unitsres)     AS residential_units,
-    MAX(p.yearbuilt)    AS year_built,
-    MAX(p.bldgclass)    AS building_class,
-    MAX(p.latitude)     AS pluto_latitude,
-    MAX(p.longitude)    AS pluto_longitude
-FROM (
-    SELECT
-        CASE
-            WHEN trim(bbl) = '' OR bbl IS NULL
-            THEN lpad(boroid::text,1,'0')||lpad(block::text,5,'0')||lpad(lot::text,4,'0')
-            ELSE trim(bbl)
-        END AS bbl_canonical,
-        housenumber,
-        streetname,
-        borough,
-        postcode,
-        trim(bin) AS bin,
-        latitude::float,
-        longitude::float
-    FROM hpd_violations
-    WHERE bbl IS NOT NULL
-) v
-LEFT JOIN pluto_latest p ON p.bbl = v.bbl_canonical
-GROUP BY v.bbl_canonical
+# Schema-only stub (ADR-001): PLUTO enrichment is done by the shared buildings
+# substrate (evidentiary-buildings). This step only ensures a landing node
+# exists for every BBL seen in hpd_violations that wasn't covered by PLUTO.
+_BACKFILL_SQL = """
+SELECT DISTINCT
+    CASE
+        WHEN trim(bbl) = '' OR bbl IS NULL
+        THEN lpad(boroid::text,1,'0')||lpad(block::text,5,'0')||lpad(lot::text,4,'0')
+        ELSE trim(bbl)
+    END AS bbl
+FROM hpd_violations
+WHERE bbl IS NOT NULL
 """
 
-def _building_batches(conn) -> Iterator[List[dict]]:
-    """Yield batches of building dicts from the joined query."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        print("  Querying distinct buildings from hpd_violations + pluto_latest ...")
-        cur.execute(BUILDINGS_SQL)
-        batch = []
-        for row in cur:
-            borough = borough_from_bbl(row["bbl_canonical"]) or "Unknown"
-            address = (
-                row["pluto_address"]
-                or f"{row['housenumber'] or ''} {row['streetname'] or ''}".strip()
-                or ""
-            )
-            lat = row["pluto_latitude"] or row["latitude"]
-            lon = row["pluto_longitude"] or row["longitude"]
+_MERGE_BUILDING_STUB = """
+UNWIND $batch AS b
+MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
+SET bld.borough    = CASE WHEN bld.borough IS NULL THEN b.borough ELSE bld.borough END,
+    bld.updated_at = datetime($now),
+    bld.created_at = CASE WHEN bld.created_at IS NULL THEN datetime($now) ELSE bld.created_at END
+"""
 
-            batch.append({
-                "bbl":               row["bbl_canonical"],
-                "address":           address,
-                "borough":           borough,
-                "bin":               (row["bin"] or "").strip() or None,
-                "postcode":          (row["postcode"] or "").strip() or None,
-                "latitude":          float(lat) if lat else None,
-                "longitude":         float(lon) if lon else None,
-                "residential_units": row["residential_units"],
-                "year_built":        row["year_built"],
-                "building_class":    (row["building_class"] or "").strip() or None,
-            })
-            if len(batch) == BUILDING_BATCH_SIZE:
+
+def _bbl_batches(conn) -> Iterator[List[dict]]:
+    with conn.cursor(name="hpd_viol_bbls", cursor_factory=RealDictCursor) as cur:
+        cur.itersize = CURSOR_ITERSIZE
+        cur.execute(_BACKFILL_SQL)
+        batch: List[dict] = []
+        for row in cur:
+            bbl = row["bbl"]
+            batch.append({"bbl": bbl, "borough": borough_from_bbl(bbl) or "Unknown"})
+            if len(batch) == BATCH_SIZE:
                 yield batch
                 batch = []
         if batch:
@@ -236,33 +200,17 @@ def _building_batches(conn) -> Iterator[List[dict]]:
 
 
 def load_buildings(session, conn) -> int:
-    """
-    Write Building nodes to Neo4j. Uses MERGE on bbl so re-runs are safe.
-    Returns total buildings written.
-    """
-    cypher = """
-    UNWIND $batch AS b
-    MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
-    SET bld.address           = b.address,
-        bld.borough           = b.borough,
-        bld.bin               = b.bin,
-        bld.latitude          = b.latitude,
-        bld.longitude         = b.longitude,
-        bld.residential_units = b.residential_units,
-        bld.year_built        = b.year_built,
-        bld.building_class    = b.building_class,
-        bld.updated_at        = datetime($now),
-        bld.created_at        = CASE WHEN bld.created_at IS NULL
-                                     THEN datetime($now)
-                                     ELSE bld.created_at END
+    """Ensure a Building node exists for every HPD violation BBL.
+
+    PLUTO enrichment is handled by the shared substrate. This stub only
+    creates minimal nodes for any BBLs not covered by load_pluto() /
+    load_backfill(). Returns total BBLs processed.
     """
     now = datetime.now(timezone.utc).isoformat()
     total = 0
-    for batch in _building_batches(conn):
-        session.run(cypher, batch=batch, now=now)
+    for batch in _bbl_batches(conn):
+        session.run(_MERGE_BUILDING_STUB, batch=batch, now=now)
         total += len(batch)
-        if total % 10_000 == 0:
-            print(f"    {total:,} buildings written ...")
     return total
 
 

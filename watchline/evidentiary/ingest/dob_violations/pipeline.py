@@ -54,7 +54,6 @@ from psycopg2.extras import RealDictCursor
 
 NEO4J_DATABASE = NEO4J_EVIDENTIARY_DATABASE
 
-BUILDING_BATCH_SIZE  = BATCH_SIZE
 VIOLATION_BATCH_SIZE = BATCH_SIZE
 
 DOB_VIOLATIONS_SOURCE = {
@@ -187,58 +186,39 @@ def create_source_nodes(session) -> None:
 # Step 2: Building nodes
 # ---------------------------------------------------------------------------
 
-BUILDINGS_SQL = """
-SELECT
+# Schema-only stub (ADR-001): PLUTO enrichment is done by the shared buildings
+# substrate (evidentiary-buildings). This step only ensures a landing node
+# exists for every BBL seen in dob_violations that wasn't covered by PLUTO.
+_BACKFILL_SQL = """
+SELECT DISTINCT
     CASE
-        WHEN trim(v.bbl) = '' OR v.bbl IS NULL
-        THEN lpad(v.boro::text,1,'0')||lpad(v.block::text,5,'0')||lpad(v.lot::text,4,'0')
-        ELSE trim(v.bbl)
-    END AS bbl_canonical,
-    MAX(v.housenumber)  AS housenumber,
-    MAX(v.street)       AS streetname,
-    MAX(p.address)      AS pluto_address,
-    MAX(p.unitsres)     AS residential_units,
-    MAX(p.yearbuilt)    AS year_built,
-    MAX(p.bldgclass)    AS building_class,
-    MAX(p.latitude)     AS latitude,
-    MAX(p.longitude)    AS longitude
-FROM dob_violations v
-LEFT JOIN pluto_latest p ON p.bbl = CASE
-    WHEN trim(v.bbl) = '' OR v.bbl IS NULL
-    THEN lpad(v.boro::text,1,'0')||lpad(v.block::text,5,'0')||lpad(v.lot::text,4,'0')
-    ELSE trim(v.bbl)
-END
-WHERE v.bbl IS NOT NULL
-  -- Exclude test/dummy records
-  AND NOT (trim(v.block) = '99999' AND trim(v.lot) = '99999')
-GROUP BY bbl_canonical
+        WHEN trim(bbl) = '' OR bbl IS NULL
+        THEN lpad(boro::text,1,'0')||lpad(block::text,5,'0')||lpad(lot::text,4,'0')
+        ELSE trim(bbl)
+    END AS bbl
+FROM dob_violations
+WHERE bbl IS NOT NULL
+  AND NOT (trim(block) = '99999' AND trim(lot) = '99999')
 """
 
-def _building_batches(conn) -> Iterator[List[dict]]:
-    """Yield batches of building dicts."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        print("  Querying distinct buildings from dob_violations + pluto_latest ...")
-        cur.execute(BUILDINGS_SQL)
-        batch = []
-        for row in cur:
-            bbl = row["bbl_canonical"]
-            borough = borough_from_bbl(bbl) or "Unknown"
-            address = row["pluto_address"] or (
-                f"{(row['housenumber'] or '').strip()} "
-                f"{(row['streetname'] or '').strip()}"
-            ).strip()
+_MERGE_BUILDING_STUB = """
+UNWIND $batch AS b
+MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
+SET bld.borough    = CASE WHEN bld.borough IS NULL THEN b.borough ELSE bld.borough END,
+    bld.updated_at = datetime($now),
+    bld.created_at = CASE WHEN bld.created_at IS NULL THEN datetime($now) ELSE bld.created_at END
+"""
 
-            batch.append({
-                "bbl":               bbl,
-                "address":           address,
-                "borough":           borough,
-                "latitude":          float(row["latitude"]) if row["latitude"] else None,
-                "longitude":         float(row["longitude"]) if row["longitude"] else None,
-                "residential_units": row["residential_units"],
-                "year_built":        row["year_built"],
-                "building_class":    (row["building_class"] or "").strip() or None,
-            })
-            if len(batch) == BUILDING_BATCH_SIZE:
+
+def _bbl_batches(conn) -> Iterator[List[dict]]:
+    with conn.cursor(name="dob_viol_bbls", cursor_factory=RealDictCursor) as cur:
+        cur.itersize = CURSOR_ITERSIZE
+        cur.execute(_BACKFILL_SQL)
+        batch: List[dict] = []
+        for row in cur:
+            bbl = row["bbl"]
+            batch.append({"bbl": bbl, "borough": borough_from_bbl(bbl) or "Unknown"})
+            if len(batch) == BATCH_SIZE:
                 yield batch
                 batch = []
         if batch:
@@ -246,39 +226,17 @@ def _building_batches(conn) -> Iterator[List[dict]]:
 
 
 def load_buildings(session, conn) -> int:
-    """
-    Write Building nodes. MERGE on bbl so safe to run after HPD pipeline
-    has already created Building nodes -- adds new BBLs, updates existing.
-    """
-    cypher = """
-    UNWIND $batch AS b
-    MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
-    SET bld.borough           = CASE WHEN bld.borough IS NULL
-                                     THEN b.borough ELSE bld.borough END,
-        bld.address           = CASE WHEN bld.address IS NULL OR bld.address = ''
-                                     THEN b.address ELSE bld.address END,
-        bld.latitude          = CASE WHEN bld.latitude IS NULL
-                                     THEN b.latitude ELSE bld.latitude END,
-        bld.longitude         = CASE WHEN bld.longitude IS NULL
-                                     THEN b.longitude ELSE bld.longitude END,
-        bld.residential_units = CASE WHEN bld.residential_units IS NULL
-                                     THEN b.residential_units
-                                     ELSE bld.residential_units END,
-        bld.year_built        = CASE WHEN bld.year_built IS NULL
-                                     THEN b.year_built ELSE bld.year_built END,
-        bld.building_class    = CASE WHEN bld.building_class IS NULL
-                                     THEN b.building_class ELSE bld.building_class END,
-        bld.updated_at        = datetime($now),
-        bld.created_at        = CASE WHEN bld.created_at IS NULL
-                                     THEN datetime($now) ELSE bld.created_at END
+    """Ensure a Building node exists for every DOB violation BBL.
+
+    PLUTO enrichment is handled by the shared substrate. This stub only
+    creates minimal nodes for any BBLs not covered by load_pluto() /
+    load_backfill(). Returns total BBLs processed.
     """
     now = datetime.now(timezone.utc).isoformat()
     total = 0
-    for batch in _building_batches(conn):
-        session.run(cypher, batch=batch, now=now)
+    for batch in _bbl_batches(conn):
+        session.run(_MERGE_BUILDING_STUB, batch=batch, now=now)
         total += len(batch)
-        if total % 10_000 == 0:
-            print(f"    {total:,} buildings processed ...")
     return total
 
 
