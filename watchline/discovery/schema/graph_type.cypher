@@ -33,6 +33,17 @@ ALTER CURRENT GRAPH TYPE SET {
      residential_units :: INTEGER,
      year_built        :: INTEGER,
      building_class    :: STRING,
+     // Rent stabilization enrichment (ADR-014: shared substrate, loaded by discovery-rentstab)
+     rs_units_2018     :: INTEGER,
+     rs_units_2019     :: INTEGER,
+     rs_units_2020     :: INTEGER,
+     rs_units_2021     :: INTEGER,
+     rs_units_2022     :: INTEGER,
+     rs_units_2023     :: INTEGER,
+     rs_units_current  :: INTEGER,
+     rs_units_change   :: INTEGER,
+     rs_deregulating   :: BOOLEAN,
+     rs_pdfsoa_2023    :: STRING,
      created_at        :: ZONED DATETIME,
      updated_at        :: ZONED DATETIME
   }),

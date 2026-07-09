@@ -61,8 +61,8 @@ from psycopg2.extras import RealDictCursor
 # ---------------------------------------------------------------------------
 
 NEO4J_DATABASE = NEO4J_EVIDENTIARY_DATABASE
-BUILDING_BATCH_SIZE = 500
-LITIGATION_BATCH_SIZE = 500
+BUILDING_BATCH_SIZE  = BATCH_SIZE
+LITIGATION_BATCH_SIZE = BATCH_SIZE
 
 HPD_LITIGATIONS_SOURCE = {
     "source_id":        "SRC-HPD-LITIGATIONS-001",
@@ -115,6 +115,7 @@ FINDING_INTERPRETIVE = {
 # Connections
 # ---------------------------------------------------------------------------
 
+from watchline.shared.batching import BATCH_SIZE, CURSOR_ITERSIZE
 from watchline.shared.bbl import borough_from_bbl
 from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
 
@@ -263,7 +264,7 @@ ORDER BY l.litigationid
 def _litigation_batches(conn) -> Iterator[List[dict]]:
     with conn.cursor(name="hpd_litigations_cursor",
                      cursor_factory=RealDictCursor) as cur:
-        cur.itersize = 2000
+        cur.itersize = CURSOR_ITERSIZE
         print("  Querying HPD litigations ...")
         cur.execute(LITIGATIONS_SQL)
         batch = []

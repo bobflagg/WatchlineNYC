@@ -7,7 +7,7 @@ court litigations (tenant actions, heat/hot-water cases, harassment
 findings, access warrants, etc.).
 
 What this pipeline creates:
-    Event nodes (event_type='CourtFiling', source_name='HPD'), keyed
+    Event nodes (event_type='CourtFiling', source_name='HPD-Litigations'), keyed
     event_id = EVT-HPD-LIT-<litigationid>.
     (Building)-[:HAS_EVENT]->(Event) edges.
 
@@ -170,7 +170,7 @@ def load_litigations(session, conn):
     MATCH (b:Building {bbl: row.bbl})
     MERGE (e:Event:WatchlineNode {event_id: row.event_id})
     SET e.event_type       = 'CourtFiling',
-        e.source_name      = 'HPD',
+        e.source_name      = 'HPD-Litigations',
         e.source_record_id = row.source_record_id,
         e.event_date        = CASE WHEN row.event_date IS NULL THEN null ELSE date(row.event_date) END,
         e.status            = row.status,

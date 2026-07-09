@@ -40,7 +40,7 @@ from datetime import datetime, timezone
 
 from neo4j import Session
 
-BATCH_SIZE = 500
+from watchline.shared.batching import BATCH_SIZE
 SOURCE_ID  = "SRC-ACRIS-001"
 
 

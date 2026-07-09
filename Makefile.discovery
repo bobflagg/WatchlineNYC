@@ -19,7 +19,7 @@ DC_PORTFOLIO = $(PYTHON) -m $(DC_MOD).portfolio.pipeline
 .NOTPARALLEL:
 
 .PHONY: discovery-check discovery-bootstrap discovery-schema \
-        discovery-buildings \
+        discovery-buildings discovery-rentstab \
         discovery-actors discovery-registrations discovery-hpd-registrations \
         discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
         discovery-hpd-litigations discovery-oca-evictions \
@@ -59,6 +59,9 @@ discovery-schema: ## [dc] Apply the discovery graph type (run ONCE on an empty D
 
 discovery-buildings: ## [dc] Build Building nodes from full PLUTO substrate (~858K lots)
 	$(PYTHON) -m $(DC_MOD).buildings.pipeline
+
+discovery-rentstab: ## [dc] Enrich Building nodes with DHCR rent stabilization unit counts (ADR-014)
+	$(PYTHON) -m $(DC_MOD).rentstab.pipeline
 
 discovery-actors: ## [dc] Build Actor:LandlordActor nodes from landlords_with_connections
 	$(PYTHON) -m $(DC_MOD).hpd_registrations.pipeline --step actors
@@ -111,7 +114,8 @@ discovery-portfolio: discovery-portfolio-edges discovery-portfolio-reconcile ## 
 
 # ---- Full pipeline -----------------------------------------------------------
 
-discovery-ingest-all: discovery-bootstrap discovery-buildings discovery-hpd-registrations \
+discovery-ingest-all: discovery-bootstrap discovery-buildings discovery-rentstab \
+                      discovery-hpd-registrations \
                       discovery-events discovery-portfolio ## [dc] Full ordered discovery ingestion
 	@echo ""
 	@echo "Discovery ingestion complete."

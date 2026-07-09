@@ -75,145 +75,12 @@ Usage:
 """
 
 import argparse
-import json
-import os
-from datetime import datetime, timezone
-from typing import Iterator, List
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
-
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-NEO4J_DATABASE = NEO4J_DISCOVERY_DATABASE
-
-EVENT_BATCH_SIZE = 2000
-
-LEGAL_AUTHORITY = "NY RPAPL Art. 7 (Marshal execution of warrant of eviction)"
-
-_PROPERTY_TYPE_NORMALIZE = {"R": "RESIDENTIAL", "C": "COMMERCIAL"}
-
-
-# ---------------------------------------------------------------------------
-# Connections
-# ---------------------------------------------------------------------------
-
+from watchline.shared.marshal_evictions import load_marshal_evictions
 from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _event_id(courtindexnumber, docketnumber) -> str:
-    return f"EVT-MARSHAL-{courtindexnumber}-{docketnumber}"
-
-
-def _property_type(v):
-    if not v:
-        return None
-    return _PROPERTY_TYPE_NORMALIZE.get(v.strip().upper(), v.strip())
-
-
-# ---------------------------------------------------------------------------
-# Step 1: Event(Eviction, Marshal) nodes + HAS_EVENT edges
-# ---------------------------------------------------------------------------
-
-# bbl is text -> trim. No boro/block/lot columns exist in this table, so
-# unlike hpd_violations/hpd_litigations there is no reconstruction path for
-# a blank/malformed bbl (see module docstring) -- such rows simply fail to
-# MATCH a Building and are skipped like any other unmatched row.
-EVICTIONS_SQL = """
-SELECT
-    courtindexnumber,
-    docketnumber,
-    trim(bbl)                    AS bbl,
-    residentialcommercialind,
-    evictionlegalpossession,
-    executeddate,
-    ejectment,
-    evictionaptnum,
-    evictionaddress,
-    marshalfirstname,
-    marshallastname
-FROM marshal_evictions_all
-"""
-
-
-def _raw_record(row: dict) -> str:
-    return json.dumps({
-        "ejectment":        row["ejectment"],
-        "evictionaptnum":   row["evictionaptnum"],
-        "evictionaddress":  row["evictionaddress"],
-        "marshalfirstname": row["marshalfirstname"],
-        "marshallastname":  row["marshallastname"],
-    })
-
-
-def _eviction_batches(conn) -> Iterator[List[dict]]:
-    with conn.cursor(name="marshal_evictions", cursor_factory=RealDictCursor) as cur:
-        cur.itersize = 2000
-        cur.execute(EVICTIONS_SQL)
-        batch = []
-        for row in cur:
-            batch.append({
-                "event_id":         _event_id(row["courtindexnumber"], row["docketnumber"]),
-                "bbl":              row["bbl"],
-                "violation_class":  _property_type(row["residentialcommercialind"]),
-                "status":           row["evictionlegalpossession"],
-                "event_date":       row["executeddate"].isoformat() if row["executeddate"] else None,
-                "source_id":        row["courtindexnumber"],
-                "source_record_id": row["docketnumber"],
-                "raw_record":       _raw_record(row),
-            })
-            if len(batch) == EVENT_BATCH_SIZE:
-                yield batch
-                batch = []
-        if batch:
-            yield batch
-
-
-def load_evictions(session, conn):
-    """
-    MERGE Event(Eviction, Marshal) nodes and HAS_EVENT edges. Building-first:
-    rows whose BBL has no Building node are skipped entirely (no orphan
-    Event nodes). Returns (events_written, skipped_missing_building).
-    """
-    cypher = """
-    UNWIND $batch AS row
-    MATCH (b:Building {bbl: row.bbl})
-    MERGE (e:Event:WatchlineNode {event_id: row.event_id})
-    SET e.event_type       = 'Eviction',
-        e.source_name      = 'Marshal',
-        e.source_id        = row.source_id,
-        e.source_record_id = row.source_record_id,
-        e.event_date        = CASE WHEN row.event_date IS NULL THEN null ELSE date(row.event_date) END,
-        e.status            = row.status,
-        e.violation_class   = row.violation_class,
-        e.legal_authority   = $legal_authority,
-        e.raw_record        = row.raw_record,
-        e.created_at        = CASE WHEN e.created_at IS NULL THEN datetime($now) ELSE e.created_at END
-    MERGE (b)-[:HAS_EVENT]->(e)
-    """
-    now = _now()
-    total = 0
-    missing_bbls = set()
-    for batch in _eviction_batches(conn):
-        bbls = {row["bbl"] for row in batch}
-        matched = session.run(
-            "UNWIND $bbls AS bbl MATCH (b:Building {bbl: bbl}) RETURN collect(bbl) AS matched",
-            bbls=list(bbls),
-        ).single()["matched"]
-        missing_bbls.update(bbls - set(matched))
-
-        session.run(cypher, batch=batch, now=now, legal_authority=LEGAL_AUTHORITY)
-        total += len(batch)
-        if total % 20_000 == 0:
-            print(f"    {total:,} eviction rows processed ...")
-    return total, len(missing_bbls)
+NEO4J_DATABASE = NEO4J_DISCOVERY_DATABASE
 
 
 def step_evictions(driver) -> None:
@@ -221,17 +88,13 @@ def step_evictions(driver) -> None:
     conn = pg_conn()
     try:
         with driver.session(database=NEO4J_DATABASE) as session:
-            total, skipped = load_evictions(session, conn)
+            total, skipped = load_marshal_evictions(session, conn)
         print(f"  {total:,} eviction rows processed.")
         if skipped:
             print(f"  {skipped:,} distinct BBLs had no Building node (rows skipped).")
     finally:
         conn.close()
 
-
-# ---------------------------------------------------------------------------
-# Orchestration
-# ---------------------------------------------------------------------------
 
 def run_all(driver) -> None:
     step_evictions(driver)

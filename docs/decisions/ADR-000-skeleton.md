@@ -54,7 +54,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | `source_name = 'HPD'` |
 | **Principle** | P-2 (same fact, same value) |
 | **Recommended resolution** | Adopt `'HPD-Litigations'` (evidentiary approach). It is more specific and distinguishes litigation records from HPD violation records (also `source_name = 'HPD'`), which is important for query filtering. The evidentiary graph also uses `source_name` to route investigative intents — a collision would break queries that filter `source_name = 'HPD'` expecting violations only. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 4). Updated `watchline/discovery/ingest/hpd_litigations/pipeline.py`: `source_name = 'HPD'` → `source_name = 'HPD-Litigations'` in both the Cypher SET clause and the module docstring. Evidentiary pipeline already used the correct value. |
 
 ---
 
@@ -132,7 +132,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | Buildings: 2000; events: 2000; portfolio edges: 5000 (cursor). Cursor itersize: 5000 consistently. |
 | **Principle** | P-5 (shared library, consistent conventions) |
 | **Recommended resolution** | Adopt discovery's larger batch sizes in the shared buildings/events library (2000 batch, 5000 cursor). The evidentiary 500-row batches were conservative; at 11M HPD violations they add unnecessary round-trips. Exception: portfolio store stays at 200 (inner UNWIND multiplies row count). Document the rationale as a comment in the shared config. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 4). Created `watchline/shared/batching.py` with `BATCH_SIZE=2000`, `CURSOR_ITERSIZE=5000`, `PORTFOLIO_BATCH=200`. Updated 6 evidentiary pipelines (`hpd_violations`, `dob_violations`, `ecb_violations`, `hpd_litigations`, `rentstab`, `acris/store.py`) to import constants from shared. Removed all local `BATCH_SIZE`/`CURSOR_ITERSIZE` definitions from those pipelines. |
 
 ---
 
@@ -171,7 +171,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | `EVT-MARSHAL-<courtindexnumber>-<docketnumber>`. |
 | **Principle** | P-1 (conform the substrate where the same fact should appear in both) |
 | **Recommended resolution** | Marshal evictions are a domain fact (not an epistemic overlay) and should eventually be in both graphs. However, the evidentiary graph lacks a `Source` node and `Observation` layer for this source. Design the shared substrate to include marshal evictions as Events; defer the evidentiary overlay (Observations, Claims) until the eviction data model is agreed. Flag as a Phase 4 item. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 4). Created `watchline/shared/marshal_evictions.py` with `EVICTIONS_SQL`, `_MERGE_EVICTIONS`, `_eviction_batches()`, and `load_marshal_evictions()`. Refactored `watchline/discovery/ingest/marshal_evictions/pipeline.py` to delegate to shared module (now uses `BATCH_SIZE`/`CURSOR_ITERSIZE` from `watchline.shared.batching`). Created `watchline/evidentiary/ingest/marshal_evictions/pipeline.py` with `SRC-MARSHAL-001` Source node creation + call to shared `load_marshal_evictions()`. Added `evidentiary-marshal-evictions` target to `Makefile.evidentiary`; wired into `evidentiary-build`. Evidentiary overlay (Observations, Claims about eviction patterns) deferred per ADR. |
 
 ---
 
@@ -184,4 +184,4 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | Not ingested. |
 | **Principle** | P-1 (conform the substrate) |
 | **Recommended resolution** | RS unit counts are domain facts about buildings, not an epistemic overlay. Include in the shared buildings substrate library so both graphs carry them. The data is additive (SET properties on existing Building nodes) and does not alter identity. Phase 2 task. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 4). Added `RENTSTAB_SQL`, `_MERGE_RENTSTAB`, `_rentstab_batches()`, and `load_rentstab()` to `watchline/shared/buildings.py`. RS properties added to `watchline/discovery/schema/graph_type.cypher`. Evidentiary `rentstab/pipeline.py` stripped of duplicate SQL/batch logic; `step_enrich()` now delegates to `load_rentstab()`. Created `watchline/discovery/ingest/rentstab/pipeline.py` as thin wrapper targeting `NEO4J_DISCOVERY_DATABASE`. Added `discovery-rentstab` target to `Makefile.discovery`; wired into `discovery-ingest-all`. Source node creation (`DHCR_RENTSTAB_SOURCE`, `create_source_node()`) remains in the evidentiary pipeline as an evidentiary-layer epistemic concept. |

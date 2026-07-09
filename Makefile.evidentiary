@@ -9,7 +9,7 @@
 #   evidentiary-schema -> evidentiary-seed-rules -> evidentiary-indexes
 #   -> evidentiary-buildings
 #   -> evidentiary-hpd -> evidentiary-dob -> evidentiary-ecb
-#   -> evidentiary-hpd-lit -> evidentiary-rentstab
+#   -> evidentiary-hpd-lit -> evidentiary-rentstab -> evidentiary-marshal-evictions
 #   -> evidentiary-portfolio -> evidentiary-agents -> evidentiary-acris
 #   -> evidentiary-reconcile -> evidentiary-phc001
 # =============================================================================
@@ -27,7 +27,7 @@ EV_CYPHER_ARGS = -a "$(NEO4J_URI)" \
         evidentiary-buildings \
         evidentiary-portfolio evidentiary-reconcile \
         evidentiary-portfolio-init evidentiary-portfolio-load evidentiary-portfolio-store \
-        evidentiary-agents evidentiary-acris \
+        evidentiary-agents evidentiary-acris evidentiary-marshal-evictions \
         evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
         evidentiary-rentstab \
         evidentiary-phc001 evidentiary-phc001-dry-run \
@@ -134,6 +134,11 @@ evidentiary-rentstab: ## [ev] Ingest rent stabilization data (~46K buildings)
 	$(PYTHON) -m $(EV_INGEST).rentstab.pipeline
 	@echo "Rent stabilization complete."
 
+evidentiary-marshal-evictions: ## [ev] Ingest NYC Marshal eviction executions (~112K events) (ADR-013)
+	@echo "Ingesting marshal eviction records..."
+	$(PYTHON) -m $(EV_INGEST).marshal_evictions.pipeline
+	@echo "Marshal evictions complete."
+
 
 # ---- Rule evaluation ---------------------------------------------------------
 
@@ -173,7 +178,8 @@ evidentiary-clean-landlords: ## [ev] Remove intermediate Landlord nodes from the
 evidentiary-build: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
                    evidentiary-buildings \
                    evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
-                   evidentiary-rentstab evidentiary-portfolio evidentiary-agents \
+                   evidentiary-rentstab evidentiary-marshal-evictions \
+                   evidentiary-portfolio evidentiary-agents \
                    evidentiary-acris evidentiary-reconcile evidentiary-phc001 ## [ev] Full evidentiary KG build from scratch
 	@echo ""
 	@echo "Full evidentiary KG build complete. Run 'make evidentiary-verify' to confirm."

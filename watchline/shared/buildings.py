@@ -135,3 +135,124 @@ def load_backfill(session, conn) -> int:
         session.run(_MERGE_BACKFILL, batch=batch, now=now)
         total += len(batch)
     return total
+
+
+# ---------------------------------------------------------------------------
+# Rent stabilization enrichment (ADR-014)
+# ---------------------------------------------------------------------------
+
+RENTSTAB_SQL = """
+SELECT
+    trim(r.ucbbl)  AS bbl,
+    r.uc2018,
+    r.uc2019,
+    r.uc2020,
+    r.uc2021,
+    r.uc2022,
+    r.uc2023,
+    r.pdfsoa2023,
+    p.address      AS pluto_address,
+    p.unitsres     AS residential_units,
+    p.yearbuilt    AS year_built,
+    p.bldgclass    AS building_class,
+    p.latitude,
+    p.longitude
+FROM rentstab_v2 r
+LEFT JOIN pluto_latest p ON p.bbl = trim(r.ucbbl)
+WHERE r.ucbbl IS NOT NULL
+  AND LENGTH(trim(r.ucbbl)) = 10
+ORDER BY r.ucbbl
+"""
+
+_MERGE_RENTSTAB = """
+UNWIND $batch AS b
+MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
+SET bld.rs_units_2018   = b.rs_units_2018,
+    bld.rs_units_2019   = b.rs_units_2019,
+    bld.rs_units_2020   = b.rs_units_2020,
+    bld.rs_units_2021   = b.rs_units_2021,
+    bld.rs_units_2022   = b.rs_units_2022,
+    bld.rs_units_2023   = b.rs_units_2023,
+    bld.rs_units_current  = b.rs_units_current,
+    bld.rs_units_change   = b.rs_units_change,
+    bld.rs_deregulating   = b.rs_deregulating,
+    bld.rs_pdfsoa_2023    = b.rs_pdfsoa_2023,
+    bld.updated_at        = datetime($now),
+    bld.borough           = CASE WHEN bld.borough IS NULL
+                                 THEN b.borough ELSE bld.borough END,
+    bld.address           = CASE WHEN bld.address IS NULL OR bld.address = ''
+                                 THEN b.address ELSE bld.address END,
+    bld.latitude          = CASE WHEN bld.latitude IS NULL
+                                 THEN b.latitude ELSE bld.latitude END,
+    bld.longitude         = CASE WHEN bld.longitude IS NULL
+                                 THEN b.longitude ELSE bld.longitude END,
+    bld.residential_units = CASE WHEN bld.residential_units IS NULL
+                                 THEN b.residential_units
+                                 ELSE bld.residential_units END,
+    bld.year_built        = CASE WHEN bld.year_built IS NULL
+                                 THEN b.year_built ELSE bld.year_built END,
+    bld.building_class    = CASE WHEN bld.building_class IS NULL
+                                 THEN b.building_class ELSE bld.building_class END,
+    bld.created_at        = CASE WHEN bld.created_at IS NULL
+                                 THEN datetime($now) ELSE bld.created_at END
+"""
+
+
+def _rentstab_batches(conn) -> Iterator[List[dict]]:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        print("  Querying rentstab_v2 + pluto_latest ...")
+        cur.execute(RENTSTAB_SQL)
+        batch: List[dict] = []
+        for row in cur:
+            bbl = row["bbl"]
+            uc2018 = row["uc2018"]
+            uc2023 = row["uc2023"]
+            if uc2018 is not None and uc2023 is not None:
+                rs_change = uc2023 - uc2018
+                rs_deregulating = rs_change < 0
+            else:
+                rs_change = None
+                rs_deregulating = False
+            batch.append({
+                "bbl":               bbl,
+                "borough":           borough_from_bbl(bbl) or "Unknown",
+                "address":           row["pluto_address"] or "",
+                "latitude":          float(row["latitude"]) if row["latitude"] else None,
+                "longitude":         float(row["longitude"]) if row["longitude"] else None,
+                "residential_units": row["residential_units"],
+                "year_built":        row["year_built"],
+                "building_class":    (row["building_class"] or "").strip() or None,
+                "rs_units_2018":     uc2018,
+                "rs_units_2019":     row["uc2019"],
+                "rs_units_2020":     row["uc2020"],
+                "rs_units_2021":     row["uc2021"],
+                "rs_units_2022":     row["uc2022"],
+                "rs_units_2023":     uc2023,
+                "rs_units_current":  uc2023,
+                "rs_units_change":   rs_change,
+                "rs_deregulating":   rs_deregulating,
+                "rs_pdfsoa_2023":    row["pdfsoa2023"],
+            })
+            if len(batch) == BATCH_SIZE:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
+
+def load_rentstab(session, conn) -> tuple:
+    """Enrich Building nodes with DHCR rent stabilization unit counts.
+
+    MERGE on bbl — idempotent. PLUTO properties are not overwritten if
+    already set. Returns (total_processed, deregulating_count).
+    """
+    now = _now()
+    total = 0
+    deregulating = 0
+    for batch in _rentstab_batches(conn):
+        session.run(_MERGE_RENTSTAB, batch=batch, now=now)
+        total += len(batch)
+        deregulating += sum(1 for b in batch if b["rs_deregulating"])
+        if total % 10_000 == 0:
+            print(f"    {total:,} buildings enriched ...")
+    return total, deregulating

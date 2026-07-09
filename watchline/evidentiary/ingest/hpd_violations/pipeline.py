@@ -49,9 +49,9 @@ import os
 
 NEO4J_DATABASE = NEO4J_EVIDENTIARY_DATABASE
 
-BUILDING_BATCH_SIZE = 500
-VIOLATION_BATCH_SIZE = 500
-OBSERVATION_BATCH_SIZE = 500
+BUILDING_BATCH_SIZE   = BATCH_SIZE
+VIOLATION_BATCH_SIZE  = BATCH_SIZE
+OBSERVATION_BATCH_SIZE = BATCH_SIZE
 
 HPD_VIOLATIONS_SOURCE = {
     "source_id":        "SRC-HPD-VIOLATIONS-001",
@@ -103,6 +103,7 @@ PLUTO_SOURCE = {
 # Connections
 # ---------------------------------------------------------------------------
 
+from watchline.shared.batching import BATCH_SIZE, CURSOR_ITERSIZE
 from watchline.shared.bbl import borough_from_bbl
 from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_EVIDENTIARY_DATABASE
 
@@ -314,7 +315,7 @@ def _violation_batches(conn) -> Iterator[List[dict]]:
     """Yield batches of violation dicts using a server-side cursor for streaming."""
     with conn.cursor(name="hpd_violations_cursor",
                      cursor_factory=RealDictCursor) as cur:
-        cur.itersize = 2000
+        cur.itersize = CURSOR_ITERSIZE
         print("  Querying all violations (open and closed) ...")
         cur.execute(VIOLATIONS_SQL)
         batch = []
