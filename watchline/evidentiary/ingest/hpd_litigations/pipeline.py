@@ -2,8 +2,8 @@
 Watchline HPD Litigations Ingestion Pipeline
 watchline/ingest/hpd_litigations/pipeline.py
 
-Ingests NYC HPD housing court litigations from the deedwatch PostgreSQL
-database into the Watchline Neo4j knowledge graph.
+Ingests NYC HPD housing court litigations from the WoW PostgreSQL database
+(`wow`, port 5434) into the Watchline Neo4j knowledge graph.
 
 HPD litigations are housing court cases initiated by HPD on behalf of
 tenants. They are distinct from HPD violations: a violation is an

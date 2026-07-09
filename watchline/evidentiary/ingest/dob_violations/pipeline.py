@@ -2,8 +2,8 @@
 Watchline DOB Violations Ingestion Pipeline
 watchline/ingest/dob_violations/pipeline.py
 
-Ingests NYC Department of Buildings violations from the deedwatch
-PostgreSQL database into the Watchline Neo4j knowledge graph.
+Ingests NYC Department of Buildings violations from the WoW PostgreSQL
+database (`wow`, port 5434) into the Watchline Neo4j knowledge graph.
 
 What this pipeline creates:
   Layer 1 (Domain):

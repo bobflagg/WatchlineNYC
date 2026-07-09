@@ -3,7 +3,7 @@ Watchline ECB/OATH Violations Ingestion Pipeline
 watchline/ingest/ecb_violations/pipeline.py
 
 Ingests NYC Environmental Control Board (ECB) / OATH violations from the
-deedwatch PostgreSQL database into the Watchline Neo4j knowledge graph.
+WoW PostgreSQL database (`wow`, port 5434) into the Watchline Neo4j knowledge graph.
 
 ECB violations are adjudicated enforcement actions issued by the Office of
 Administrative Trials and Hearings (OATH), distinct from HPD and DOB

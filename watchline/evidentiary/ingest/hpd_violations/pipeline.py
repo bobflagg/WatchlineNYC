@@ -2,8 +2,8 @@
 Watchline HPD Violations Ingestion Pipeline
 watchline/ingest/hpd_violations/pipeline.py
 
-Ingests HPD violations from the deedwatch PostgreSQL database into
-the Watchline Neo4j knowledge graph.
+Ingests HPD violations from the WoW PostgreSQL database (`wow`, port 5434)
+into the Watchline Neo4j knowledge graph.
 
 What this pipeline creates:
   Layer 1 (Domain):

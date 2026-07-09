@@ -67,7 +67,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | Scope: `doctype ILIKE '%DEED%'` (all 8 deed subtypes, any date). Party handling: ACRIS party → `Actor:WatchlineNode {actor_id: ACT-ACRIS-<sha1>}` + `PARTY_TO {role}` edge. Deliberately disjoint from LandlordActor namespace. |
 | **Principle** | P-3 (actor identity intentionally different), P-4 (single Event supertype) |
 | **Recommended resolution** | Split by concern. (a) Document scope: adopt discovery's `ILIKE '%DEED%'` — broader and more authoritative. The evidentiary '2010+' date filter was a pragmatic scope limit; the full history is more useful for ownership change detection. (b) Party handling: the two graphs' different approaches are consistent with Principle 3 — discovery holds raw ACRIS parties; evidentiary defers to its identity resolution pipeline. Keep both as-is. For the shared substrate library, only Events and Buildings are shared; ACRIS party Actors are discovery-only until the evidentiary resolution pipeline is built. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 3). (a) Updated `evidentiary/ingest/acris/load.py` SQL from `doctype IN ('DEED', 'CORRD')` to `doctype ILIKE '%DEED%'` and removed the `2010-01-01` date floor. (b) Party handling unchanged — intentionally different per P-3. |
 
 ---
 
@@ -145,7 +145,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | Docstrings and `check` target: "Reads WoW (`wow`, port 5434), NOT `deedwatch`". |
 | **Principle** | P-9 (source of record is WoW PostgreSQL) |
 | **Recommended resolution** | The source is the WoW PostgreSQL instance. `deedwatch` was a developer-specific label. Update evidentiary docstrings to reference `wow` (port 5434). The `check` Makefile target already validates `PGDATABASE = "wow"`. |
-| **Status** | OPEN — cosmetic but matters for onboarding |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 3). Updated docstrings in 4 evidentiary event pipelines (hpd_violations, hpd_litigations, dob_violations, ecb_violations) from "deedwatch PostgreSQL database" to "WoW PostgreSQL database (`wow`, port 5434)". References to "DeedWatch" in `fw/server.py`, `fw/explorer.py`, `ui/app.py`, `ui/sidebar.py` are the conversational agent product name and are intentionally unchanged. |
 
 ---
 

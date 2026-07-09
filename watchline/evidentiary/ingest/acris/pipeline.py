@@ -5,7 +5,7 @@ Ingests ACRIS deed transfer records into the Neo4j epistemic graph as
 DeedTransfer Event nodes on Building nodes.
 
 Scope:
-    Document types DEED and CORRD, recorded since 2010-01-01.
+    All deed subtypes (doctype ILIKE '%DEED%'), all dates (ADR-005).
     Only buildings already present in the graph receive DeedTransfer events.
     Buildings not yet in the graph (typically 1-4 family homeowner properties
     not covered by HPD violation data) are silently skipped. These will be

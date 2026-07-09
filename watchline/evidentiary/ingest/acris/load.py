@@ -10,8 +10,9 @@ Source tables:
     real_property_parties  -- grantors (partytype=1) and grantees (partytype=2)
 
 Scope:
-    Document types: DEED, CORRD (corrective deed)
-    Date range:     2010-01-01 to present
+    Document types: all deed subtypes (doctype ILIKE '%DEED%') — includes DEED,
+                    CORRD, DEEDO, Mdeed, and other deed variants (ADR-005).
+    Date range:     all dates (no lower bound — full history)
     BBL filter:     non-null, non-zero 10-digit BBL from real_property_legals
 
 One output row per (documentid, bbl) pair. Multiple grantors and grantees
@@ -68,8 +69,7 @@ LEFT JOIN grantors g1
     ON g1.documentid = m.documentid
 LEFT JOIN grantees g2
     ON g2.documentid = m.documentid
-WHERE m.doctype IN ('DEED', 'CORRD')
-  AND m.docdate >= '2010-01-01'
+WHERE m.doctype ILIKE '%DEED%'
   AND l.bbl IS NOT NULL
   AND l.bbl != '0000000000'
 ORDER BY m.docdate, m.documentid
@@ -86,7 +86,7 @@ def fetch_deeds() -> list[dict]:
 
     Returns a list of dicts, one per (document, BBL) pair:
         document_id     str       ACRIS documentid (primary key)
-        doc_type        str       'DEED' or 'CORRD'
+        doc_type        str       deed subtype (DEED, CORRD, DEEDO, MEED, etc.)
         docdate         str|None  deed date as 'YYYY-MM-DD'
         recorded_date   str|None  recording date as 'YYYY-MM-DD'
         doc_amount      int|None  sale price in dollars
@@ -98,7 +98,7 @@ def fetch_deeds() -> list[dict]:
     conn = pg_conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            print("  Querying ACRIS deed records (DEED + CORRD since 2010)...")
+            print("  Querying ACRIS deed records (all deed subtypes, all dates)...")
             cur.execute(_QUERY)
             rows = cur.fetchall()
         conn.commit()
