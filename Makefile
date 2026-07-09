@@ -1,80 +1,80 @@
 # =============================================================================
-# Watchline NYC -- Makefile
+# Watchline NYC — Makefile
 #
-# Orchestrates the full knowledge graph build pipeline, Neo4j infrastructure,
-# and application serving.
+# Top-level orchestrator. Delegates to:
+#   Makefile.evidentiary  evidentiary KG build pipeline  (targets: evidentiary-*)
+#   Makefile.discovery    discovery KG ingestion pipeline (targets: discovery-*)
 #
 # Usage:
-#   make help          Show all available targets
-#   make kgs           Download, set up, and load Neo4j containers
-#   make build         Full KG build from scratch (schema + ingest all datasets)
-#   make serve         Start FastAPI + Streamlit in the background
-#   make serve-stop    Stop both servers
+#   make help                      Show all available targets
+#   make kgs                       Download, set up, and load Neo4j containers
+#   make evidentiary-build         Full evidentiary KG build from scratch
+#   make discovery-ingest-all      Full discovery KG ingestion (schema -> events -> portfolio)
+#   make serve                     Start FastAPI + Streamlit in the background
 #
-# Prerequisites:
-#   - .env file with PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD,
-#     NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE
-#   - Docker installed and running (for KG containers)
-#   - cypher-shell installed and on PATH (or set CYPHER_SHELL below)
-#   - uv installed
+# Prerequisites (.env):
+#   PGHOST, PGPORT, PGDATABASE (=wow), PGUSER, PGPASSWORD
+#   NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+#   NEO4J_EVIDENTIARY_DATABASE, NEO4J_DISCOVERY_DATABASE
+#   NEO4J_EPISTEMIC_URI, NEO4J_EPISTEMIC_USER,
+#   NEO4J_EPISTEMIC_PASSWORD, NEO4J_EPISTEMIC_DATABASE
 #
-# Version: 2.0 -- July 2026
+# Version: 3.0 — July 2026 (reconciliation)
 # =============================================================================
 
-.PHONY: help \
-        download setup load test kgs restart stop start \
-        logs-domain logs-epistemic status clean-docker \
-        api api-stop api-logs \
-        ui  ui-stop  ui-logs  \
-        serve serve-stop serve-status \
-        build rebuild nightly \
-        schema seed-rules indexes \
-        portfolio reconcile agents \
-        hpd dob ecb hpd-lit rentstab phc001 phc001-dry-run \
-        verify clean-landlords
+include .env
+export
 
+PYTHON       ?= uv run python
+CYPHER_SHELL ?= cypher-shell
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-PYTHON        = uv run python
-CYPHER_SHELL  = cypher-shell
-SCRIPTS_DIR   = scripts
-INGEST        = watchline.ingest
+include Makefile.evidentiary
+include Makefile.discovery
 
 DOCKER_DIR          := docker
 DUMPS_DIR           := dumps
-DOMAIN_GDRIVE_ID    := 1nqobTwCW6puY6rIFQL2xSqNPrYcRRouY
-EPISTEMIC_GDRIVE_ID := 1EW4fESzlmVizppQGUgvhwP8AxCda-Azq
+DISCOVERY_GDRIVE_ID := 1nqobTwCW6puY6rIFQL2xSqNPrYcRRouY
+EVIDENTIARY_GDRIVE_ID := 1EW4fESzlmVizppQGUgvhwP8AxCda-Azq
 
 API_PID_FILE := .api.pid
 UI_PID_FILE  := .ui.pid
 API_LOG      := .api.log
 UI_LOG       := .ui.log
 
-# Load .env for cypher-shell authentication
-include .env
-export
-
-CYPHER_ARGS = -a "$(NEO4J_EPISTEMIC_URI)" \
-              -u "$(NEO4J_EPISTEMIC_USER)" \
-              -p "$(NEO4J_EPISTEMIC_PASSWORD)" \
-              -d "$(NEO4J_EPISTEMIC_DATABASE)"
+.PHONY: help install \
+        download setup load test kgs restart stop start \
+        logs-discovery logs-evidentiary status clean-docker \
+        api api-stop api-logs \
+        ui ui-stop ui-logs \
+        serve serve-stop serve-status
 
 
 # ---------------------------------------------------------------------------
-# Help
-# Uses ## comments on each target for self-documenting output.
+# Help — aggregates targets from this file and both sub-Makefiles
 # ---------------------------------------------------------------------------
 
-help: ## Show this help message
+help: ## Show all available targets
 	@echo ""
 	@echo "Watchline NYC"
 	@echo "============="
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 	@echo ""
+	@echo "  Infrastructure & serving:"
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' Makefile | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-32s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "  Evidentiary KG  (evidentiary-*):"
+	@grep -hE '^evidentiary-[a-zA-Z_-]+:.*?## \[ev\].*$$' Makefile.evidentiary | \
+		sed 's/:.*## \[ev\] /\t/' | \
+		awk 'BEGIN {FS = "\t"}; {printf "  \033[33m%-32s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "  Discovery KG    (discovery-*):"
+	@grep -hE '^discovery-[a-zA-Z_-]+:.*?## \[dc\].*$$' Makefile.discovery | \
+		sed 's/:.*## \[dc\] /\t/' | \
+		awk 'BEGIN {FS = "\t"}; {printf "  \033[32m%-32s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+
+install: ## Install Python dependencies (uv)
+	uv sync
 
 
 # ---------------------------------------------------------------------------
@@ -84,12 +84,12 @@ help: ## Show this help message
 download: ## Download KG dumps from Google Drive into dumps/
 	@echo "Checking for gdown..."
 	@uv run pip install -q gdown
-	@mkdir -p $(DUMPS_DIR)/domain $(DUMPS_DIR)/epistemic
-	@echo "Downloading Domain KG dump..."
-	@uv run gdown $(DOMAIN_GDRIVE_ID) -O $(DUMPS_DIR)/domain/neo4j.dump
-	@echo "Downloading Epistemic KG dump..."
-	@uv run gdown $(EPISTEMIC_GDRIVE_ID) -O $(DUMPS_DIR)/epistemic/neo4j.dump
-	@du -sh $(DUMPS_DIR)/domain/neo4j.dump $(DUMPS_DIR)/epistemic/neo4j.dump
+	@mkdir -p $(DUMPS_DIR)/discovery $(DUMPS_DIR)/evidentiary
+	@echo "Downloading Discovery KG dump..."
+	@uv run gdown $(DISCOVERY_GDRIVE_ID) -O $(DUMPS_DIR)/discovery/neo4j.dump
+	@echo "Downloading Evidentiary KG dump..."
+	@uv run gdown $(EVIDENTIARY_GDRIVE_ID) -O $(DUMPS_DIR)/evidentiary/neo4j.dump
+	@du -sh $(DUMPS_DIR)/discovery/neo4j.dump $(DUMPS_DIR)/evidentiary/neo4j.dump
 
 setup: ## Create and start Neo4j Docker containers
 	@bash $(DOCKER_DIR)/setup-kg-containers.sh
@@ -103,29 +103,29 @@ test: ## Test that both KGs are up and returning data
 kgs: download setup load test ## Download, setup, load, and test in one step
 
 restart: ## Restart both Neo4j containers
-	@docker restart neo4j-domain neo4j-epistemic
+	@docker restart neo4j-discovery neo4j-evidentiary
 
 stop: ## Stop both Neo4j containers
-	@docker stop neo4j-domain neo4j-epistemic
+	@docker stop neo4j-discovery neo4j-evidentiary
 
 start: ## Start both Neo4j containers (if already set up)
-	@docker start neo4j-domain neo4j-epistemic
+	@docker start neo4j-discovery neo4j-evidentiary
 
-logs-domain: ## Tail logs for the Domain KG container
-	@docker logs -f neo4j-domain
+logs-discovery: ## Tail logs for the Discovery KG container
+	@docker logs -f neo4j-discovery
 
-logs-epistemic: ## Tail logs for the Epistemic KG container
-	@docker logs -f neo4j-epistemic
+logs-evidentiary: ## Tail logs for the Evidentiary KG container
+	@docker logs -f neo4j-evidentiary
 
 status: ## Show running status of both Neo4j containers
-	@docker ps --filter name=neo4j-domain --filter name=neo4j-epistemic
+	@docker ps --filter name=neo4j-discovery --filter name=neo4j-evidentiary
 
-clean-docker: ## Stop and remove containers and volumes (destructive!)
-	@echo "WARNING: This will delete all Neo4j containers and volume data."
+clean-docker: ## Stop and remove both containers and their volumes (destructive!)
+	@echo "WARNING: This will delete all Neo4j container data."
 	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	@docker stop neo4j-domain neo4j-epistemic 2>/dev/null || true
-	@docker rm   neo4j-domain neo4j-epistemic 2>/dev/null || true
-	@docker volume rm neo4j-domain neo4j-epistemic 2>/dev/null || true
+	@docker stop neo4j-discovery neo4j-evidentiary 2>/dev/null || true
+	@docker rm   neo4j-discovery neo4j-evidentiary 2>/dev/null || true
+	@docker volume rm neo4j-discovery neo4j-evidentiary 2>/dev/null || true
 	@echo "Done."
 
 
@@ -192,155 +192,3 @@ serve-status: ## Show whether FastAPI and Streamlit are running
 	else \
 		echo "  Streamlit:  stopped"; \
 	fi
-
-
-# ---------------------------------------------------------------------------
-# KG build pipeline -- full build from scratch
-# ---------------------------------------------------------------------------
-
-build: schema seed-rules indexes hpd dob ecb hpd-lit rentstab portfolio agents acris reconcile phc001 ## Full KG build from scratch
-	@echo ""
-	@echo "Full Watchline KG build complete. Run 'make verify' to confirm."
-
-rebuild: build ## Alias for build
-
-nightly: portfolio agents reconcile ## Re-run portfolio detection + agents + reconcile (incremental)
-	@echo ""
-	@echo "Nightly update complete."
-
-
-# ---------------------------------------------------------------------------
-# One-time setup targets (run against a fresh Neo4j database)
-# ---------------------------------------------------------------------------
-
-schema: ## Apply GRAPH TYPE schema to Neo4j
-	@echo "Applying GRAPH TYPE schema..."
-	$(CYPHER_SHELL) $(CYPHER_ARGS) --file $(SCRIPTS_DIR)/01_schema.cypher
-	@echo "Schema applied."
-
-seed-rules: ## Load all Rule nodes into Neo4j
-	@echo "Loading Rule nodes..."
-	$(CYPHER_SHELL) $(CYPHER_ARGS) --file $(SCRIPTS_DIR)/02_seed_rules.cypher
-	@echo "Rules seeded."
-
-indexes: ## Create performance indexes
-	@echo "Creating performance indexes..."
-	$(CYPHER_SHELL) $(CYPHER_ARGS) --file $(SCRIPTS_DIR)/03_indexes.cypher
-	@echo "Indexes created (building in background — monitor with SHOW INDEXES)."
-
-
-# ---------------------------------------------------------------------------
-# Portfolio detection pipeline
-# ---------------------------------------------------------------------------
-
-portfolio: ## Load landlord graph + run WCC/Louvain + write ontology
-	@echo "Running portfolio detection pipeline..."
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step init
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step load
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step store
-	@echo "Portfolio pipeline complete."
-
-reconcile: ## Link BeneficialControl relationships to Building nodes
-	@echo "Reconciling BeneficialControl relationships..."
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step reconcile
-	@echo "Reconciliation complete."
-
-portfolio-init: ## Run portfolio init step only
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step init
-
-portfolio-load: ## Run portfolio load step only
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step load
-
-portfolio-store: ## Run portfolio store step only
-	$(PYTHON) -m $(INGEST).portfolio.pipeline --step store
-
-
-# ---------------------------------------------------------------------------
-# Managing agent ingestion pipeline
-# ---------------------------------------------------------------------------
-
-agents: ## Ingest managing agents from HPD registration contacts
-	@echo "Ingesting managing agent contacts..."
-	$(PYTHON) -m $(INGEST).agents.pipeline --step load
-	$(PYTHON) -m $(INGEST).agents.pipeline --step store
-	@echo "Agents pipeline complete."
-
-acris: ## Ingest ACRIS deed transfer records (DEED + CORRD, 2010–present)
-	@echo "Ingesting ACRIS deed transfer records..."
-	$(PYTHON) -m $(INGEST).acris.pipeline --step load
-	$(PYTHON) -m $(INGEST).acris.pipeline --step store
-	@echo "ACRIS pipeline complete."
-
-
-# ---------------------------------------------------------------------------
-# Ingestion pipelines
-# ---------------------------------------------------------------------------
-
-hpd: ## Ingest HPD violations (~11M events)
-	@echo "Ingesting HPD violations..."
-	$(PYTHON) -m $(INGEST).hpd_violations.pipeline --step source
-	$(PYTHON) -m $(INGEST).hpd_violations.pipeline --step buildings
-	$(PYTHON) -m $(INGEST).hpd_violations.pipeline --step violations
-	@echo "HPD violations complete."
-
-dob: ## Ingest DOB violations (~2.5M events)
-	@echo "Ingesting DOB violations..."
-	$(PYTHON) -m $(INGEST).dob_violations.pipeline --step source
-	$(PYTHON) -m $(INGEST).dob_violations.pipeline --step buildings
-	$(PYTHON) -m $(INGEST).dob_violations.pipeline --step violations
-	@echo "DOB violations complete."
-
-ecb: ## Ingest ECB/OATH violations (~1.8M judgments)
-	@echo "Ingesting ECB violations..."
-	$(PYTHON) -m $(INGEST).ecb_violations.pipeline --step source
-	$(PYTHON) -m $(INGEST).ecb_violations.pipeline --step buildings
-	$(PYTHON) -m $(INGEST).ecb_violations.pipeline --step violations
-	@echo "ECB violations complete."
-
-hpd-lit: ## Ingest HPD litigations (~239K cases)
-	@echo "Ingesting HPD litigations..."
-	$(PYTHON) -m $(INGEST).hpd_litigations.pipeline
-	@echo "HPD litigations complete."
-
-rentstab: ## Ingest rent stabilization data (~46K buildings)
-	@echo "Ingesting rent stabilization data..."
-	$(PYTHON) -m $(INGEST).rentstab.pipeline
-	@echo "Rent stabilization complete."
-
-
-# ---------------------------------------------------------------------------
-# Rule evaluation
-# ---------------------------------------------------------------------------
-
-phc001: ## Evaluate PHC-001 (Persistent Hazardous Conditions)
-	@echo "Evaluating PHC-001 (Persistent Hazardous Conditions)..."
-	$(PYTHON) -m $(INGEST).phc001.pipeline
-	@echo "PHC-001 evaluation complete."
-
-phc001-dry-run: ## Dry run PHC-001 (no writes)
-	@echo "PHC-001 dry run (no writes)..."
-	$(PYTHON) -m $(INGEST).phc001.pipeline --dry-run
-
-
-# ---------------------------------------------------------------------------
-# Verification and utilities
-# ---------------------------------------------------------------------------
-
-verify: ## Run sanity check queries against the live graph
-	@echo "Running verification queries..."
-	@echo "MATCH (n) RETURN labels(n)[0] AS label, count(n) AS count ORDER BY count DESC LIMIT 15;" \
-		| $(CYPHER_SHELL) $(CYPHER_ARGS) --format plain
-	@echo ""
-	@echo "MATCH (rel:Relationship {relationship_type: 'BeneficialControl'})-[:INVOLVES_BUILDING]->(bld:Building) MATCH (rel)-[:INVOLVES_ACTOR]->(a:Actor) MATCH (a)-[:SUBJECT_OF]->(c:Claim) RETURN count(DISTINCT bld) AS buildings, count(DISTINCT a) AS networks, count(DISTINCT c) AS claims, count(DISTINCT rel) AS relationships;" \
-		| $(CYPHER_SHELL) $(CYPHER_ARGS) --format plain
-	@echo ""
-	@echo "MATCH (e:Event) RETURN e.source_name AS source, count(e) AS events ORDER BY events DESC;" \
-		| $(CYPHER_SHELL) $(CYPHER_ARGS) --format plain
-	@echo ""
-	@echo "MATCH (a:Actor) RETURN a.actor_type AS type, count(a) AS count ORDER BY count DESC;" \
-		| $(CYPHER_SHELL) $(CYPHER_ARGS) --format plain
-
-clean-landlords: ## Clear intermediate Landlord nodes from the graph
-	@echo "Clearing intermediate Landlord nodes..."
-	@echo "MATCH (n:Landlord) DETACH DELETE n;" | $(CYPHER_SHELL) $(CYPHER_ARGS)
-	@echo "Done."

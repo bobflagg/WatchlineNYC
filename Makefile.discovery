@@ -1,0 +1,117 @@
+# =============================================================================
+# Makefile.discovery — discovery KG ingestion pipeline
+#
+# Included by the top-level Makefile. All targets are prefixed discovery-.
+# Shared variables (PYTHON) are defined by the including Makefile before this
+# file is parsed; do not redefine them here.
+#
+# Dependency order (enforced by discovery-ingest-all):
+#   discovery-schema -> discovery-buildings -> discovery-hpd-registrations
+#   -> discovery-events -> discovery-portfolio
+#
+# All targets are idempotent and safe to re-run.
+# Targets marked [blocked] depend on data not yet available in WoW.
+# =============================================================================
+
+DC_MOD       = watchline.discovery.ingest
+DC_PORTFOLIO = $(PYTHON) -m $(DC_MOD).portfolio.pipeline
+
+.NOTPARALLEL:
+
+.PHONY: discovery-check discovery-bootstrap discovery-schema \
+        discovery-buildings \
+        discovery-actors discovery-registrations discovery-hpd-registrations \
+        discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
+        discovery-hpd-litigations discovery-oca-evictions \
+        discovery-marshal-evictions discovery-acris-deeds discovery-events \
+        discovery-portfolio-edges discovery-portfolio-reconcile discovery-portfolio \
+        discovery-ingest-all
+
+
+# ---- Setup / verification ----------------------------------------------------
+
+discovery-check: ## [dc] Verify DB connections (expect Postgres = wow:5434; Neo4j reachable)
+	@$(PYTHON) -c '\
+import os; from dotenv import load_dotenv; load_dotenv(); \
+import psycopg2; \
+c = psycopg2.connect(host=os.environ["PGHOST"], port=os.environ["PGPORT"], \
+    dbname=os.environ["PGDATABASE"], user=os.environ["PGUSER"], password=os.environ["PGPASSWORD"]); \
+cur = c.cursor(); cur.execute("SELECT current_database(), inet_server_port()"); \
+db = cur.fetchone(); print("  Postgres:", db); c.close(); \
+print("  WARNING: expected database \"wow\"") if db[0] != "wow" else None; \
+from neo4j import GraphDatabase; \
+d = GraphDatabase.driver(os.environ["NEO4J_URI"], auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"])); \
+d.verify_connectivity(); \
+print("  Neo4j:   connected to", os.environ["NEO4J_URI"], \
+      "db", os.environ.get("NEO4J_DISCOVERY_DATABASE", "neo4j")); \
+d.close()'
+
+discovery-bootstrap: discovery-check discovery-schema ## [dc] Verify connections then apply the graph type (run FIRST on an empty DB)
+
+
+# ---- Schema ------------------------------------------------------------------
+
+discovery-schema: ## [dc] Apply the discovery graph type (run ONCE on an empty DB before loading)
+	$(DC_PORTFOLIO) --step schema
+
+
+# ---- Layer 1: buildings + actors ---------------------------------------------
+
+discovery-buildings: ## [dc] Build Building nodes from full PLUTO substrate (~858K lots)
+	$(PYTHON) -m $(DC_MOD).buildings.pipeline
+
+discovery-actors: ## [dc] Build Actor:LandlordActor nodes from landlords_with_connections
+	$(PYTHON) -m $(DC_MOD).hpd_registrations.pipeline --step actors
+
+discovery-registrations: ## [dc] Build (Actor)-[:REGISTERED_FOR]->(Building) edges
+	$(PYTHON) -m $(DC_MOD).hpd_registrations.pipeline --step registrations
+
+discovery-hpd-registrations: ## [dc] Actors + REGISTERED_FOR edges (full hpd_registrations pipeline)
+	$(PYTHON) -m $(DC_MOD).hpd_registrations.pipeline
+
+
+# ---- Layer 2: events --------------------------------------------------------
+
+discovery-hpd-violations: ## [dc] HPD violations -> Event(Violation, HPD)
+	$(PYTHON) -m $(DC_MOD).hpd_violations.pipeline
+
+discovery-dob-violations: ## [dc] DOB violations -> Event(Violation, DOB)
+	$(PYTHON) -m $(DC_MOD).dob_violations.pipeline
+
+discovery-ecb-violations: ## [dc] ECB judgments -> Event(Judgment, ECB)
+	$(PYTHON) -m $(DC_MOD).ecb_violations.pipeline
+
+discovery-hpd-litigations: ## [dc] HPD litigations -> Event(CourtFiling, HPD-Litigations)
+	$(PYTHON) -m $(DC_MOD).hpd_litigations.pipeline
+
+discovery-oca-evictions: ## [dc] [blocked] OCA evictions — bbl bridge not yet available in WoW
+	$(PYTHON) -m $(DC_MOD).oca_evictions.pipeline
+
+discovery-marshal-evictions: ## [dc] Marshal evictions -> Event(Eviction, Marshal)
+	$(PYTHON) -m $(DC_MOD).marshal_evictions.pipeline
+
+discovery-acris-deeds: ## [dc] ACRIS deeds -> Event(DeedTransfer) + grantor/grantee Actor:PARTY_TO
+	$(PYTHON) -m $(DC_MOD).acris_deeds.pipeline
+
+discovery-events: discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
+                  discovery-hpd-litigations discovery-oca-evictions \
+                  discovery-marshal-evictions discovery-acris-deeds ## [dc] All event datasets
+
+
+# ---- Layer 3: portfolio ------------------------------------------------------
+
+discovery-portfolio-edges: ## [dc] Actor connection edges (CONNECTED_BY_NAME/ADDRESS)
+	$(DC_PORTFOLIO) --step edges
+
+discovery-portfolio-reconcile: ## [dc] GDS clustering -> Portfolio + MEMBER_OF/IN_PORTFOLIO/APPARENT_CONTROL
+	$(DC_PORTFOLIO) --step reconcile
+
+discovery-portfolio: discovery-portfolio-edges discovery-portfolio-reconcile ## [dc] Full portfolio layer (edges + reconcile)
+
+
+# ---- Full pipeline -----------------------------------------------------------
+
+discovery-ingest-all: discovery-bootstrap discovery-buildings discovery-hpd-registrations \
+                      discovery-events discovery-portfolio ## [dc] Full ordered discovery ingestion
+	@echo ""
+	@echo "Discovery ingestion complete."

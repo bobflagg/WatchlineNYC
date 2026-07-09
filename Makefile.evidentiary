@@ -1,0 +1,185 @@
+# =============================================================================
+# Makefile.evidentiary — evidentiary KG build pipeline
+#
+# Included by the top-level Makefile. All targets are prefixed evidentiary-.
+# Shared variables (PYTHON, CYPHER_SHELL) are defined by the including Makefile
+# before this file is parsed; do not redefine them here.
+#
+# Dependency order for a full build:
+#   evidentiary-schema -> evidentiary-seed-rules -> evidentiary-indexes
+#   -> evidentiary-buildings
+#   -> evidentiary-hpd -> evidentiary-dob -> evidentiary-ecb
+#   -> evidentiary-hpd-lit -> evidentiary-rentstab
+#   -> evidentiary-portfolio -> evidentiary-agents -> evidentiary-acris
+#   -> evidentiary-reconcile -> evidentiary-phc001
+# =============================================================================
+
+EV_INGEST    = watchline.evidentiary.ingest
+EV_SCRIPTS   = scripts
+
+# Uses NEO4J_EPISTEMIC_* vars exported from .env by the top-level Makefile.
+EV_CYPHER_ARGS = -a "$(NEO4J_EPISTEMIC_URI)" \
+                 -u "$(NEO4J_EPISTEMIC_USER)" \
+                 -p "$(NEO4J_EPISTEMIC_PASSWORD)" \
+                 -d "$(NEO4J_EPISTEMIC_DATABASE)"
+
+.PHONY: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
+        evidentiary-buildings \
+        evidentiary-portfolio evidentiary-reconcile \
+        evidentiary-portfolio-init evidentiary-portfolio-load evidentiary-portfolio-store \
+        evidentiary-agents evidentiary-acris \
+        evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
+        evidentiary-rentstab \
+        evidentiary-phc001 evidentiary-phc001-dry-run \
+        evidentiary-verify evidentiary-clean-landlords \
+        evidentiary-build evidentiary-rebuild evidentiary-nightly
+
+
+# ---- One-time setup ----------------------------------------------------------
+
+evidentiary-schema: ## [ev] Apply GRAPH TYPE schema to the evidentiary database
+	@echo "Applying evidentiary GRAPH TYPE schema..."
+	$(CYPHER_SHELL) $(EV_CYPHER_ARGS) --file $(EV_SCRIPTS)/01_schema.cypher
+	@echo "Schema applied."
+
+evidentiary-seed-rules: ## [ev] Load all Rule nodes into the evidentiary graph
+	@echo "Loading Rule nodes..."
+	$(CYPHER_SHELL) $(EV_CYPHER_ARGS) --file $(EV_SCRIPTS)/02_seed_rules.cypher
+	@echo "Rules seeded."
+
+evidentiary-indexes: ## [ev] Create performance indexes
+	@echo "Creating performance indexes..."
+	$(CYPHER_SHELL) $(EV_CYPHER_ARGS) --file $(EV_SCRIPTS)/03_indexes.cypher
+	@echo "Indexes created (building in background)."
+
+
+# ---- Portfolio detection -----------------------------------------------------
+
+evidentiary-portfolio: ## [ev] Load landlord graph + WCC/Louvain + write OwnershipNetwork ontology
+	@echo "Running portfolio detection pipeline..."
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step init
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step load
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step store
+	@echo "Portfolio pipeline complete."
+
+evidentiary-reconcile: ## [ev] Link BeneficialControl relationships to Building nodes
+	@echo "Reconciling BeneficialControl relationships..."
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step reconcile
+	@echo "Reconciliation complete."
+
+evidentiary-portfolio-init: ## [ev] Portfolio init step only
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step init
+
+evidentiary-portfolio-load: ## [ev] Portfolio load step only
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step load
+
+evidentiary-portfolio-store: ## [ev] Portfolio store step only
+	$(PYTHON) -m $(EV_INGEST).portfolio.pipeline --step store
+
+
+# ---- Evidentiary-only overlay pipelines --------------------------------------
+
+evidentiary-agents: ## [ev] Ingest managing agents from HPD registration contacts
+	@echo "Ingesting managing agent contacts..."
+	$(PYTHON) -m $(EV_INGEST).agents.pipeline --step load
+	$(PYTHON) -m $(EV_INGEST).agents.pipeline --step store
+	@echo "Agents pipeline complete."
+
+evidentiary-acris: ## [ev] Ingest ACRIS deed transfers with evidentiary overlay
+	@echo "Ingesting ACRIS deed transfer records..."
+	$(PYTHON) -m $(EV_INGEST).acris.pipeline --step load
+	$(PYTHON) -m $(EV_INGEST).acris.pipeline --step store
+	@echo "ACRIS pipeline complete."
+
+
+# ---- Shared building substrate -----------------------------------------------
+
+evidentiary-buildings: ## [ev] Ingest canonical Building nodes from pluto_latest (shared substrate)
+	@echo "Ingesting PLUTO building substrate..."
+	$(PYTHON) -m $(EV_INGEST).buildings.pipeline --step pluto
+	$(PYTHON) -m $(EV_INGEST).buildings.pipeline --step backfill
+	@echo "Building substrate complete."
+
+
+# ---- Domain event ingestion --------------------------------------------------
+
+evidentiary-hpd: ## [ev] Ingest HPD violations (~11M events)
+	@echo "Ingesting HPD violations..."
+	$(PYTHON) -m $(EV_INGEST).hpd_violations.pipeline --step source
+	$(PYTHON) -m $(EV_INGEST).hpd_violations.pipeline --step buildings
+	$(PYTHON) -m $(EV_INGEST).hpd_violations.pipeline --step violations
+	@echo "HPD violations complete."
+
+evidentiary-dob: ## [ev] Ingest DOB violations (~2.5M events)
+	@echo "Ingesting DOB violations..."
+	$(PYTHON) -m $(EV_INGEST).dob_violations.pipeline --step source
+	$(PYTHON) -m $(EV_INGEST).dob_violations.pipeline --step buildings
+	$(PYTHON) -m $(EV_INGEST).dob_violations.pipeline --step violations
+	@echo "DOB violations complete."
+
+evidentiary-ecb: ## [ev] Ingest ECB/OATH judgments (~1.8M events)
+	@echo "Ingesting ECB violations..."
+	$(PYTHON) -m $(EV_INGEST).ecb_violations.pipeline --step source
+	$(PYTHON) -m $(EV_INGEST).ecb_violations.pipeline --step buildings
+	$(PYTHON) -m $(EV_INGEST).ecb_violations.pipeline --step violations
+	@echo "ECB violations complete."
+
+evidentiary-hpd-lit: ## [ev] Ingest HPD litigations (~239K cases)
+	@echo "Ingesting HPD litigations..."
+	$(PYTHON) -m $(EV_INGEST).hpd_litigations.pipeline
+	@echo "HPD litigations complete."
+
+evidentiary-rentstab: ## [ev] Ingest rent stabilization data (~46K buildings)
+	@echo "Ingesting rent stabilization data..."
+	$(PYTHON) -m $(EV_INGEST).rentstab.pipeline
+	@echo "Rent stabilization complete."
+
+
+# ---- Rule evaluation ---------------------------------------------------------
+
+evidentiary-phc001: ## [ev] Evaluate PHC-001 (Persistent Hazardous Conditions)
+	@echo "Evaluating PHC-001..."
+	$(PYTHON) -m $(EV_INGEST).phc001.pipeline
+	@echo "PHC-001 evaluation complete."
+
+evidentiary-phc001-dry-run: ## [ev] Dry run PHC-001 (no writes)
+	$(PYTHON) -m $(EV_INGEST).phc001.pipeline --dry-run
+
+
+# ---- Verification + utilities ------------------------------------------------
+
+evidentiary-verify: ## [ev] Run sanity check queries against the evidentiary graph
+	@echo "Running evidentiary verification queries..."
+	@echo "MATCH (n) RETURN labels(n)[0] AS label, count(n) AS count ORDER BY count DESC LIMIT 15;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo ""
+	@echo "MATCH (rel:Relationship {relationship_type:'BeneficialControl'})-[:INVOLVES_BUILDING]->(b:Building) MATCH (rel)-[:INVOLVES_ACTOR]->(a:Actor) MATCH (a)-[:SUBJECT_OF]->(c:Claim) RETURN count(DISTINCT b) AS buildings, count(DISTINCT a) AS networks, count(DISTINCT c) AS claims;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo ""
+	@echo "MATCH (e:Event) RETURN e.source_name AS source, count(e) AS events ORDER BY events DESC;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo ""
+	@echo "MATCH (a:Actor) RETURN a.actor_type AS type, count(a) AS count ORDER BY count DESC;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+
+evidentiary-clean-landlords: ## [ev] Remove intermediate Landlord nodes from the evidentiary graph
+	@echo "Clearing intermediate Landlord nodes..."
+	@echo "MATCH (n:Landlord) DETACH DELETE n;" | $(CYPHER_SHELL) $(EV_CYPHER_ARGS)
+	@echo "Done."
+
+
+# ---- Full build --------------------------------------------------------------
+
+evidentiary-build: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
+                   evidentiary-buildings \
+                   evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
+                   evidentiary-rentstab evidentiary-portfolio evidentiary-agents \
+                   evidentiary-acris evidentiary-reconcile evidentiary-phc001 ## [ev] Full evidentiary KG build from scratch
+	@echo ""
+	@echo "Full evidentiary KG build complete. Run 'make evidentiary-verify' to confirm."
+
+evidentiary-rebuild: evidentiary-build ## [ev] Alias for evidentiary-build
+
+evidentiary-nightly: evidentiary-portfolio evidentiary-agents evidentiary-reconcile ## [ev] Incremental nightly update (portfolio + agents + reconcile)
+	@echo ""
+	@echo "Evidentiary nightly update complete."
