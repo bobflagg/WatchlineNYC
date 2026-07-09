@@ -80,7 +80,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | `actor_id = "ACT-<nodeid>"` (LandlordActor), `actor_id = "ACT-ACRIS-<sha1>"` (ACRIS). |
 | **Principle** | P-3 (actor keys must be namespaced so regimes never collide) |
 | **Recommended resolution** | Adopt explicit namespacing per Principle 3, as the kickoff brief prescribes. Rename discovery LandlordActor key to `ACT-LL-<nodeid>`. Retain `ACT-ACRIS-<sha1>`. Retain evidentiary `ACT-<uuid4>` for OwnershipNetwork (these never enter the discovery graph). `MGT-<uuid5>` is already distinct. Document the namespace registry in a new `docs/actor-namespaces.md`. This is a breaking change for the discovery graph — schedule for Phase 3 with a full rebuild. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09. Renamed discovery LandlordActor key from `ACT-{nodeid}` to `ACT-LL-{nodeid}` in `hpd_registrations/pipeline.py` and `portfolio/pipeline.py` (both `_actor_id()` functions). `ACT-ACRIS-{sha1}` is unchanged. Evidentiary `ACT-{uuid4}` and `MGT-{uuid5}` are already disjoint and unaffected. Namespace registry written to `docs/actor-namespaces.md`. Discovery graph rebuild required to migrate existing nodes; no in-place rename is possible against a live graph due to the IS KEY constraint on `actor_id`. |
 
 ---
 
@@ -106,7 +106,7 @@ Principles cited as (P-N) refer to the numbered Reconciliation Principles in REC
 | **Discovery approach** | Each pipeline is self-contained; no shared config. |
 | **Principle** | P-5 (one source of truth for shared ingestion primitives) |
 | **Recommended resolution** | Create a shared `watchline/shared/connections.py` (or similar) that provides `pg_conn()`, `neo4j_evidentiary_driver()`, `neo4j_discovery_driver()`, and the `NEO4J_EVIDENTIARY_DATABASE` / `NEO4J_DISCOVERY_DATABASE` constants. Both graph-specific ingestion codebases import from this shared module. This is the natural home for the ADR-007 fix and prevents the config from drifting again. |
-| **Status** | OPEN |
+| **Status** | DECIDED + IMPLEMENTED — 2026-07-09 (Phase 2). Created `watchline/shared/connections.py` with `pg_conn()`, `neo4j_driver()`, `NEO4J_EVIDENTIARY_DATABASE`, `NEO4J_DISCOVERY_DATABASE`. All 9 discovery + 6 evidentiary pipelines import from shared. Single point of change for credential rotation. |
 
 ---
 

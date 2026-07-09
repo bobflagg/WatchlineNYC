@@ -6,7 +6,7 @@ Creates the Actor layer of the DISCOVERY knowledge graph and links actors to the
 buildings they are registered for.
 
 What this pipeline creates:
-    Actor nodes (one per WoW landlord identity), keyed actor_id = ACT-<nodeid>.
+    Actor nodes (one per WoW landlord identity), keyed actor_id = ACT-LL-<nodeid>.
     (Actor)-[:REGISTERED_FOR]->(Building) edges, with registrationid +
     registration_end_date provenance.
 
@@ -73,7 +73,7 @@ def _now() -> str:
 
 
 def _actor_id(nodeid) -> str:
-    return f"ACT-{nodeid}"
+    return f"ACT-LL-{nodeid}"
 
 
 # ---------------------------------------------------------------------------
