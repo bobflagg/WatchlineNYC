@@ -1,10 +1,22 @@
--- Evidentiary KG graph type snapshot — 2026-07-09
--- Source: SHOW CURRENT GRAPH TYPE run against neo4j://localhost:7687 db=evidentiary
+-- Evidentiary KG graph type snapshot — 2026-07-16
+-- Source: SHOW CURRENT GRAPH TYPE run against evidentiary database, immediately
+-- after `make evidentiary-schema` applied scripts/01_schema.cypher with the
+-- dof_* / rs_* Building fields added (notes/evidentiary-ingestion-plan.md task 1).
 -- Re-run to verify schema has not drifted after ingestion pipeline changes.
+--
+-- Note: the prior snapshot (2026-07-09) carried a standalone
+-- `CONSTRAINT landlord_nodeid FOR (n:Landlord) REQUIRE (n.nodeid) IS UNIQUE`.
+-- ALTER CURRENT GRAPH TYPE SET replaces the entire graph type and all existing
+-- constraints, and :Landlord is intentionally not a declared element type
+-- (intermediate node, cleared by `make evidentiary-clean-landlords`), so that
+-- constraint did not survive this re-apply. Not a regression in practice:
+-- watchline/evidentiary/ingest/portfolio/load.py:150 re-creates it idempotently
+-- (`CREATE CONSTRAINT landlord_nodeid IF NOT EXISTS ...`) as the first step of
+-- its own `init` step, before any :Landlord MERGE.
 
 {
   (:`Actor` => :`WatchlineNode` {`actor_type` :: STRING NOT NULL, `canonical_id` :: STRING NOT NULL, `created_at` :: ZONED DATETIME NOT NULL, `display_name` :: STRING NOT NULL, `ein` :: STRING, `resolution_confidence` :: STRING NOT NULL, `run_id` :: STRING, `state_registration_id` :: STRING, `updated_at` :: ZONED DATETIME NOT NULL}),
-  (:`Building` => :`WatchlineNode` {`address` :: STRING NOT NULL, `bbl` :: STRING NOT NULL, `bin` :: STRING, `borough` :: STRING NOT NULL, `building_class` :: STRING, `created_at` :: ZONED DATETIME NOT NULL, `latitude` :: FLOAT, `longitude` :: FLOAT, `residential_units` :: INTEGER, `updated_at` :: ZONED DATETIME NOT NULL, `year_built` :: INTEGER}),
+  (:`Building` => :`WatchlineNode` {`address` :: STRING NOT NULL, `bbl` :: STRING NOT NULL, `bin` :: STRING, `borough` :: STRING NOT NULL, `building_class` :: STRING, `created_at` :: ZONED DATETIME NOT NULL, `dof_assessland` :: INTEGER, `dof_assesstot` :: INTEGER, `dof_exempttot` :: INTEGER, `dof_histdist` :: STRING, `dof_landmark` :: STRING, `dof_ownername` :: STRING, `dof_ownertype` :: STRING, `dof_zonedist1` :: STRING, `latitude` :: FLOAT, `longitude` :: FLOAT, `residential_units` :: INTEGER, `rs_deregulating` :: BOOLEAN, `rs_pdfsoa_2023` :: STRING, `rs_units_2018` :: INTEGER, `rs_units_2019` :: INTEGER, `rs_units_2020` :: INTEGER, `rs_units_2021` :: INTEGER, `rs_units_2022` :: INTEGER, `rs_units_2023` :: INTEGER, `rs_units_change` :: INTEGER, `rs_units_current` :: INTEGER, `updated_at` :: ZONED DATETIME NOT NULL, `year_built` :: INTEGER}),
   (:`CanonicalQuestion` => :`WatchlineNode` {`applicable_rule_ids` :: STRING, `cq_id` :: STRING NOT NULL, `intent_id` :: STRING NOT NULL, `question_template` :: STRING NOT NULL, `required_node_types` :: STRING NOT NULL, `traversal_description` :: STRING NOT NULL}),
   (:`Claim` => :`WatchlineNode` {`claim_id` :: STRING NOT NULL, `claim_text` :: STRING NOT NULL, `created_at` :: ZONED DATETIME NOT NULL, `interpretive_status` :: STRING NOT NULL, `subject_id` :: STRING NOT NULL, `subject_type` :: STRING NOT NULL, `superseded_by` :: STRING, `valid_from` :: DATE, `valid_to` :: DATE}),
   (:`Event` => :`WatchlineNode` {`closed_date` :: DATE, `created_at` :: ZONED DATETIME NOT NULL, `days_open` :: INTEGER, `description` :: STRING, `event_date` :: DATE, `event_id` :: STRING NOT NULL, `event_type` :: STRING NOT NULL, `legal_authority` :: STRING, `open_date` :: DATE, `raw_record` :: STRING NOT NULL, `section` :: STRING, `source_id` :: STRING NOT NULL, `source_name` :: STRING NOT NULL, `status` :: STRING NOT NULL, `violation_class` :: STRING, `violation_code` :: STRING}),
@@ -46,6 +58,5 @@
   CONSTRAINT `constraint_6f9bc768` FOR (`n`:`Relationship` =>) REQUIRE (`n`.`relationship_id`) IS KEY,
   CONSTRAINT `constraint_712662c4` FOR (`n`:`ResolutionMethod` =>) REQUIRE (`n`.`method_id`) IS KEY,
   CONSTRAINT `constraint_c461b40c` FOR (`n`:`Rule` =>) REQUIRE (`n`.`rule_id`) IS KEY,
-  CONSTRAINT `constraint_9f2b1300` FOR (`n`:`Source` =>) REQUIRE (`n`.`source_id`) IS KEY,
-  CONSTRAINT `landlord_nodeid` FOR (`n`:`Landlord`) REQUIRE (`n`.`nodeid`) IS UNIQUE
+  CONSTRAINT `constraint_9f2b1300` FOR (`n`:`Source` =>) REQUIRE (`n`.`source_id`) IS KEY
 }

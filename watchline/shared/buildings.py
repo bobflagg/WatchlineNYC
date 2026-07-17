@@ -257,3 +257,112 @@ def load_rentstab(session, conn) -> tuple:
         if total % 10_000 == 0:
             print(f"    {total:,} buildings enriched ...")
     return total, deregulating
+
+
+# ---------------------------------------------------------------------------
+# DOF ownership / assessment / zoning enrichment
+# ---------------------------------------------------------------------------
+#
+# pluto_latest already backs the core Building substrate (address, units,
+# year built, class -- see PLUTO_SQL above), but ownername/ownertype/
+# assessland/assesstot/exempttot/zonedist1/landmark/histdist were never
+# pulled in. These are additive properties this function is the only writer
+# of, so (unlike load_rentstab, which has to defer to whichever pipeline set
+# the shared core fields first) there's no "don't overwrite if already set"
+# logic needed here -- just SET directly.
+#
+# Verified directly against pluto_latest (858,602 rows):
+#   ownername   857,931 populated (99.9%). Free text -- individuals
+#               ("TERRY JEU"), LLCs ("KPS ROCKAWAY LLC"), trusts, etc.
+#               Passed through verbatim, including any source formatting
+#               quirks (e.g. a sampled trust name has a stray embedded
+#               space: "...IRREVOCABLE TRUS T") -- not corrected here.
+#   ownertype   6 distinct values. Overwhelmingly blank (823,249 of
+#               858,602, ~95.9%) -- blank means private/unspecified
+#               ownership, not a data gap, and is normalized to null rather
+#               than stored as a literal space character. The remaining 5
+#               codes (C, M, O, P, X) were NOT decoded here -- their precise
+#               DOF PLUTO data-dictionary meanings were not independently
+#               verified in this session, so they are passed through
+#               verbatim rather than asserted. Consult DCP's PLUTO data
+#               dictionary before building any logic that branches on them.
+#   assessland / assesstot / exempttot   858,244 populated (99.96%),
+#               populated together (same assessment-roll row).
+#   zonedist1   856,769 populated (99.79%).
+#   landmark    only 1,490 populated (0.17%) -- rare by construction, not a
+#               data quality problem. Verified only 3 values occur:
+#               'INDIVIDUAL LANDMARK', 'INDIVIDUAL AND INTERIOR LANDMARK',
+#               'INTERIOR LANDMARK'.
+#   histdist    31,723 populated (3.7%) -- historic district name text.
+
+DOF_OWNERSHIP_SQL = """
+SELECT
+    trim(bbl)        AS bbl,
+    ownername        AS ownername,
+    ownertype        AS ownertype,
+    assessland       AS assessland,
+    assesstot        AS assesstot,
+    exempttot        AS exempttot,
+    trim(zonedist1)  AS zonedist1,
+    landmark         AS landmark,
+    histdist         AS histdist
+FROM pluto_latest
+WHERE bbl IS NOT NULL AND trim(bbl) <> ''
+"""
+
+_MERGE_DOF_OWNERSHIP = """
+UNWIND $batch AS b
+MERGE (bld:Building:WatchlineNode {bbl: b.bbl})
+SET bld.dof_ownername  = b.dof_ownername,
+    bld.dof_ownertype  = b.dof_ownertype,
+    bld.dof_assessland = b.dof_assessland,
+    bld.dof_assesstot  = b.dof_assesstot,
+    bld.dof_exempttot  = b.dof_exempttot,
+    bld.dof_zonedist1  = b.dof_zonedist1,
+    bld.dof_landmark   = b.dof_landmark,
+    bld.dof_histdist   = b.dof_histdist,
+    bld.updated_at     = datetime($now),
+    bld.created_at     = CASE WHEN bld.created_at IS NULL
+                              THEN datetime($now) ELSE bld.created_at END
+"""
+
+
+def _dof_ownership_batches(conn) -> Iterator[List[dict]]:
+    with conn.cursor(name="pluto_dof_ownership", cursor_factory=RealDictCursor) as cur:
+        cur.itersize = CURSOR_ITERSIZE
+        cur.execute(DOF_OWNERSHIP_SQL)
+        batch: List[dict] = []
+        for row in cur:
+            batch.append({
+                "bbl":            row["bbl"],
+                "dof_ownername":  (row["ownername"] or "").strip() or None,
+                "dof_ownertype":  (row["ownertype"] or "").strip() or None,
+                "dof_assessland": row["assessland"],
+                "dof_assesstot":  row["assesstot"],
+                "dof_exempttot":  row["exempttot"],
+                "dof_zonedist1":  (row["zonedist1"] or "").strip() or None,
+                "dof_landmark":   (row["landmark"] or "").strip() or None,
+                "dof_histdist":   (row["histdist"] or "").strip() or None,
+            })
+            if len(batch) == BATCH_SIZE:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
+
+def load_dof_ownership(session, conn) -> int:
+    """Enrich Building nodes with DOF ownership/assessment/zoning data from
+    pluto_latest (ownername, ownertype, assessland, assesstot, exempttot,
+    zonedist1, landmark, histdist).
+
+    MERGE on bbl — idempotent. Returns total_processed.
+    """
+    now = _now()
+    total = 0
+    for batch in _dof_ownership_batches(conn):
+        session.run(_MERGE_DOF_OWNERSHIP, batch=batch, now=now)
+        total += len(batch)
+        if total % 50_000 == 0:
+            print(f"    {total:,} buildings enriched ...")
+    return total
