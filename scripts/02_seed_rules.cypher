@@ -20,6 +20,14 @@
 //   RUL-00007  DT-001    Deterioration Trajectory (Interpretation layer)
 //   RUL-00008  NE-001    Network Exposure (Interpretation layer)
 //   RUL-00009  MA-001    Management Differential (Interpretation layer)
+//   RUL-00010  RS-001    Rent Stabilization Loss (Interpretation layer)
+//   RUL-00011  FE-001    Fine Evasion (Interpretation layer)
+//   RUL-00012  EA-001    Enforcement Accountability Gap (Interpretation layer)
+//   RUL-00013  RCV-001   Recidivism (Interpretation layer)
+//   RUL-00014  OC-001    Ownership Change Deterioration (Interpretation layer)
+//   RUL-00015  VA-001    Vacate History (Interpretation layer)
+//   RUL-00016  OND-001   Ownership Name Discrepancy (Interpretation layer)
+//   RUL-00017  MBC-001   Mortgage-Based Concealment (Interpretation layer)
 //
 // Amendment protocol (Charter Principle 15):
 //   To update a Rule: increment version, set deprecated=true on the old node,
@@ -389,8 +397,108 @@ SET
   r.deprecated                 = false;
 
 
+// RUL-00015: VA-001 -- Vacate History
+// Interpretation layer. Evaluates whether HPD has ever issued a vacate order
+// against the building -- a stronger displacement/safety signal than a Class
+// C violation, since it represents actual forced displacement rather than a
+// citation that may or may not be remediated. Evaluated by the VacateHistory
+// intent handler.
+// -----------------------------------------------------------------------------
+MERGE (r:Rule:WatchlineNode:VersionedObject:AuditableRecord {rule_id: 'RUL-00015'})
+SET
+  r.name                       = 'VA-001',
+  r.title                      = 'Vacate History',
+  r.version                    = '1.0',
+  r.author                     = 'Watchline NYC project team',
+  r.authority                  = 'HPD vacate orders (NYC Multiple Dwelling Law / Housing Maintenance Code, Admin Code Title 27) are HPD\'s own determination that a building or unit is dangerous enough that residents must leave -- the most severe displacement action short of demolition. The count threshold (one or more orders is sufficient to flag; two or more is flagged as recurring) is Watchline editorial judgment, not a statutory definition of chronic displacement risk.',
+  r.interpretive_concept       = 'VacateHistory',
+  r.input_types                = 'Building|Event[HPD VacateOrder]',
+  r.threshold_description      = 'A building satisfies Watchline Rule VA-001 (Vacate History) if HPD has issued one or more vacate orders against the building on record. Because a vacate order already represents HPD\'s own severe safety determination -- residents were displaced, not merely cited -- no minimum count above one is required to establish evidentiary significance, unlike routine violation-count thresholds elsewhere in this ruleset. A vacate order with no recorded rescind date is currently Active, indicating ongoing displacement at query time. Two or more vacate orders recorded for the same building, active or historical, are additionally flagged as a recurring displacement pattern.',
+  r.threshold_logic            = 'vacate_order_count = count(Event{event_type:"VacateOrder", source_name:"HPD"} linked via HAS_EVENT to Building). satisfied = vacate_order_count >= 1. currently_active = exists an order with status = "Active" (rescind_date IS NULL). recurring = vacate_order_count >= 2.',
+  r.output_interpretive_status = 'Inferred',
+  r.effective_date             = date('2026-07-17'),
+  r.expiry_date                = null,
+  r.explanation_template       = 'The building at {address}, {borough} (BBL {bbl}) {verdict} Watchline Rule VA-001 (Vacate History). HPD has issued {vacate_order_count} vacate order(s) against this building. {active_description} {recurring_description} This finding is based on HPD vacate order records. The interpretive status is Inferred.',
+  r.falsification_conditions   = 'No HPD vacate order record exists for the building at query time. Or: a previously counted vacate order is found to be a data entry error, duplicate, or was issued against a different BBL upon HPD correction. Or: HPD rescinds an order previously counted as currently Active (the currently_active sub-signal, though not the base vacate_order_count >= 1 verdict, would then no longer hold).',
+  r.amendment_notes            = 'Initial version. No minimum multiplicity is required (unlike PHC-001\'s >=3 or RCV-001\'s multi-year pattern) because HPD vacate orders are rare (8,752 citywide across the full dataset, vs. millions of violations) and each one is already a severe, HPD-initiated displacement action, not a routine citation. This rule does not apply a recency window: a vacate order from any date in the available HPD history satisfies it, so long-rescinded historical orders and currently active ones are both flagged, distinguished only by the active/recurring sub-signals. A future version could add a recency-weighted or currently-active-only variant if long-past, fully-resolved vacate orders prove to be low-signal in practice.',
+  r.deprecated                 = false;
+
+
+// RUL-00016: OND-001 -- Ownership Name Discrepancy
+// Interpretation layer. Compares DOF's recorded owner-of-record name
+// (dof_ownername) against the display_name of the Actor Watchline has
+// resolved as the building's probable beneficial controller (RUL-00002).
+// Evaluated by the OwnershipNameDiscrepancy intent handler.
+//
+// IMPORTANT CALIBRATION NOTE (see amendment_notes): this rule's positive
+// flag rate is HIGH relative to every other rule in this file (~71% of its
+// applicable population, verified 2026-07-17) because display_name is
+// chosen as the single most frequent registered contact name across an
+// Actor's ENTIRE portfolio (see watchline/evidentiary/ingest/portfolio/
+// store.py line ~920, `max(... key=frequency)`), not the specific name
+// this individual building was registered under. A positive OND-001 flag
+// is therefore Low confidence and should be read as a lead worth checking
+// by hand, not evidence of concealment -- see threshold_description.
+// -----------------------------------------------------------------------------
+MERGE (r:Rule:WatchlineNode:VersionedObject:AuditableRecord {rule_id: 'RUL-00016'})
+SET
+  r.name                       = 'OND-001',
+  r.title                      = 'Ownership Name Discrepancy',
+  r.version                    = '1.0',
+  r.author                     = 'Watchline NYC project team',
+  r.authority                  = 'DOF PLUTO owner-of-record data (NYC Department of Finance) establishes the name and type of the legal owner recorded on the tax roll. Watchline\'s ProbableBeneficialControl resolution (RUL-00002 / PBC-001) establishes who Watchline\'s WCC/Louvain portfolio-detection algorithm believes controls the building. The comparison threshold (corporate-name exclusion, zero-token-overlap trigger) is Watchline editorial judgment, not a statutory or regulatory determination of ownership discrepancy or concealment.',
+  r.interpretive_concept       = 'OwnershipNameDiscrepancy',
+  r.input_types                = 'Building|Relationship[BeneficialControl]|Actor|Claim[ProbableBeneficialControl]',
+  r.threshold_description      = 'A building satisfies Watchline Rule OND-001 (Ownership Name Discrepancy) if: (1) DOF\'s recorded owner-of-record name (dof_ownername) does not look corporate -- does not contain a corporate-entity suffix such as LLC, INC, CORP, LP, LTD, TRUST, ASSOCIATES, REALTY, PROPERTIES, MANAGEMENT, or HOLDINGS; AND (2) DOF\'s owner name shares no name token in common with the display_name of the Actor Watchline has resolved as the building\'s probable beneficial controller. Corporate-looking DOF names are excluded from evaluation entirely (insufficient_data) because a corporate title-holder differing from a named natural-person beneficial owner is the expected, non-suspicious shape of NYC LLC-held rental property, not a discrepancy this rule is designed to detect. A building with no resolved beneficial controller, or no DOF owner name, is also insufficient_data.',
+  r.threshold_logic            = 'is_corporate = dof_ownername matches /(?i)(LLC|INC|CORP|CO\\.|COMPANY|LP|LTD|TRUST|ASSOC|REALTY|PROPERTIES|MGMT|MANAGEMENT|HOLDINGS)/. token_overlap = normalize_tokens(dof_ownername) INTERSECT normalize_tokens(controller.display_name) is non-empty. satisfied = NOT is_corporate AND NOT token_overlap AND dof_ownername IS NOT NULL AND controller IS NOT NULL. confidence = Low (see amendment_notes).',
+  r.output_interpretive_status = 'Inferred',
+  r.effective_date             = date('2026-07-17'),
+  r.expiry_date                = null,
+  r.explanation_template       = 'The building at {address}, {borough} (BBL {bbl}) {verdict} Watchline Rule OND-001 (Ownership Name Discrepancy). DOF records the owner of record as {dof_ownername}. Watchline has resolved {controller_name} as the building\'s probable beneficial controller (Rule PBC-001). {overlap_description} This finding is Low confidence -- see the Rules tab caveat about portfolio-wide name aggregation. The interpretive status is Inferred.',
+  r.falsification_conditions   = 'DOF\'s owner name looks corporate (contains an LLC/INC/CORP/etc. suffix) -- rule does not apply, insufficient_data. Or: DOF\'s owner name shares at least one name token with the resolved beneficial controller\'s display_name -- treated as a plausible match, not a discrepancy. Or: no BeneficialControl relationship / ProbableBeneficialControl claim exists for the building -- insufficient_data, nothing to compare against. Or: the resolved beneficial controller\'s display_name changes on a portfolio pipeline re-run (versioned update), which can flip a prior discrepancy verdict without any change to the underlying DOF record.',
+  r.amendment_notes            = 'Initial version. Calibrated against live evidentiary data 2026-07-17: of ~30,085 buildings with both a DOF owner name and a resolved BeneficialControl relationship, 22,392 (74%) have a corporate-looking DOF name and are excluded from evaluation entirely (out of this rule\'s scope). Of the remaining ~7,693 buildings with a natural-person-looking DOF name, 16.6% show an exact name-token match with the resolved controller\'s display_name, 12.5% show partial token overlap, and 70.9% show zero overlap -- this last group is the population OND-001 flags. The 70.9% rate is high enough that a positive flag must be read as Low confidence: display_name is the single most frequent registered contact name across the controller\'s ENTIRE portfolio network (see watchline/evidentiary/ingest/portfolio/store.py), not necessarily the specific name this individual building was registered under with HPD -- the raw per-building registered name is not currently preserved in the evidentiary graph (intermediate Landlord nodes are deleted after each portfolio run) so it cannot be checked directly. A future version should extend the portfolio pipeline to persist a constituent_names list per Actor (all distinct raw registered names contributing to the network, not just the plurality winner) and compare against that full set instead of the single display_name, which would substantially reduce the false-positive rate from network aggregation. Until then, OND-001 findings are leads pointing to a name worth checking by hand, not evidence of concealment on their own.',
+  r.deprecated                 = false;
+
+
+// RUL-00017: MBC-001 -- Mortgage-Based Concealment
+// Interpretation layer. Compares the grantee name(s) on a building's most
+// recent ACRIS DeedTransfer against the mortgagor name(s) on its nearest
+// purchase-money Mortgage (recorded within -14 to +60 days of the deed).
+// A mismatch means the party who took out financing on the purchase is not
+// the party who took title -- a classic nominee/straw-buyer signal, since
+// under normal purchase-money financing the buyer of record and the
+// borrower of record are the same party. Evaluated by the
+// MortgageBasedConcealment intent handler.
+//
+// CALIBRATION NOTE (see amendment_notes): unlike RUL-00016 (OND-001), this
+// rule's positive-flag rate is LOW and well-discriminated (verified
+// 2026-07-17: 2.9% of matched purchase-money pairs show zero name overlap,
+// versus OND-001's 71%) because both compared names come from the SAME
+// ACRIS self-reporting convention on the SAME closing package, not two
+// independently-sourced/aggregated datasets. Confidence: Medium.
+// -----------------------------------------------------------------------------
+MERGE (r:Rule:WatchlineNode:VersionedObject:AuditableRecord {rule_id: 'RUL-00017'})
+SET
+  r.name                       = 'MBC-001',
+  r.title                      = 'Mortgage-Based Concealment',
+  r.version                    = '1.0',
+  r.author                     = 'Watchline NYC project team',
+  r.authority                  = 'ACRIS real_property_master/real_property_parties records (NYC Department of Finance) establish both the grantee named on a deed transfer and the mortgagor named on a mortgage instrument, self-reported at the same closing under the same recording convention. The comparison threshold (-14 to +60 day purchase-money window, zero-token-overlap trigger) is Watchline editorial judgment, not a statutory or regulatory determination of concealment.',
+  r.interpretive_concept       = 'MortgageBasedConcealment',
+  r.input_types                = 'Building|Event[DeedTransfer, ACRIS]|Event[Mortgage, ACRIS]',
+  r.threshold_description      = 'A building satisfies Watchline Rule MBC-001 (Mortgage-Based Concealment) if: (1) its most recent ACRIS DeedTransfer has a grantee name on record; AND (2) a Mortgage event exists on the same building recorded within -14 to +60 days of that deed (its purchase-money mortgage); AND (3) the mortgagor name(s) on that mortgage share no name token in common with the deed\'s grantee name(s). A building with no deed transfer, or with a deed but no mortgage recorded in the purchase-money window (e.g. an all-cash purchase), is insufficient_data -- there is no financing party to compare against, which is not itself a discrepancy.',
+  r.threshold_logic            = 'latest_deed = most recent DeedTransfer Event on Building by event_date. nearest_mortgage = Mortgage Event on Building minimizing abs(days(latest_deed.event_date, m.event_date)), restricted to the range [-14, 60] days. token_overlap = normalize_tokens(latest_deed.grantee_names) INTERSECT normalize_tokens(nearest_mortgage.mortgagor_names) is non-empty. satisfied = latest_deed IS NOT NULL AND nearest_mortgage IS NOT NULL AND NOT token_overlap. confidence = Medium (see amendment_notes).',
+  r.output_interpretive_status = 'Inferred',
+  r.effective_date             = date('2026-07-17'),
+  r.expiry_date                = null,
+  r.explanation_template       = 'The building at {address}, {borough} (BBL {bbl}) {verdict} Watchline Rule MBC-001 (Mortgage-Based Concealment). The most recent deed transfer, recorded {deed_date}, names {grantee_names} as grantee. A mortgage recorded {mortgage_date} names {mortgagor_names} as mortgagor. {overlap_description} This finding is Medium confidence -- see the Rules tab for the purchase-money-window methodology. The interpretive status is Inferred.',
+  r.falsification_conditions   = 'The mortgagor name(s) share at least one name token with the deed grantee name(s) -- treated as the expected purchase-money pattern, not a discrepancy. Or: no Mortgage event falls within the -14 to +60 day purchase-money window of the most recent deed transfer (all-cash purchase, or the financing mortgage was recorded outside this window, or was never ingested) -- insufficient_data, not evaluated. Or: the deed transfer itself has no recorded grantee name. Or: a later-discovered deed transfer or mortgage record supersedes the ones used in this evaluation.',
+  r.amendment_notes            = 'Initial version. Calibrated against a live evidentiary sample 2026-07-17: of ~39,933 nearest-deed-to-mortgage pairs (sampled from the full ACRIS mortgage population, restricted to the -14/+60 day purchase-money window), 85.1% show an exact grantee/mortgagor name-token match, 12.0% show partial overlap, and 2.9% show zero overlap -- this last group is the population MBC-001 flags. A sub-sample breakdown of the zero-overlap group (n=461) found no dominant corporate/individual sub-pattern (29.5% corporate grantee + individual mortgagor, 23.2% the reverse, 8.7% both corporate, 38.6% both individual with unrelated names) -- unlike OND-001, this rule does NOT exclude corporate names from evaluation, since an LLC-took-title / unrelated-individual-financed pattern is itself a classic nominee-structure signal, not noise. The 2.9% flag rate is low and well-discriminated relative to OND-001\'s 71%, because both compared names come from the same ACRIS self-reporting convention on the same closing package rather than two independently-sourced datasets -- hence Medium rather than Low confidence. This rule evaluates only the building\'s MOST RECENT deed transfer (matching the OC-001 precedent), not its full transaction history; a building with an older concealment-pattern transaction that has since been superseded by a clean later sale will not be flagged. A future version could surface historical (non-most-recent) purchase-money mismatches as additional evidence context without changing the rule\'s own verdict.',
+  r.deprecated                 = false;
+
+
 // =============================================================================
-// Verification query -- run after seeding to confirm all fourteen rules are present
+// Verification query -- run after seeding to confirm all seventeen rules are present
 // =============================================================================
 //
 // MATCH (r:Rule)
@@ -411,4 +519,8 @@ SET
 //   RUL-00011  FE-001   Fine Evasion                                             1.0  false
 //   RUL-00012  EA-001   Enforcement Accountability Gap                           1.0  false
 //   RUL-00013  RCV-001  Recidivism                                               1.0  false
+//   RUL-00014  OC-001   Ownership Change Deterioration                          1.0  false
+//   RUL-00015  VA-001   Vacate History                                           1.0  false
+//   RUL-00016  OND-001  Ownership Name Discrepancy                               1.0  false
+//   RUL-00017  MBC-001  Mortgage-Based Concealment                               1.0  false
 // =============================================================================

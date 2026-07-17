@@ -10,8 +10,8 @@
 #   -> evidentiary-indexes
 #   -> evidentiary-buildings
 #   -> evidentiary-hpd -> evidentiary-dob -> evidentiary-ecb
-#   -> evidentiary-hpd-lit -> evidentiary-hpd-complaints -> evidentiary-rentstab
-#   -> evidentiary-pluto-dof -> evidentiary-marshal-evictions
+#   -> evidentiary-hpd-lit -> evidentiary-hpd-complaints -> evidentiary-hpd-vacateorders
+#   -> evidentiary-rentstab -> evidentiary-pluto-dof -> evidentiary-marshal-evictions
 #   -> evidentiary-portfolio -> evidentiary-agents -> evidentiary-acris
 #   -> evidentiary-acris-mortgages -> evidentiary-reconcile -> evidentiary-phc001
 #
@@ -37,7 +37,7 @@ EV_CYPHER_ARGS = -a "$(NEO4J_URI)" \
         evidentiary-portfolio-init evidentiary-portfolio-load evidentiary-portfolio-store \
         evidentiary-agents evidentiary-acris evidentiary-acris-mortgages evidentiary-marshal-evictions \
         evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
-        evidentiary-hpd-complaints \
+        evidentiary-hpd-complaints evidentiary-hpd-vacateorders \
         evidentiary-rentstab evidentiary-pluto-dof \
         evidentiary-phc001 evidentiary-phc001-dry-run \
         evidentiary-verify evidentiary-clean-landlords \
@@ -156,6 +156,11 @@ evidentiary-hpd-complaints: ## [ev] Ingest HPD tenant complaints (~16.1M problem
 	$(PYTHON) -m $(EV_INGEST).hpd_complaints.pipeline
 	@echo "HPD complaints complete."
 
+evidentiary-hpd-vacateorders: ## [ev] Ingest HPD vacate orders (~8.75K rows)
+	@echo "Ingesting HPD vacate orders..."
+	$(PYTHON) -m $(EV_INGEST).hpd_vacateorders.pipeline
+	@echo "HPD vacate orders complete."
+
 evidentiary-rentstab: ## [ev] Ingest rent stabilization data (~46K buildings)
 	@echo "Ingesting rent stabilization data..."
 	$(PYTHON) -m $(EV_INGEST).rentstab.pipeline
@@ -217,7 +222,7 @@ evidentiary-clean-landlords: ## [ev] Remove intermediate Landlord nodes from the
 evidentiary-build: evidentiary-schema evidentiary-seed-rules evidentiary-seed-intents evidentiary-indexes \
                    evidentiary-buildings \
                    evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
-                   evidentiary-hpd-complaints \
+                   evidentiary-hpd-complaints evidentiary-hpd-vacateorders \
                    evidentiary-rentstab evidentiary-pluto-dof evidentiary-marshal-evictions \
                    evidentiary-portfolio evidentiary-agents \
                    evidentiary-acris evidentiary-acris-mortgages \

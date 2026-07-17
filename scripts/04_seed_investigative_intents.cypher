@@ -98,14 +98,14 @@ SET
 MERGE (ii:InvestigativeIntent:WatchlineNode {intent_id: 'INT-00003'})
 SET
   ii.name                 = 'PortfolioCondition',
-  ii.description          = 'How bad is this landlord''s record across all their buildings?',
+  ii.description          = 'How bad is this landlord\'s record across all their buildings?',
   ii.applicable_rules     = 'RUL-00001',
   ii.canonical_question_ids = 'CQ-00003';
 
 MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00003'})
 SET
   cq.intent_id             = 'INT-00003',
-  cq.question_template     = 'How bad is {actor}''s record across all their buildings?',
+  cq.question_template     = 'How bad is {actor}\'s record across all their buildings?',
   cq.traversal_description = 'Resolve Actor, follow BeneficialControl to every Building in the portfolio, count how many satisfy the PHC-001 PersistentHazardousConditions Claim.',
   cq.required_node_types   = 'Actor|Relationship|Building|Claim',
   cq.applicable_rule_ids   = 'RUL-00001';
@@ -126,7 +126,7 @@ MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00004'})
 SET
   cq.intent_id             = 'INT-00004',
   cq.question_template     = 'Has {actor} let hazardous conditions persist repeatedly?',
-  cq.traversal_description = 'Resolve Actor''s portfolio, aggregate multi-year PHC trajectory across buildings, apply RCV-001 persistence thresholds.',
+  cq.traversal_description = 'Resolve Actor\'s portfolio, aggregate multi-year PHC trajectory across buildings, apply RCV-001 persistence thresholds.',
   cq.required_node_types   = 'Actor|Relationship|Building|Event',
   cq.applicable_rule_ids   = 'RUL-00013';
 
@@ -168,7 +168,7 @@ SET
 MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00006'})
 SET
   cq.intent_id             = 'INT-00006',
-  cq.question_template     = 'Are LLCs being used to hide someone''s identity in the {actor} portfolio?',
+  cq.question_template     = 'Are LLCs being used to hide someone\'s identity in the {actor} portfolio?',
   cq.traversal_description = 'Fetch IdentityObservation/IdentityAssertion records for the Actor and the PBC claim_text, flag if address-based connections dominate over name-based connections.',
   cq.required_node_types   = 'Actor|IdentityAssertion|IdentityObservation|Claim',
   cq.applicable_rule_ids   = 'RUL-00003|RUL-00004';
@@ -340,6 +340,79 @@ MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00015'})
 SET
   cq.intent_id             = 'INT-00013',
   cq.question_template     = 'Is {actor} connected to other landlords operating as a coordinated network?',
-  cq.traversal_description = 'Follow ProbableAffiliation Relationship edges from the named Actor, fan out to each affiliate''s portfolio, aggregate combined PHC rate per NE-001.',
+  cq.traversal_description = 'Follow ProbableAffiliation Relationship edges from the named Actor, fan out to each affiliate\'s portfolio, aggregate combined PHC rate per NE-001.',
   cq.required_node_types   = 'Actor|Relationship|Building|Claim',
   cq.applicable_rule_ids   = 'RUL-00008';
+
+
+// -----------------------------------------------------------------------------
+// INT-00014 -- VacateHistory
+// Added 2026-07-17, not part of the original 13-intent set tested
+// 2026-07-16 -- see notes/evidentiary-ingestion-plan.md "New Rules" (VA-001).
+// No pre-tested natural-language question yet; question_template is a
+// direct generalization of the intent description, to be validated against
+// a real tested question per CLAUDE.md's "Testing a New Intent" process.
+// -----------------------------------------------------------------------------
+MERGE (ii:InvestigativeIntent:WatchlineNode {intent_id: 'INT-00014'})
+SET
+  ii.name                 = 'VacateHistory',
+  ii.description          = 'Has HPD ever issued a vacate order against this building?',
+  ii.applicable_rules     = 'RUL-00015',
+  ii.canonical_question_ids = 'CQ-00016';
+
+MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00016'})
+SET
+  cq.intent_id             = 'INT-00014',
+  cq.question_template     = 'Has {building} in {borough} ever been vacated by HPD?',
+  cq.traversal_description = 'Fetch all VacateOrder Events for the Building (event_type=VacateOrder, source_name=HPD), evaluate VA-001 (count >= 1 satisfies; >= 2 flagged recurring; any order with no rescind_date flagged currently active).',
+  cq.required_node_types   = 'Building|Event',
+  cq.applicable_rule_ids   = 'RUL-00015';
+
+
+// -----------------------------------------------------------------------------
+// INT-00015 -- OwnershipNameDiscrepancy
+// Added 2026-07-17, not part of the original 13-intent set tested
+// 2026-07-16 -- see notes/evidentiary-ingestion-plan.md "New Rules"
+// (OwnershipNameDiscrepancy using dof_ownername). No pre-tested
+// natural-language question yet -- see CLAUDE.md's "Testing a New Intent"
+// process. Low-confidence rule (see RUL-00016 amendment_notes); narrator
+// must not overstate a positive flag as evidence of concealment.
+// -----------------------------------------------------------------------------
+MERGE (ii:InvestigativeIntent:WatchlineNode {intent_id: 'INT-00015'})
+SET
+  ii.name                 = 'OwnershipNameDiscrepancy',
+  ii.description          = 'Does DOF\'s recorded owner-of-record name match who Watchline has resolved as this building\'s probable beneficial controller?',
+  ii.applicable_rules     = 'RUL-00016',
+  ii.canonical_question_ids = 'CQ-00017';
+
+MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00017'})
+SET
+  cq.intent_id             = 'INT-00015',
+  cq.question_template     = 'Does the DOF-recorded owner of {building} in {borough} match who Watchline says controls it?',
+  cq.traversal_description = 'Fetch dof_ownername from the Building and the display_name of its resolved BeneficialControl Actor, evaluate OND-001 (corporate-name exclusion, then zero-token-overlap trigger; Low confidence).',
+  cq.required_node_types   = 'Building|Relationship|Actor|Claim',
+  cq.applicable_rule_ids   = 'RUL-00016';
+
+
+// -----------------------------------------------------------------------------
+// INT-00016 -- MortgageBasedConcealment
+// Added 2026-07-17, not part of the original 13-intent set tested
+// 2026-07-16 -- see notes/evidentiary-ingestion-plan.md "New Rules"
+// (mortgage-based concealment rule). No pre-tested natural-language
+// question yet -- see CLAUDE.md's "Testing a New Intent" process.
+// Medium-confidence rule (see RUL-00017 amendment_notes).
+// -----------------------------------------------------------------------------
+MERGE (ii:InvestigativeIntent:WatchlineNode {intent_id: 'INT-00016'})
+SET
+  ii.name                 = 'MortgageBasedConcealment',
+  ii.description          = 'Does the party who financed this building\'s most recent purchase match the party who took title?',
+  ii.applicable_rules     = 'RUL-00017',
+  ii.canonical_question_ids = 'CQ-00018';
+
+MERGE (cq:CanonicalQuestion:WatchlineNode {cq_id: 'CQ-00018'})
+SET
+  cq.intent_id             = 'INT-00016',
+  cq.question_template     = 'Does the mortgage on {building} in {borough} match who bought it?',
+  cq.traversal_description = 'Fetch the Building\'s most recent DeedTransfer and its nearest purchase-money Mortgage (-14 to +60 day window), evaluate MBC-001 (zero-token-overlap between grantee_names and mortgagor_names; Medium confidence).',
+  cq.required_node_types   = 'Building|Event',
+  cq.applicable_rule_ids   = 'RUL-00017';
