@@ -6,8 +6,8 @@
 # file is parsed; do not redefine them here.
 #
 # Dependency order (enforced by discovery-ingest-all):
-#   discovery-schema -> discovery-buildings -> discovery-hpd-registrations
-#   -> discovery-events -> discovery-portfolio
+#   discovery-schema -> discovery-buildings -> discovery-rentstab -> discovery-pluto-dof
+#   -> discovery-hpd-registrations -> discovery-events -> discovery-portfolio
 #
 # All targets are idempotent and safe to re-run.
 # Targets marked [blocked] depend on data not yet available in WoW.
@@ -19,11 +19,11 @@ DC_PORTFOLIO = $(PYTHON) -m $(DC_MOD).portfolio.pipeline
 .NOTPARALLEL:
 
 .PHONY: discovery-check discovery-bootstrap discovery-schema \
-        discovery-buildings discovery-rentstab \
+        discovery-buildings discovery-rentstab discovery-pluto-dof \
         discovery-actors discovery-registrations discovery-hpd-registrations \
         discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
-        discovery-hpd-litigations discovery-oca-evictions \
-        discovery-marshal-evictions discovery-acris-deeds discovery-events \
+        discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders discovery-oca-evictions \
+        discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
         discovery-portfolio-edges discovery-portfolio-reconcile discovery-portfolio \
         discovery-ingest-all
 
@@ -63,6 +63,9 @@ discovery-buildings: ## [dc] Build Building nodes from full PLUTO substrate (~85
 discovery-rentstab: ## [dc] Enrich Building nodes with DHCR rent stabilization unit counts (ADR-014)
 	$(PYTHON) -m $(DC_MOD).rentstab.pipeline
 
+discovery-pluto-dof: ## [dc] Enrich Building nodes with DOF ownername/ownertype/assessed value/zoning
+	$(PYTHON) -m $(DC_MOD).pluto_dof.pipeline
+
 discovery-actors: ## [dc] Build Actor:LandlordActor nodes from landlords_with_connections
 	$(PYTHON) -m $(DC_MOD).hpd_registrations.pipeline --step actors
 
@@ -87,6 +90,12 @@ discovery-ecb-violations: ## [dc] ECB judgments -> Event(Judgment, ECB)
 discovery-hpd-litigations: ## [dc] HPD litigations -> Event(CourtFiling, HPD-Litigations)
 	$(PYTHON) -m $(DC_MOD).hpd_litigations.pipeline
 
+discovery-hpd-complaints: ## [dc] HPD tenant complaints -> Event(Complaint, HPD)
+	$(PYTHON) -m $(DC_MOD).hpd_complaints.pipeline
+
+discovery-hpd-vacateorders: ## [dc] HPD vacate orders -> Event(VacateOrder, HPD)
+	$(PYTHON) -m $(DC_MOD).hpd_vacateorders.pipeline
+
 discovery-oca-evictions: ## [dc] [blocked] OCA evictions — bbl bridge not yet available in WoW
 	$(PYTHON) -m $(DC_MOD).oca_evictions.pipeline
 
@@ -96,9 +105,12 @@ discovery-marshal-evictions: ## [dc] Marshal evictions -> Event(Eviction, Marsha
 discovery-acris-deeds: ## [dc] ACRIS deeds -> Event(DeedTransfer) + grantor/grantee Actor:PARTY_TO
 	$(PYTHON) -m $(DC_MOD).acris_deeds.pipeline
 
+discovery-acris-mortgages: discovery-acris-deeds ## [dc] ACRIS mortgages/assignments/satisfactions -> Event + mortgagor/mortgagee Actor:PARTY_TO + REFERENCES chain
+	$(PYTHON) -m $(DC_MOD).acris_mortgages.pipeline
+
 discovery-events: discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
-                  discovery-hpd-litigations \
-                  discovery-marshal-evictions discovery-acris-deeds ## [dc] All event datasets
+                  discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
+                  discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages ## [dc] All event datasets
 
 
 # ---- Layer 3: portfolio ------------------------------------------------------
@@ -114,7 +126,7 @@ discovery-portfolio: discovery-portfolio-edges discovery-portfolio-reconcile ## 
 
 # ---- Full pipeline -----------------------------------------------------------
 
-discovery-ingest-all: discovery-bootstrap discovery-buildings discovery-rentstab \
+discovery-ingest-all: discovery-bootstrap discovery-buildings discovery-rentstab discovery-pluto-dof \
                       discovery-hpd-registrations \
                       discovery-events discovery-portfolio ## [dc] Full ordered discovery ingestion
 	@echo ""

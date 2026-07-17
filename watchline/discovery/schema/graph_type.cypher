@@ -44,6 +44,19 @@ ALTER CURRENT GRAPH TYPE SET {
      rs_units_change   :: INTEGER,
      rs_deregulating   :: BOOLEAN,
      rs_pdfsoa_2023    :: STRING,
+     // DOF ownership/assessment/zoning enrichment (pluto_latest columns not
+     // pulled in by the core buildings pipeline), loaded by discovery-pluto-dof.
+     // dof_ prefix distinguishes DOF-sourced fields from PLUTO's own core
+     // substrate columns above and signals provenance, same convention rs_
+     // uses for DHCR-sourced rent stabilization fields.
+     dof_ownername     :: STRING,
+     dof_ownertype     :: STRING,
+     dof_assessland    :: INTEGER,
+     dof_assesstot     :: INTEGER,
+     dof_exempttot     :: INTEGER,
+     dof_zonedist1     :: STRING,
+     dof_landmark      :: STRING,
+     dof_histdist      :: STRING,
      created_at        :: ZONED DATETIME,
      updated_at        :: ZONED DATETIME
   }),
@@ -82,6 +95,22 @@ ALTER CURRENT GRAPH TYPE SET {
      residential_units :: INTEGER
   }),
 
+  // Non-authoritative triage pointer produced by Discovery's Explore/Scan
+  // pipelines (Charter Principle 18). A Lead asserts nothing about the world
+  // and carries no Interpretive Status — see discovery-component-design.md §2.
+  (:Lead => :WatchlineNode {
+     lead_id                  :: STRING IS KEY,
+     session_id               :: STRING NOT NULL,   // Explore session id, or Scan batch run id
+     created_at               :: ZONED DATETIME,
+     source_mode              :: STRING NOT NULL,   // 'Explore' | 'Scan'
+     suggested_intent         :: STRING NOT NULL,   // one of the 12 canonical intent names, or 'NOVEL_CANDIDATE'
+     novel_intent_description :: STRING,            // required iff suggested_intent = 'NOVEL_CANDIDATE'; flags Principle 15 review
+     rationale                :: STRING NOT NULL,
+     priority                 :: STRING,            // 'High' | 'Medium' | 'Low' — triage label only, NOT an Interpretive Status or confidence score
+     status                   :: STRING NOT NULL,   // 'New' | 'Reviewed' | 'HandedOff' | 'Dismissed'
+     resulting_claim_ref      :: STRING             // populated after hand-off; plain reference into the evidentiary database, not a graph edge
+  }),
+
   // ---- Relationship element types ------------------------------------------
 
   (:Building)-[:HAS_EVENT =>]->(:Event),
@@ -96,6 +125,20 @@ ALTER CURRENT GRAPH TYPE SET {
   }]->(:Building),
 
   (:Actor)-[:PARTY_TO => { role :: STRING }]->(:Event),
+
+  // Chains a later ACRIS financial instrument back to the document it
+  // modifies -- MortgageAssignment/MortgageSatisfaction Event -> the
+  // Mortgage Event (or prior Assignment) it references. Populated by
+  // acris_mortgages step 3 from real_property_references, resolved via
+  // referencebydocid (exact) or, when that's blank, via referencebycrfn
+  // joined back to real_property_master.crfn (also exact -- CRFN is a
+  // unique recording number, not a fuzzy match). ref_type records which
+  // of the two resolved the edge, for traceability. Both endpoints MUST
+  // already exist as Event nodes (event_id = EVT-ACRIS-<documentid>) --
+  // this is deliberately MATCH, never MERGE, on either side, so a
+  // reference to a document type this graph doesn't ingest (e.g. AGMT,
+  // PAT) is silently skipped rather than creating a placeholder Event.
+  (:Event)-[:REFERENCES => { ref_type :: STRING NOT NULL }]->(:Event),
 
   (:Actor)-[:CONNECTED_BY_NAME => { weight :: FLOAT NOT NULL }]->(:Actor),
 
@@ -113,6 +156,23 @@ ALTER CURRENT GRAPH TYPE SET {
      method       :: STRING NOT NULL,
      run_id       :: STRING NOT NULL,
      generated_at :: ZONED DATETIME
-  }]->(:Building)
+  }]->(:Building),
+
+  // Lead targets — one or more per Lead: Building, Actor, or Portfolio.
+  // A relationship type name can be declared only once per graph type
+  // (repeating :CONCERNS per target label fails with "graph type contains
+  // duplicated tokens") and there is no label-union syntax on the end node
+  // ("Invalid input '|', expected: ')', '=' or 'IMPLIES'"). Building, Actor,
+  // and Portfolio all already imply :WatchlineNode above, so the target is
+  // constrained to that common supertype instead; persist_lead is the
+  // deterministic step that enforces the tighter Building|Actor|Portfolio
+  // restriction the design calls for (design doc §5).
+  (:Lead)-[:CONCERNS =>]->(:WatchlineNode),
+
+  // Structured, queryable provenance for Explore-mode Leads — built by
+  // persist_lead from the validated session trace, never from the LLM's own
+  // account of what it did. Non-graph inputs (web search, full tool-call
+  // history) live in the session trace log, referenced by session_id.
+  (:Lead)-[:MOTIVATED_BY =>]->(:Event)
 
 }

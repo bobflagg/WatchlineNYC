@@ -117,6 +117,31 @@ ALTER CURRENT GRAPH TYPE SET {
     building_class    :: STRING,           // NYC building classification code
     year_built        :: INTEGER,
     residential_units :: INTEGER,          // per HPD registration
+    // Rent stabilization enrichment (shared substrate, loaded by evidentiary-rentstab).
+    // Live on Building nodes since the rentstab pipeline shipped but not previously
+    // declared here -- this closes that schema-drift gap (see notes/evidentiary-ingestion-plan.md).
+    rs_units_2018     :: INTEGER,
+    rs_units_2019     :: INTEGER,
+    rs_units_2020     :: INTEGER,
+    rs_units_2021     :: INTEGER,
+    rs_units_2022     :: INTEGER,
+    rs_units_2023     :: INTEGER,
+    rs_units_current  :: INTEGER,
+    rs_units_change   :: INTEGER,
+    rs_deregulating   :: BOOLEAN,
+    rs_pdfsoa_2023    :: STRING,
+    // DOF ownership/assessment/zoning enrichment (pluto_latest columns not
+    // pulled in by the core buildings pipeline), loaded by evidentiary-pluto-dof.
+    // dof_ prefix distinguishes DOF-sourced fields from PLUTO's own core
+    // substrate columns above, mirroring discovery/schema/graph_type.cypher.
+    dof_ownername     :: STRING,
+    dof_ownertype     :: STRING,
+    dof_assessland    :: INTEGER,
+    dof_assesstot     :: INTEGER,
+    dof_exempttot     :: INTEGER,
+    dof_zonedist1     :: STRING,
+    dof_landmark      :: STRING,
+    dof_histdist      :: STRING,
     created_at        :: ZONED DATETIME NOT NULL,
     updated_at        :: ZONED DATETIME NOT NULL
   }) REQUIRE b.bbl IS KEY,
@@ -381,6 +406,16 @@ ALTER CURRENT GRAPH TYPE SET {
   // ===========================================================================
 
   (:Building)-[:HAS_EVENT =>]->(:Event),
+  // Chains a later ACRIS financial instrument back to the document it
+  // modifies -- MortgageAssignment/MortgageSatisfaction Event -> the
+  // Mortgage Event (or prior Assignment) it references. Mirrors
+  // discovery/schema/graph_type.cypher's REFERENCES declaration exactly
+  // (same ref_type semantics: 'DOCID' or 'CRFN', see
+  // watchline/evidentiary/ingest/acris_mortgages/pipeline.py). Populated by
+  // acris_mortgages step 3, MATCH-only on both ends -- never MERGE -- so a
+  // reference to a document type this graph doesn't ingest is silently
+  // skipped rather than creating a placeholder Event.
+  (:Event)-[:REFERENCES => { ref_type :: STRING NOT NULL }]->(:Event),
   // INVOLVES_BUILDING: Relationship -> Building
   // Connects a Relationship node (e.g. BeneficialControl) to the Building
   // it concerns. Symmetric to INVOLVES_ACTOR for the asset side.
