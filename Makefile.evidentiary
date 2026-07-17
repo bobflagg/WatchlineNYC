@@ -6,12 +6,20 @@
 # before this file is parsed; do not redefine them here.
 #
 # Dependency order for a full build:
-#   evidentiary-schema -> evidentiary-seed-rules -> evidentiary-indexes
+#   evidentiary-schema -> evidentiary-seed-rules -> evidentiary-seed-intents
+#   -> evidentiary-indexes
 #   -> evidentiary-buildings
 #   -> evidentiary-hpd -> evidentiary-dob -> evidentiary-ecb
-#   -> evidentiary-hpd-lit -> evidentiary-rentstab -> evidentiary-marshal-evictions
+#   -> evidentiary-hpd-lit -> evidentiary-hpd-complaints -> evidentiary-rentstab
+#   -> evidentiary-pluto-dof -> evidentiary-marshal-evictions
 #   -> evidentiary-portfolio -> evidentiary-agents -> evidentiary-acris
-#   -> evidentiary-reconcile -> evidentiary-phc001
+#   -> evidentiary-acris-mortgages -> evidentiary-reconcile -> evidentiary-phc001
+#
+# evidentiary-seed-intents populates Layer 5 (InvestigativeIntent,
+# CanonicalQuestion) -- consumed at query time by watchline/fw/router.py's
+# _validate_intent(), not by any ingestion pipeline, so its exact position
+# in the build order is not load-bearing. Grouped with evidentiary-seed-rules
+# since both are one-time ontology seed steps.
 # =============================================================================
 
 EV_INGEST    = watchline.evidentiary.ingest
@@ -23,13 +31,14 @@ EV_CYPHER_ARGS = -a "$(NEO4J_URI)" \
                  -p "$(NEO4J_PASSWORD)" \
                  -d "$(NEO4J_EVIDENTIARY_DATABASE)"
 
-.PHONY: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
+.PHONY: evidentiary-schema evidentiary-seed-rules evidentiary-seed-intents evidentiary-indexes \
         evidentiary-buildings \
         evidentiary-portfolio evidentiary-reconcile \
         evidentiary-portfolio-init evidentiary-portfolio-load evidentiary-portfolio-store \
-        evidentiary-agents evidentiary-acris evidentiary-marshal-evictions \
+        evidentiary-agents evidentiary-acris evidentiary-acris-mortgages evidentiary-marshal-evictions \
         evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
-        evidentiary-rentstab \
+        evidentiary-hpd-complaints \
+        evidentiary-rentstab evidentiary-pluto-dof \
         evidentiary-phc001 evidentiary-phc001-dry-run \
         evidentiary-verify evidentiary-clean-landlords \
         evidentiary-build evidentiary-rebuild evidentiary-nightly
@@ -46,6 +55,11 @@ evidentiary-seed-rules: ## [ev] Load all Rule nodes into the evidentiary graph
 	@echo "Loading Rule nodes..."
 	$(CYPHER_SHELL) $(EV_CYPHER_ARGS) --file $(EV_SCRIPTS)/02_seed_rules.cypher
 	@echo "Rules seeded."
+
+evidentiary-seed-intents: ## [ev] Load InvestigativeIntent + CanonicalQuestion nodes (Layer 5)
+	@echo "Loading InvestigativeIntent + CanonicalQuestion nodes..."
+	$(CYPHER_SHELL) $(EV_CYPHER_ARGS) --file $(EV_SCRIPTS)/04_seed_investigative_intents.cypher
+	@echo "Investigative intents seeded."
 
 evidentiary-indexes: ## [ev] Create performance indexes
 	@echo "Creating performance indexes..."
@@ -91,6 +105,14 @@ evidentiary-acris: ## [ev] Ingest ACRIS deed transfers with evidentiary overlay
 	$(PYTHON) -m $(EV_INGEST).acris.pipeline --step store
 	@echo "ACRIS pipeline complete."
 
+evidentiary-acris-mortgages: ## [ev] Ingest ACRIS mortgages/assignments/satisfactions + REFERENCES chain
+	@echo "Ingesting ACRIS mortgage instruments..."
+	$(PYTHON) -m $(EV_INGEST).acris_mortgages.pipeline --step source
+	$(PYTHON) -m $(EV_INGEST).acris_mortgages.pipeline --step events
+	$(PYTHON) -m $(EV_INGEST).acris_mortgages.pipeline --step parties
+	$(PYTHON) -m $(EV_INGEST).acris_mortgages.pipeline --step references
+	@echo "ACRIS mortgages pipeline complete."
+
 
 # ---- Shared building substrate -----------------------------------------------
 
@@ -129,10 +151,20 @@ evidentiary-hpd-lit: ## [ev] Ingest HPD litigations (~239K cases)
 	$(PYTHON) -m $(EV_INGEST).hpd_litigations.pipeline
 	@echo "HPD litigations complete."
 
+evidentiary-hpd-complaints: ## [ev] Ingest HPD tenant complaints (~16.1M problem rows)
+	@echo "Ingesting HPD tenant complaints..."
+	$(PYTHON) -m $(EV_INGEST).hpd_complaints.pipeline
+	@echo "HPD complaints complete."
+
 evidentiary-rentstab: ## [ev] Ingest rent stabilization data (~46K buildings)
 	@echo "Ingesting rent stabilization data..."
 	$(PYTHON) -m $(EV_INGEST).rentstab.pipeline
 	@echo "Rent stabilization complete."
+
+evidentiary-pluto-dof: ## [ev] Ingest DOF ownership/assessment/zoning enrichment
+	@echo "Ingesting DOF ownership/assessment/zoning data..."
+	$(PYTHON) -m $(EV_INGEST).pluto_dof.pipeline
+	@echo "DOF ownership/assessment/zoning complete."
 
 evidentiary-marshal-evictions: ## [ev] Ingest NYC Marshal eviction executions (~112K events) (ADR-013)
 	@echo "Ingesting marshal eviction records..."
@@ -166,6 +198,13 @@ evidentiary-verify: ## [ev] Run sanity check queries against the evidentiary gra
 	@echo ""
 	@echo "MATCH (a:Actor) RETURN a.actor_type AS type, count(a) AS count ORDER BY count DESC;" \
 		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo ""
+	@echo "MATCH (ii:InvestigativeIntent) RETURN count(ii) AS investigative_intents;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo "MATCH (cq:CanonicalQuestion) RETURN count(cq) AS canonical_questions;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
+	@echo "MATCH (cq:CanonicalQuestion) WHERE NOT EXISTS { MATCH (ii:InvestigativeIntent {intent_id: cq.intent_id}) } RETURN count(cq) AS orphaned_canonical_questions;" \
+		| $(CYPHER_SHELL) $(EV_CYPHER_ARGS) --format plain
 
 evidentiary-clean-landlords: ## [ev] Remove intermediate Landlord nodes from the evidentiary graph
 	@echo "Clearing intermediate Landlord nodes..."
@@ -175,12 +214,14 @@ evidentiary-clean-landlords: ## [ev] Remove intermediate Landlord nodes from the
 
 # ---- Full build --------------------------------------------------------------
 
-evidentiary-build: evidentiary-schema evidentiary-seed-rules evidentiary-indexes \
+evidentiary-build: evidentiary-schema evidentiary-seed-rules evidentiary-seed-intents evidentiary-indexes \
                    evidentiary-buildings \
                    evidentiary-hpd evidentiary-dob evidentiary-ecb evidentiary-hpd-lit \
-                   evidentiary-rentstab evidentiary-marshal-evictions \
+                   evidentiary-hpd-complaints \
+                   evidentiary-rentstab evidentiary-pluto-dof evidentiary-marshal-evictions \
                    evidentiary-portfolio evidentiary-agents \
-                   evidentiary-acris evidentiary-reconcile evidentiary-phc001 ## [ev] Full evidentiary KG build from scratch
+                   evidentiary-acris evidentiary-acris-mortgages \
+                   evidentiary-reconcile evidentiary-phc001 ## [ev] Full evidentiary KG build from scratch
 	@echo ""
 	@echo "Full evidentiary KG build complete. Run 'make evidentiary-verify' to confirm."
 
