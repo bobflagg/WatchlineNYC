@@ -32,7 +32,9 @@ JSON schema:
                      "WorstFirst" | "ConcealmentDetection" | "DeteriorationTrajectory" |
                      "EnforcementAccountability" | "GeographicConcentration" |
                      "OwnershipChange" | "BuildingDueDiligence" |
-                     "RentStabilization" | "FineEvasion" | "NetworkExposure" | "General",
+                     "RentStabilization" | "FineEvasion" | "NetworkExposure" |
+                     "VacateHistory" | "OwnershipNameDiscrepancy" |
+                     "MortgageBasedConcealment" | "General",
   "confidence": "High" | "Medium" | "Low"
 }
 
@@ -50,6 +52,9 @@ Intent category definitions:
 - RentStabilization:          rent-stabilized unit counts and deregulation trajectory
 - FineEvasion:                outstanding ECB/OATH fines and payment patterns
 - NetworkExposure:             are two or more apparently separate landlords operating as a coordinated network
+- VacateHistory:               has HPD ever issued a vacate order (forced displacement) against this building
+- OwnershipNameDiscrepancy:    does DOF's recorded owner-of-record name match who Watchline resolved as controlling this building
+- MortgageBasedConcealment:    does the party who financed this building's most recent purchase match the party who took title on the deed
 - General:                    simple factual questions not covered by the above
 """
 

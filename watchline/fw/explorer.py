@@ -416,7 +416,8 @@ def build_agent(tracker: ProvenanceTracker, checkpointer=None):
     ]
 
     agent = create_deep_agent(
-        model="anthropic:claude-sonnet-4-6",
+        #model="anthropic:claude-sonnet-4-6",
+        model="anthropic:claude-haiku-4-5",
         tools=tools,
         system_prompt=SYSTEM_PROMPT,
         checkpointer=checkpointer

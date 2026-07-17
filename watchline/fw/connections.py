@@ -16,7 +16,8 @@ load_dotenv()
 
 def get_llm() -> ChatAnthropic:
     return ChatAnthropic(
-        model="claude-sonnet-4-6",
+        #model="claude-sonnet-4-6",
+        model="claude-haiku-4-5",
         api_key=os.environ["ANTHROPIC_API_KEY"],
         max_tokens=2048,
     )

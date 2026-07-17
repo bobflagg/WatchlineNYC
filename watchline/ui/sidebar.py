@@ -38,6 +38,10 @@ MODES = {
             "Are there clusters of troubled buildings in the Bronx?",
             "Did conditions change after 883 East 180 Street in the Bronx was sold?",
             "Did conditions change after 122 West 97th Street in Manhattan was sold?",
+            "Tell me about vacate orders at 16 Richman Plaza.",
+            "Does the DOF-recorded owner of 1425 Vyse Avenue in the Bronx match who Watchline says controls it?",
+            "Does the mortgage on 153-02 111 ROAD match who bought it?",
+            
             "-----",
             "Has the landlord been keeping up with repairs at 10 Halletts Point?",
             "What's the BBL for 1071 Franklin Avenue, Bronx?",
@@ -71,6 +75,9 @@ MODES = {
             "Are there clusters of troubled buildings in the Bronx?",
             "Did conditions change after 883 East 180 Street in the Bronx was sold?",
             "Did conditions change after 122 West 97th Street in Manhattan was sold?",
+            "Tell me about vacate orders at 16 Richman Plaza.",
+            "Does the DOF-recorded owner of 1425 Vyse Avenue in the Bronx match who Watchline says controls it?",
+            "Does the mortgage on 153-02 111 ROAD match who bought it?",
             "-----",
             "Has the landlord been keeping up with repairs at 10 Halletts Point?",
             "What's the BBL for 1071 Franklin Avenue, Bronx?",
@@ -85,6 +92,21 @@ MODES = {
             "What other buildings does that owner control, and how many units total?",
             "What's the enforcement history for 1-02 26th Avenue — HPD, DOB, ECB/OATH?",
             "Show the ownership chain for 26-50 1st Street, Queens, with interpretive status.",
+        ],
+    },
+    "🕵️ Discovery Leads": {
+        "emoji": "🕵️",                    # rendered via CSS ::before, not the label
+        "graph": "explore",               # bounded, autonomous Discovery agent -- produces Leads, not answers
+        "messages_key": "discovery_messages",
+        "select_key": "discovery_sample",
+        "guard_key": "last_discovery_sample",
+        "input_placeholder": "Ask a question to investigate — produces a candidate Lead",
+        "samples": [
+            "Who controls 530 East 169th Street in the Bronx, and does that owner have other buildings with problems?",
+            "Is 122 West 97th Street in Manhattan getting worse?",
+            "What is the full record on 1459 Wythe Place, Bronx?",
+            "Is 1380 White Plains Road Bronx losing rent stabilized units?",
+            "What are the outstanding ECB fines at 1459 Wythe Place Bronx?",
         ],
     },
 }

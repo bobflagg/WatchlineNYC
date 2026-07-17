@@ -22,18 +22,59 @@ from watchline.fw.state import WatchlineState
 
 
 # ---------------------------------------------------------------------------
+# Intent validation (Charter Principle 17)
+#
+# "Every conditional transition must be justified by a defined Rule or
+# Canonical Question in the ontology." identify_intent's LLM call chooses
+# an intent_category with no graph access at all (see intent.py). This is
+# the one place that classification is checked against a real ontology
+# object before the pipeline trusts it. See
+# scripts/04_seed_investigative_intents.cypher for the seed data.
+# ---------------------------------------------------------------------------
+
+def _validate_intent(intent_cat: str) -> str | None:
+    """
+    Look up intent_cat against InvestigativeIntent.name in the graph.
+
+    Returns the matching intent_id, or None if no node was found. None is
+    expected for 'General' (a catch-all fallback, not a named investigative
+    question — no InvestigativeIntent node is seeded for it). For any other
+    category, None means either the LLM classified into a category outside
+    the ontology, or REGISTRY and the seeded InvestigativeIntent nodes have
+    drifted apart — both are worth surfacing, not silently swallowing.
+    """
+    if intent_cat == "General":
+        return None
+    results = neo4j_query(
+        "MATCH (ii:InvestigativeIntent {name: $name}) RETURN ii.intent_id AS intent_id",
+        params={"name": intent_cat},
+    )
+    return results[0]["intent_id"] if results else None
+
+
+# ---------------------------------------------------------------------------
 # select_rules
 # ---------------------------------------------------------------------------
 
 def select_rules(state: WatchlineState) -> dict:
     """
     Map intent to handler, resolve entity, prepare traversal params.
-    No LLM, no graph queries here (entity resolution is graph access
-    but is treated as infrastructure, not reasoning).
+    No LLM here. Entity resolution and the InvestigativeIntent check below
+    are graph access but are treated as infrastructure, not reasoning.
     """
     intent       = state["intent"]
     entity_type  = intent.get("entity_type", "Unknown")
     intent_cat   = intent.get("intent_category", "General")
+
+    justified_by_intent_id = _validate_intent(intent_cat)
+    if justified_by_intent_id is None and intent_cat != "General":
+        print(
+            f"WARNING: intent_category '{intent_cat}' has no matching "
+            f"InvestigativeIntent node in the graph — routing is proceeding "
+            f"on LLM classification alone, unjustified by the ontology. "
+            f"Check scripts/04_seed_investigative_intents.cypher against "
+            f"REGISTRY in watchline/fw/intents/__init__.py for drift."
+        )
 
     # Look up handler — fall back to General if category is unrecognised
     handler = REGISTRY.get(intent_cat) or REGISTRY["General"]
@@ -44,8 +85,9 @@ def select_rules(state: WatchlineState) -> dict:
             "needs_clarification": False,
             "traversal_results": {
                 **handler.not_supported_response(),
-                "handler":        handler,
-                "traversal_type": handler.traversal_key(),
+                "handler":                handler,
+                "traversal_type":         handler.traversal_key(),
+                "justified_by_intent_id": justified_by_intent_id,
             },
         }
 
@@ -54,10 +96,11 @@ def select_rules(state: WatchlineState) -> dict:
         return {
             "needs_clarification": False,
             "traversal_results": {
-                "handler":         handler,
-                "traversal_type":  handler.traversal_key(),
-                "params":          {},
-                "resolved_entity": None,
+                "handler":                handler,
+                "traversal_type":         handler.traversal_key(),
+                "params":                 {},
+                "resolved_entity":        None,
+                "justified_by_intent_id": justified_by_intent_id,
             },
         }
 
@@ -67,10 +110,11 @@ def select_rules(state: WatchlineState) -> dict:
         return {
             "needs_clarification": False,
             "traversal_results": {
-                "handler":         handler,
-                "traversal_type":  handler.traversal_key(),
-                "params":          handler.get_params(intent),
-                "resolved_entity": None,
+                "handler":                handler,
+                "traversal_type":         handler.traversal_key(),
+                "params":                 handler.get_params(intent),
+                "resolved_entity":        None,
+                "justified_by_intent_id": justified_by_intent_id,
             },
         }
 
@@ -118,10 +162,11 @@ def select_rules(state: WatchlineState) -> dict:
     return {
         "needs_clarification": False,
         "traversal_results": {
-            "handler":         handler,
-            "traversal_type":  handler.traversal_key(),
-            "params":          handler.get_params(intent),
-            "resolved_entity": resolved_entity,
+            "handler":                handler,
+            "traversal_type":         handler.traversal_key(),
+            "params":                 handler.get_params(intent),
+            "resolved_entity":        resolved_entity,
+            "justified_by_intent_id": justified_by_intent_id,
         },
     }
 

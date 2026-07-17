@@ -12,6 +12,21 @@ if "thread_id" not in st.session_state:
 if "last_dashboard" not in st.session_state:
     st.session_state.last_dashboard = None
 
+if "last_lead" not in st.session_state:
+    st.session_state.last_lead = None
+
+if "pending_handoff_question" not in st.session_state:
+    st.session_state.pending_handoff_question = None
+
+# Streamlit forbids writing st.session_state.mode once the st.radio(key="mode")
+# widget in render_sidebar() has been instantiated this run -- so a mode
+# switch triggered from the main body (the Lead panel's hand-off button)
+# can't set st.session_state.mode directly. It sets this separate,
+# unbound flag instead; consuming it here, before render_sidebar() runs,
+# is what actually changes the radio's value for this run.
+if st.session_state.get("pending_mode_switch"):
+    st.session_state.mode = st.session_state.pop("pending_mode_switch")
+
 st.set_page_config(
     page_title="Watchline NYC",
     page_icon="⚖️",
@@ -237,6 +252,119 @@ def _render_dashboard_panel():
 
 
 # ---------------------------------------------------------------------------
+# Discovery Lead panel
+# ---------------------------------------------------------------------------
+# Charter Principle 18: Discovery's output is a Lead, never a Claim -- it
+# carries no Interpretive Status and asserts nothing about the world. This
+# panel exists to show that distinction to the user, not just to display
+# data (design doc §2).
+
+# Maps a Lead's suggested_intent to a natural-language question likely to
+# route back to the SAME intent_category when evidentiary's identify_intent
+# parses it (see watchline/fw/intent.py's INTENT_SYSTEM_PROMPT definitions --
+# these templates paraphrase that prompt's own intent definitions).
+_INTENT_QUESTION_TEMPLATES = {
+    "PortfolioIdentification":   "Who actually controls {target}?",
+    "PortfolioCondition":        "How bad is {target}'s record across all their buildings?",
+    "Recidivism":                "Has {target} let hazardous conditions persist repeatedly?",
+    "WorstFirst":                "Who is the worst landlord in NYC?",
+    "ConcealmentDetection":      "Is {target} using LLCs or name variations to hide their identity?",
+    "DeteriorationTrajectory":   "Is {target} getting worse over time?",
+    "EnforcementAccountability": "Is HPD following up on violations at {target}?",
+    "GeographicConcentration":   "Are there clusters of troubled buildings near {target}?",
+    "OwnershipChange":           "Did conditions change after {target} was sold?",
+    "BuildingDueDiligence":      "What is the full record on {target}?",
+    "RentStabilization":         "Is {target} losing rent-stabilized units?",
+    "FineEvasion":               "What are the outstanding ECB fines at {target}?",
+    "NetworkExposure":           "Is {target} connected to other landlords with bad records?",
+}
+
+
+# Intents whose phrasing is about a landlord/actor, not a specific building
+# ("...their buildings", "...let conditions persist", "...hide their
+# identity") -- these must prefer the Actor's name over a BBL, or the
+# constructed question reads incoherently (e.g. "How bad is BBL 123's record
+# across all their buildings?"). Everything else is building-scoped and
+# prefers the BBL.
+_ACTOR_SCOPED_INTENTS = {
+    "PortfolioCondition", "Recidivism", "ConcealmentDetection", "NetworkExposure",
+}
+
+
+def _build_handoff_question(lead: dict) -> str | None:
+    """
+    Construct a natural-language question from a Lead's target and
+    suggested_intent, for the "investigate in evidentiary" hand-off
+    (design doc §9). Only Building.bbl is safe to hand off directly --
+    Discovery's Actor/Portfolio ids are a namespace evidentiary doesn't
+    share (Reconciliation Principle 3) -- so an Actor target is handed off
+    by its human-readable name instead. Portfolio-only Leads have no clean
+    evidentiary equivalent and return None.
+    """
+    proposal = lead.get("lead_proposal") or {}
+    intent = proposal.get("suggested_intent")
+    template = _INTENT_QUESTION_TEMPLATES.get(intent)
+    if not template:
+        return None
+    if "{target}" not in template:
+        return template  # e.g. WorstFirst names no specific target
+
+    targets = lead.get("validated_targets") or []
+    building = next((t for t in targets if t.get("kind") == "Building"), None)
+    actor = next((t for t in targets if t.get("kind") == "Actor" and t.get("label")), None)
+
+    primary, fallback = (actor, building) if intent in _ACTOR_SCOPED_INTENTS else (building, actor)
+    chosen = primary or fallback
+    if not chosen:
+        return None
+    label = f"BBL {chosen['id']}" if chosen["kind"] == "Building" else chosen["label"]
+    return template.format(target=label)
+
+
+def _render_lead_panel():
+    """Render the latest Discovery Lead, with an evidentiary hand-off button."""
+    lead = st.session_state.get("last_lead")
+    if not lead:
+        return
+
+    st.divider()
+    proposal = lead.get("lead_proposal") or {}
+
+    st.caption(f"🕵️ Discovery Lead · `{lead['lead_id']}`")
+    st.markdown(
+        f"**Suggested intent:** {proposal.get('suggested_intent', '—')}"
+        f"  ·  **Priority:** {proposal.get('priority', '—')}"
+    )
+    st.info(
+        "This is a Lead: a non-authoritative pointer for further investigation, "
+        "not a Claim. It carries no Interpretive Status and asserts nothing "
+        "about the world (Charter Principle 18)."
+    )
+
+    if proposal.get("novel_intent_description"):
+        st.markdown(f"**Novel pattern:** {proposal['novel_intent_description']}")
+
+    st.markdown("**Rationale**")
+    st.write(proposal.get("rationale", "—"))
+
+    targets = lead.get("validated_targets") or []
+    if targets:
+        st.markdown("**Targets**")
+        for t in targets:
+            st.write(f"- {t['kind']}: {t.get('label') or t['id']}  (`{t['id']}`)")
+
+    question = _build_handoff_question(lead)
+    if question:
+        if st.button("🔍 Investigate in Evidentiary", key=f"handoff_{lead['lead_id']}"):
+            st.session_state.pending_handoff_question = question
+            st.session_state.pending_mode_switch = "🔬 Investigate"
+            st.rerun()
+        st.caption(f"Will ask: _{question}_")
+    else:
+        st.caption("No building or actor target available for an evidentiary hand-off.")
+
+
+# ---------------------------------------------------------------------------
 # Streaming helpers
 # ---------------------------------------------------------------------------
 
@@ -288,6 +416,10 @@ def render(prompt: str, graph: str) -> str:
                 st.session_state.last_dashboard = base64.b64decode(
                     encoded.encode("ascii")
                 ).decode("utf-8")
+        elif t == "lead":
+            # Discovery Explore's answer -- a Lead, not a dashboard. See
+            # _render_lead_panel().
+            st.session_state.last_lead = event
         elif t == "error":
             events_panel.error(event["message"])
             events_panel.update(label="Error", state="error", expanded=True)
@@ -315,6 +447,23 @@ def pending_sample(select_key: str, guard_key: str):
     if selected != _PLACEHOLDER and selected != st.session_state.get(guard_key):
         st.session_state[guard_key] = selected
         return selected
+    return None
+
+
+def pending_handoff():
+    """
+    Return a Discovery Lead's hand-off question once, else None.
+
+    Set by _render_lead_panel()'s "Investigate in Evidentiary" button
+    (design doc §9), which also switches st.session_state.mode to
+    "🔬 Investigate" before calling st.rerun() -- by the time this function
+    runs on the next script pass, the active mode is already Investigate,
+    so returning the question here is enough to auto-submit it.
+    """
+    question = st.session_state.get("pending_handoff_question")
+    if question:
+        st.session_state.pending_handoff_question = None
+        return question
     return None
 
 
@@ -349,23 +498,32 @@ else:
 
     typed = st.chat_input(cfg["input_placeholder"])
     pending = pending_sample(cfg["select_key"], cfg["guard_key"])
+    handoff = pending_handoff() if cfg["graph"] == "investigator" else None
 
-    prompt = typed or pending
+    prompt = typed or pending or handoff
     if prompt:
-        # Clear the previous dashboard so a stale result never shows
+        # Clear the previous dashboard/Lead so a stale result never shows
         # below a new question while the pipeline is still running.
         st.session_state.last_dashboard = None
+        st.session_state.last_lead = None
         messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
         with st.chat_message("assistant"):
             answer = render(prompt, cfg["graph"])
-        # For investigator responses the answer text is empty — store a
-        # placeholder so the transcript shows something on replay.
-        transcript_entry = answer if answer else "_(See dashboard below)_"
+        # For investigator/explore responses the answer text is empty --
+        # store a placeholder so the transcript shows something on replay.
+        if answer:
+            transcript_entry = answer
+        elif cfg["graph"] == "explore":
+            transcript_entry = "_(See Lead below)_"
+        else:
+            transcript_entry = "_(See dashboard below)_"
         messages.append({"role": "assistant", "content": transcript_entry})
 
-    # Render the dashboard if the investigator produced one.
-    # Displayed outside the chat message so it gets full width.
+    # Render the dashboard/Lead if the pipeline produced one. Displayed
+    # outside the chat message so it gets full width.
     if st.session_state.get("last_dashboard") and cfg["graph"] == "investigator":
         _render_dashboard_panel()
+    if st.session_state.get("last_lead") and cfg["graph"] == "explore":
+        _render_lead_panel()
 

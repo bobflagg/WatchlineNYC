@@ -1517,6 +1517,500 @@ def _render_fine_evasion(tr: dict, prose: str) -> dict:
     }
 
 
+def _render_vacate_history(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for VacateHistory (VA-001 / RUL-00015).
+    """
+    from watchline.fw.intents.vacate_history import _load_rule_from_graph
+
+    raw       = tr.get("raw_results", [{}])
+    row0      = raw[0] if raw else {}
+    rule_eval = tr.get("rule_evaluation") or {}
+    rule      = _load_rule_from_graph()
+
+    satisfied       = rule_eval.get("vacate_history_flagged", False)
+    insufficient    = rule_eval.get("insufficient_data", False)
+    no_history      = rule_eval.get("no_vacate_history", False)
+    count           = rule_eval.get("vacate_order_count", 0) or 0
+    active_count    = rule_eval.get("active_count", 0) or 0
+    currently_active = rule_eval.get("currently_active", False)
+    recurring       = rule_eval.get("recurring", False)
+
+    # --- Stat cards ---
+    stat_cards = (
+        _stat_mini("Vacate orders on record", count, danger=count > 0)
+        + _stat_mini("Currently active", active_count, danger=active_count > 0)
+        + _stat_mini("Rescinded", max(count - active_count, 0))
+        + _stat_mini("Recurring (≥ 2)", "Yes" if recurring else "No", danger=recurring)
+        + _stat_mini("Currently active flag", "Yes" if currently_active else "No", danger=currently_active)
+        + _stat_mini("Rule VA-001 threshold", "≥ 1 order")
+    )
+
+    # --- Vacate orders table ---
+    raw_orders = rule_eval.get("vacate_orders") or []
+    orders = sorted(
+        [o for o in raw_orders if o is not None],
+        key=lambda o: str(o.get("event_date") or ""),
+        reverse=True,
+    )
+
+    vacate_orders_table = ""
+    if orders:
+        rows_html = ""
+        for o in orders:
+            date_val = o.get("event_date")
+            date_str = str(date_val) if date_val is not None else "—"
+            reason   = o.get("vacate_reason") or "—"
+            vtype    = o.get("vacate_type") or "—"
+            units    = o.get("units_vacated")
+            status   = o.get("status") or "—"
+            status_pill = (
+                '<span class="wl-status-pill wl-status-disputed">Active</span>'
+                if status == "Active" else
+                '<span class="wl-status-pill wl-status-observed">Rescinded</span>'
+            )
+            rows_html += (
+                f"<tr>"
+                f"<td>{_esc(date_str)}</td>"
+                f"<td>{_esc(reason)}</td>"
+                f"<td>{_esc(vtype)}</td>"
+                f"<td>{_esc(units) if units is not None else '—'}</td>"
+                f"<td>{status_pill}</td>"
+                f"</tr>"
+            )
+        vacate_orders_table = (
+            f'<div class="wl-section-head">Vacate Orders ({len(orders)})</div>'
+            f'<table class="wl-table">'
+            f'<thead><tr>'
+            f'<th>Effective date</th><th>Reason</th><th>Type</th>'
+            f'<th>Units vacated</th><th>Status</th>'
+            f'</tr></thead>'
+            f'<tbody>{rows_html}</tbody>'
+            f'</table>'
+        )
+    elif not insufficient:
+        vacate_orders_table = (
+            '<p style="color:#166534;font-size:0.9rem;margin:1rem 0;">'
+            'No HPD vacate orders found for this building.</p>'
+        )
+
+    # --- Signal card ---
+    if insufficient:
+        signal_class   = "unknown"
+        signal_verdict = "⚠ Unable to evaluate — building could not be resolved"
+    elif satisfied:
+        signal_class   = "satisfied"
+        signal_verdict = f"✓ Satisfies VA-001 — {count} vacate order(s) on record"
+    else:
+        signal_class   = "not-satisfied"
+        signal_verdict = "✗ Does not satisfy VA-001 — no vacate orders on record"
+
+    # --- Load and split template ---
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl     = _intent_tmpl("vacate_history")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{STAT_CARDS}}",           stat_cards)
+        .replace("{{VACATE_ORDERS_TABLE}}",  vacate_orders_table)
+        .replace("{{ADDRESS}}",              _esc(row0.get("address")))
+        .replace("{{BOROUGH}}",              _esc(row0.get("borough")))
+        .replace("{{BBL}}",                  _esc(row0.get("bbl")))
+        .replace("{{RESIDENTIAL_UNITS}}",    _esc(row0.get("residential_units")))
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_VERSION}}",             _esc(rule.get("version", "1.0")))
+        .replace("{{AUTHORITY}}",                _esc(rule.get("authority", "")))
+        .replace("{{AUTHOR}}",                   _esc(rule.get("author", "")))
+        .replace("{{EFFECTIVE_DATE}}",           _esc(rule.get("effective_date", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",      _esc(rule.get("threshold_description", "")))
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule.get("falsification_conditions", "")))
+        .replace("{{SIGNAL_CLASS}}",             signal_class)
+        .replace("{{SIGNAL_VERDICT}}",           _esc(signal_verdict))
+        .replace("{{VACATE_ORDER_COUNT}}",       str(count))
+        .replace("{{ACTIVE_COUNT}}",             str(active_count))
+        .replace("{{RECURRING_DISPLAY}}",        "Yes" if recurring else "No")
+    )
+
+    # --- Summary hero ---
+    if insufficient:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "—"
+        hero_label = "Unable to evaluate"
+        hero_sub   = "This building could not be resolved."
+        verdict_pills = ""
+    elif currently_active:
+        hero_class = "wl-hero-deteriorating"
+        hero_icon  = "⚠"
+        hero_label = f"{active_count} active vacate order(s)"
+        hero_sub = (
+            f"{count} total vacate order(s) on record · "
+            f"Rule VA-001 satisfied · Interpretive status: Inferred"
+        )
+        verdict_pills = (
+            f'<div class="wl-signal-pills">'
+            f'<span class="wl-signal-pill wl-pill-fail">Currently active displacement</span>'
+            + (f'<span class="wl-signal-pill wl-pill-fail">Recurring ({count} orders)</span>' if recurring else '')
+            + f'</div>'
+        )
+    elif satisfied:
+        hero_class = "wl-hero-deteriorating"
+        hero_icon  = "↓"
+        hero_label = f"{count} vacate order(s) on record (rescinded)"
+        hero_sub = (
+            f"All recorded vacate orders have been rescinded · "
+            f"Rule VA-001 satisfied · Interpretive status: Inferred"
+        )
+        verdict_pills = (
+            f'<div class="wl-signal-pills">'
+            + (f'<span class="wl-signal-pill wl-pill-fail">Recurring ({count} orders)</span>' if recurring else '')
+            + f'</div>'
+        )
+    else:
+        hero_class = "wl-hero-stable"
+        hero_icon  = "✓"
+        hero_label = "No vacate order history"
+        hero_sub   = "No HPD vacate orders found for this building. Does not satisfy Rule VA-001."
+        verdict_pills = ""
+
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {_esc(row0.get("address", ""))}, '
+        f'{_esc(row0.get("borough", ""))}</span>'
+        f'<span><strong>BBL</strong> {_esc(row0.get("bbl", ""))}</span>'
+        f'<span><strong>Units</strong> {_esc(row0.get("residential_units", ""))}</span>'
+        f'<span><strong>Source</strong> NYC HPD</span>'
+        f'</div>'
+    )
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{_esc(hero_label)}</div>'
+        f'    <div class="wl-hero-sub">{_esc(hero_sub)}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{verdict_pills}'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL":  hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
+def _render_ownership_name_discrepancy(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for OwnershipNameDiscrepancy (OND-001 / RUL-00016).
+    Low-confidence rule -- see module docstring in
+    watchline/fw/intents/ownership_name_discrepancy.py before changing this.
+    """
+    from watchline.fw.intents.ownership_name_discrepancy import _load_rule_from_graph
+
+    raw       = tr.get("raw_results", [{}])
+    row0      = raw[0] if raw else {}
+    rule_eval = tr.get("rule_evaluation") or {}
+    rule      = _load_rule_from_graph()
+
+    insufficient  = rule_eval.get("insufficient_data", False)
+    reason        = rule_eval.get("reason")
+    discrepancy   = rule_eval.get("discrepancy_flagged")
+    is_corporate  = rule_eval.get("is_corporate")
+    dof_name      = rule_eval.get("dof_ownername") or "—"
+    controller    = rule_eval.get("controller_name") or "—"
+
+    _REASON_LABELS = {
+        "building_not_resolved":     "This building could not be resolved.",
+        "no_dof_owner_name":         "DOF has no recorded owner-of-record name for this building.",
+        "no_resolved_controller":    "No BeneficialControl relationship has been resolved for this building — nothing to compare against.",
+        "corporate_owner_out_of_scope": (
+            "DOF's owner name looks corporate (LLC, INC, CORP, etc.). A corporate "
+            "title-holder differing from a natural-person beneficial owner is expected "
+            "and not evaluated by this rule."
+        ),
+    }
+
+    # --- Comparison cards ---
+    comparison_cards = (
+        _stat_mini("DOF owner of record", _esc(dof_name))
+        + _stat_mini("Resolved beneficial controller", _esc(controller))
+    )
+
+    # --- Reason note (insufficient_data cases) ---
+    reason_note = ""
+    if insufficient and reason:
+        reason_note = (
+            f'<p style="color:#6b7a99;font-size:0.9rem;margin:1rem 0;">'
+            f'{_esc(_REASON_LABELS.get(reason, reason))}</p>'
+        )
+
+    # --- Signal card ---
+    if insufficient:
+        signal_class   = "unknown"
+        signal_verdict = f"⚠ Unable to evaluate — {_REASON_LABELS.get(reason, reason or 'insufficient data')}"
+    elif discrepancy:
+        signal_class   = "satisfied"
+        signal_verdict = "✓ Satisfies OND-001 — no name overlap (Low confidence, see limitation note)"
+    else:
+        signal_class   = "not-satisfied"
+        signal_verdict = "✗ Does not satisfy OND-001 — names share at least one token"
+
+    # --- Load and split template ---
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl     = _intent_tmpl("ownership_name_discrepancy")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{COMPARISON_CARDS}}",  comparison_cards)
+        .replace("{{REASON_NOTE}}",       reason_note)
+        .replace("{{ADDRESS}}",           _esc(row0.get("address")))
+        .replace("{{BOROUGH}}",           _esc(row0.get("borough")))
+        .replace("{{BBL}}",               _esc(row0.get("bbl")))
+        .replace("{{RESIDENTIAL_UNITS}}", _esc(row0.get("residential_units")))
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_VERSION}}",             _esc(rule.get("version", "1.0")))
+        .replace("{{AUTHORITY}}",                _esc(rule.get("authority", "")))
+        .replace("{{AUTHOR}}",                   _esc(rule.get("author", "")))
+        .replace("{{EFFECTIVE_DATE}}",           _esc(rule.get("effective_date", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",      _esc(rule.get("threshold_description", "")))
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule.get("falsification_conditions", "")))
+        .replace("{{SIGNAL_CLASS}}",             signal_class)
+        .replace("{{SIGNAL_VERDICT}}",           _esc(signal_verdict))
+        .replace("{{DOF_OWNERNAME}}",             _esc(dof_name))
+        .replace("{{CONTROLLER_NAME}}",           _esc(controller))
+    )
+
+    # --- Summary hero ---
+    if insufficient:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "—"
+        hero_label = "Unable to evaluate"
+        hero_sub   = _REASON_LABELS.get(reason, reason or "Insufficient data.")
+        verdict_pills = ""
+    elif discrepancy:
+        hero_class = "wl-hero-unknown"  # amber, not red — Low confidence, not a strong verdict
+        hero_icon  = "⚠"
+        hero_label = "Name discrepancy (Low confidence)"
+        hero_sub = (
+            f"DOF: {dof_name} · Watchline: {controller} · "
+            f"Rule OND-001 satisfied · Interpretive status: Inferred · Confidence: Low"
+        )
+        verdict_pills = (
+            f'<div class="wl-signal-pills">'
+            f'<span class="wl-signal-pill wl-pill-fail">No name overlap</span>'
+            f'<span class="wl-signal-pill wl-pill-fail">Low confidence — verify by hand</span>'
+            f'</div>'
+        )
+    else:
+        hero_class = "wl-hero-stable"
+        hero_icon  = "✓"
+        hero_label = "Names consistent"
+        hero_sub   = f"DOF owner and resolved controller share at least one name token. Does not satisfy Rule OND-001."
+        verdict_pills = ""
+
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {_esc(row0.get("address", ""))}, '
+        f'{_esc(row0.get("borough", ""))}</span>'
+        f'<span><strong>BBL</strong> {_esc(row0.get("bbl", ""))}</span>'
+        f'<span><strong>Units</strong> {_esc(row0.get("residential_units", ""))}</span>'
+        f'<span><strong>Sources</strong> NYC DOF · Watchline PBC-001</span>'
+        f'</div>'
+    )
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{_esc(hero_label)}</div>'
+        f'    <div class="wl-hero-sub">{_esc(hero_sub)}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{verdict_pills}'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL":  hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
+def _render_mortgage_concealment(tr: dict, prose: str) -> dict:
+    """
+    Render panel content for MortgageBasedConcealment (MBC-001 / RUL-00017).
+    """
+    from watchline.fw.intents.mortgage_concealment import _load_rule_from_graph
+
+    raw       = tr.get("raw_results", [{}])
+    row0      = raw[0] if raw else {}
+    rule_eval = tr.get("rule_evaluation") or {}
+    rule      = _load_rule_from_graph()
+
+    insufficient = rule_eval.get("insufficient_data", False)
+    reason       = rule_eval.get("reason")
+    concealment  = rule_eval.get("concealment_flagged")
+    deed_date    = rule_eval.get("deed_date") or "—"
+    grantee      = rule_eval.get("grantee_names") or "—"
+    mortgage_date = rule_eval.get("mortgage_date") or "—"
+    mortgagor    = rule_eval.get("mortgagor_names") or "—"
+    deed_amount  = rule_eval.get("deed_amount")
+    mortgage_amount = rule_eval.get("mortgage_amount")
+
+    _REASON_LABELS = {
+        "building_not_resolved":       "This building could not be resolved.",
+        "no_deed_transfer":            "No ACRIS deed transfer with a grantee name is on record for this building.",
+        "no_contemporaneous_mortgage": (
+            "No mortgage was recorded within -14 to +60 days of the most recent deed "
+            "transfer — likely an all-cash purchase, or the financing mortgage falls "
+            "outside this window or was never ingested."
+        ),
+        "unparseable_names": "The grantee or mortgagor names on record could not be compared.",
+    }
+
+    # --- Transaction cards ---
+    transaction_cards = (
+        _stat_mini("Deed date", _esc(deed_date))
+        + _stat_mini("Mortgage date", _esc(mortgage_date))
+        + _stat_mini("Deed grantee", _esc(grantee))
+        + _stat_mini("Mortgagor", _esc(mortgagor))
+        + _stat_mini("Deed amount", f"${float(deed_amount):,.0f}" if deed_amount else "—")
+        + _stat_mini("Mortgage amount", f"${float(mortgage_amount):,.0f}" if mortgage_amount else "—")
+    )
+
+    # --- Reason note (insufficient_data cases) ---
+    reason_note = ""
+    if insufficient and reason:
+        reason_note = (
+            f'<p style="color:#6b7a99;font-size:0.9rem;margin:1rem 0;">'
+            f'{_esc(_REASON_LABELS.get(reason, reason))}</p>'
+        )
+
+    # --- Signal card ---
+    if insufficient:
+        signal_class   = "unknown"
+        signal_verdict = f"⚠ Unable to evaluate — {_REASON_LABELS.get(reason, reason or 'insufficient data')}"
+    elif concealment:
+        signal_class   = "satisfied"
+        signal_verdict = "✓ Satisfies MBC-001 — no name overlap between grantee and mortgagor (Medium confidence)"
+    else:
+        signal_class   = "not-satisfied"
+        signal_verdict = "✗ Does not satisfy MBC-001 — grantee and mortgagor share at least one name token"
+
+    # --- Load and split template ---
+    _KNOWN_SECTIONS = {"EVIDENCE", "RULES"}
+    tmpl     = _intent_tmpl("mortgage_concealment")
+    sections = tmpl.split("%%")
+    tmpl_map = {}
+    for i in range(1, len(sections) - 1, 2):
+        key = sections[i].strip()
+        if key in _KNOWN_SECTIONS:
+            tmpl_map[key] = sections[i + 1]
+
+    evidence_html = (
+        tmpl_map.get("EVIDENCE", "")
+        .replace("{{TRANSACTION_CARDS}}", transaction_cards)
+        .replace("{{REASON_NOTE}}",       reason_note)
+        .replace("{{ADDRESS}}",           _esc(row0.get("address")))
+        .replace("{{BOROUGH}}",           _esc(row0.get("borough")))
+        .replace("{{BBL}}",               _esc(row0.get("bbl")))
+        .replace("{{RESIDENTIAL_UNITS}}", _esc(row0.get("residential_units")))
+    )
+
+    rules_html = (
+        tmpl_map.get("RULES", "")
+        .replace("{{RULE_VERSION}}",             _esc(rule.get("version", "1.0")))
+        .replace("{{AUTHORITY}}",                _esc(rule.get("authority", "")))
+        .replace("{{AUTHOR}}",                   _esc(rule.get("author", "")))
+        .replace("{{EFFECTIVE_DATE}}",           _esc(rule.get("effective_date", "")))
+        .replace("{{THRESHOLD_STATEMENT}}",      _esc(rule.get("threshold_description", "")))
+        .replace("{{FALSIFICATION_CONDITIONS}}", _esc(rule.get("falsification_conditions", "")))
+        .replace("{{SIGNAL_CLASS}}",             signal_class)
+        .replace("{{SIGNAL_VERDICT}}",           _esc(signal_verdict))
+        .replace("{{DEED_DATE}}",                _esc(deed_date))
+        .replace("{{GRANTEE_NAMES}}",            _esc(grantee))
+        .replace("{{MORTGAGE_DATE}}",            _esc(mortgage_date))
+        .replace("{{MORTGAGOR_NAMES}}",          _esc(mortgagor))
+    )
+
+    # --- Summary hero ---
+    if insufficient:
+        hero_class = "wl-hero-unknown"
+        hero_icon  = "—"
+        hero_label = "Unable to evaluate"
+        hero_sub   = _REASON_LABELS.get(reason, reason or "Insufficient data.")
+        verdict_pills = ""
+    elif concealment:
+        hero_class = "wl-hero-deteriorating"
+        hero_icon  = "⚠"
+        hero_label = "Financing party does not match buyer of record"
+        hero_sub = (
+            f"Grantee: {grantee} · Mortgagor: {mortgagor} · "
+            f"Rule MBC-001 satisfied · Interpretive status: Inferred · Confidence: Medium"
+        )
+        verdict_pills = (
+            f'<div class="wl-signal-pills">'
+            f'<span class="wl-signal-pill wl-pill-fail">No name overlap</span>'
+            f'<span class="wl-signal-pill wl-pill-fail">Purchase-money mismatch</span>'
+            f'</div>'
+        )
+    else:
+        hero_class = "wl-hero-stable"
+        hero_icon  = "✓"
+        hero_label = "Financing party matches buyer of record"
+        hero_sub   = "Grantee and mortgagor share at least one name token. Does not satisfy Rule MBC-001."
+        verdict_pills = ""
+
+    facts = (
+        f'<div class="wl-facts-strip">'
+        f'<span><strong>Address</strong> {_esc(row0.get("address", ""))}, '
+        f'{_esc(row0.get("borough", ""))}</span>'
+        f'<span><strong>BBL</strong> {_esc(row0.get("bbl", ""))}</span>'
+        f'<span><strong>Units</strong> {_esc(row0.get("residential_units", ""))}</span>'
+        f'<span><strong>Source</strong> NYC ACRIS</span>'
+        f'</div>'
+    )
+
+    hero_html = (
+        f'<div class="wl-summary-hero {hero_class}">'
+        f'  <div class="wl-hero-icon">{hero_icon}</div>'
+        f'  <div class="wl-hero-body">'
+        f'    <div class="wl-hero-label">{_esc(hero_label)}</div>'
+        f'    <div class="wl-hero-sub">{_esc(hero_sub)}</div>'
+        f'  </div>'
+        f'</div>'
+        f'{verdict_pills}'
+        f'{facts}'
+    )
+
+    return {
+        "SUMMARY_PANEL":  hero_html + f'<div class="wl-prose">{_prose_to_html(prose)}</div>',
+        "EVIDENCE_PANEL": evidence_html,
+        "RULES_PANEL":    rules_html,
+    }
+
+
 def _render_network_exposure(tr: dict, prose: str) -> dict:
     """
     Render panel content for NetworkExposure (NE-001 / RUL-00008).
@@ -2564,6 +3058,9 @@ _PANEL_RENDERERS = {
     "Recidivism":                   _render_recidivism,
     "NetworkExposure":              _render_network_exposure,
     "OwnershipChange":              _render_ownership_change,
+    "VacateHistory":                _render_vacate_history,
+    "OwnershipNameDiscrepancy":     _render_ownership_name_discrepancy,
+    "MortgageBasedConcealment":     _render_mortgage_concealment,
 }
 
 
@@ -2619,6 +3116,9 @@ def render_dashboard(state: WatchlineState) -> dict:
         "BuildingDueDiligence":       "Building Due Diligence",
         "RentStabilization":          "Rent Stabilization",
         "FineEvasion":                "Fine Evasion",
+        "VacateHistory":              "Vacate History",
+        "OwnershipNameDiscrepancy":   "Ownership Name Discrepancy",
+        "MortgageBasedConcealment":   "Mortgage-Based Concealment",
         "General":                    "General Query",
     }
     intent_label = intent_labels.get(intent_cat, intent_cat)

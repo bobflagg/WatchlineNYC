@@ -22,6 +22,9 @@ from watchline.fw.intents.concealment_detection import ConcealmentDetectionHandl
 from watchline.fw.intents.geographic_concentration import GeographicConcentrationHandler
 from watchline.fw.intents.network_exposure import NetworkExposureHandler
 from watchline.fw.intents.ownership_change import OwnershipChangeHandler
+from watchline.fw.intents.vacate_history import VacateHistoryHandler
+from watchline.fw.intents.ownership_name_discrepancy import OwnershipNameDiscrepancyHandler
+from watchline.fw.intents.mortgage_concealment import MortgageBasedConcealmentHandler
 from watchline.fw.intents.stubs import (
     GeneralHandler,
 )
@@ -43,6 +46,9 @@ REGISTRY: dict[str, object] = {
         FineEvasionHandler(),
         EnforcementAccountabilityHandler(),
         NetworkExposureHandler(),
+        VacateHistoryHandler(),
+        OwnershipNameDiscrepancyHandler(),
+        MortgageBasedConcealmentHandler(),
         GeneralHandler(),
     ]
 }

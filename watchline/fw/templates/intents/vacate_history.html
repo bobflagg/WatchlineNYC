@@ -1,0 +1,97 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">HPD Vacate Order Summary</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Source: NYC Department of Housing Preservation and Development (HPD).
+    A vacate order is HPD's own determination that a building, or part of
+    one, was dangerous enough that residents had to leave -- a stronger
+    displacement signal than a citation, since it represents forced
+    displacement rather than a violation that may or may not be remediated.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-bottom:1.4rem;">
+    {{STAT_CARDS}}
+  </div>
+
+  {{VACATE_ORDERS_TABLE}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">NYC HPD Vacate Orders</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule VA-001 — Vacate History</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">VA-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Threshold</span>
+    <span class="wl-meta-val">One or more HPD vacate orders on record</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+    <div class="wl-signal-card {{SIGNAL_CLASS}}">
+      <div class="wl-signal-label">Vacate order count vs. VA-001 threshold</div>
+      <div class="wl-signal-verdict">{{SIGNAL_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        Vacate orders on record: <strong>{{VACATE_ORDER_COUNT}}</strong><br/>
+        Currently active: <strong>{{ACTIVE_COUNT}}</strong><br/>
+        Recurring (&ge;2 orders): <strong>{{RECURRING_DISPLAY}}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="wl-section-head">Editorial Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Unlike routine violation-count thresholds elsewhere in this ruleset
+    (e.g. PHC-001's three-or-more Class C requirement), VA-001 requires no
+    minimum count above one: a vacate order already represents HPD's own
+    severe displacement determination, not a citation that may or may not
+    be remediated. This rule does not apply a recency window -- a
+    long-rescinded historical order and a currently active one both satisfy
+    the base verdict, distinguished only by the active/recurring
+    sub-signals shown above.
+  </p>

@@ -1,0 +1,102 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Purchase-Money Financing Comparison</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Compares the grantee named on this building's most recent ACRIS deed
+    transfer against the mortgagor named on the mortgage recorded nearest
+    to that closing (-14 to +60 days). Under normal purchase-money
+    financing the buyer of record and the borrower of record are the same
+    party.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.8rem;margin-bottom:1.4rem;">
+    {{TRANSACTION_CARDS}}
+  </div>
+
+  {{REASON_NOTE}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data source</span>
+    <span class="wl-meta-val">NYC ACRIS (Department of Finance)</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule MBC-001 — Mortgage-Based Concealment</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">MBC-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Confidence</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-stipulated">Medium</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+    <div class="wl-signal-card {{SIGNAL_CLASS}}">
+      <div class="wl-signal-label">Deed grantee vs. purchase-money mortgagor</div>
+      <div class="wl-signal-verdict">{{SIGNAL_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        Deed grantee ({{DEED_DATE}}): <strong>{{GRANTEE_NAMES}}</strong><br/>
+        Mortgagor ({{MORTGAGE_DATE}}): <strong>{{MORTGAGOR_NAMES}}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="wl-section-head">Calibration Note</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    Verified against live evidentiary data: of matched purchase-money deed/
+    mortgage pairs (grantee vs. mortgagor within a -14 to +60 day window),
+    85.1% show an exact name-token match, 12.0% show partial overlap, and
+    only 2.9% show zero overlap — the population this rule flags. This is a
+    materially cleaner signal than OwnershipNameDiscrepancy (71% mismatch
+    rate) because both names here come from the same ACRIS self-reporting
+    convention on the same closing package, not two independently-sourced
+    datasets. Corporate and individual names are both evaluated — an LLC
+    taking title while an unrelated individual finances the purchase is
+    itself part of the flagged pattern, not excluded noise. This rule
+    evaluates only the building's most recent deed transfer, not its full
+    transaction history.
+  </p>

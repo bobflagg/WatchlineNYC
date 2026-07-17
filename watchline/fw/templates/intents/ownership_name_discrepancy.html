@@ -1,0 +1,100 @@
+%%EVIDENCE%%
+  <div class="wl-section-head">Ownership Name Comparison</div>
+  <p style="font-size:0.85rem;color:#6b7a99;margin-bottom:1rem;">
+    Compares NYC Department of Finance (DOF) tax-roll owner-of-record data
+    against the Actor Watchline has resolved as this building's probable
+    beneficial controller (Rule PBC-001). This is a Low-confidence
+    comparison — see the Rules tab for why.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.8rem;margin-bottom:1.4rem;">
+    {{COMPARISON_CARDS}}
+  </div>
+
+  {{REASON_NOTE}}
+
+  <div class="wl-section-head">Building Profile</div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Address</span>
+    <span class="wl-meta-val">{{ADDRESS}}, {{BOROUGH}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">BBL</span>
+    <span class="wl-meta-val">{{BBL}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Residential units</span>
+    <span class="wl-meta-val">{{RESIDENTIAL_UNITS}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Data sources</span>
+    <span class="wl-meta-val">NYC DOF PLUTO · Watchline PBC-001</span>
+  </div>
+%%RULES%%
+  <div class="wl-section-head">Rule OND-001 — Ownership Name Discrepancy</div>
+
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Rule ID</span>
+    <span class="wl-meta-val">OND-001</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Version</span>
+    <span class="wl-meta-val">{{RULE_VERSION}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Interpretive status</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-inferred">Inferred</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Confidence</span>
+    <span class="wl-meta-val">
+      <span class="wl-status-pill wl-status-disputed">Low</span>
+    </span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Authority</span>
+    <span class="wl-meta-val">{{AUTHORITY}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Author</span>
+    <span class="wl-meta-val">{{AUTHOR}}</span>
+  </div>
+  <div class="wl-meta-row">
+    <span class="wl-meta-key">Effective date</span>
+    <span class="wl-meta-val">{{EFFECTIVE_DATE}}</span>
+  </div>
+
+  <div class="wl-section-head">Threshold Statement</div>
+  <div class="wl-threshold">{{THRESHOLD_STATEMENT}}</div>
+
+  <div class="wl-section-head">Falsification Conditions</div>
+  <div class="wl-threshold" style="border-left-color:#991b1b;">{{FALSIFICATION_CONDITIONS}}</div>
+
+  <div class="wl-section-head">Signal Evaluation</div>
+  <div class="wl-signals">
+    <div class="wl-signal-card {{SIGNAL_CLASS}}">
+      <div class="wl-signal-label">DOF owner name vs. resolved beneficial controller</div>
+      <div class="wl-signal-verdict">{{SIGNAL_VERDICT}}</div>
+      <div class="wl-signal-detail">
+        DOF owner: <strong>{{DOF_OWNERNAME}}</strong><br/>
+        Resolved controller: <strong>{{CONTROLLER_NAME}}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="wl-section-head">Important Limitation — Read Before Citing This Finding</div>
+  <p style="font-size:0.85rem;color:#555;line-height:1.7;">
+    The resolved controller's name is the single most frequently registered
+    contact name across that Actor's <em>entire</em> multi-building
+    portfolio, not necessarily the specific name this individual building
+    was registered under with HPD. Verified against live data: among
+    buildings where DOF's owner name is not corporate-looking, 71% show no
+    name overlap with the portfolio's dominant name — a rate too high to be
+    read as evidence of concealment on its own. Treat a positive OND-001
+    flag as a lead worth checking by hand, not a finding. Corporate-looking
+    DOF owner names (LLC, INC, CORP, etc.) are excluded from evaluation
+    entirely, since an LLC holding title while a natural person controls it
+    is the expected, non-suspicious shape of most NYC rental ownership.
+  </p>
