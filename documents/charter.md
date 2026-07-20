@@ -110,6 +110,14 @@ The AI orchestration layer must implement a deterministic pipeline. No branching
 
 *This principle exists because autonomous AI reasoning cannot satisfy the cross-examination test (Principle 7) or the full exposure requirement (Principle 8). A conclusion produced by a language model's internal reasoning is not traceable to a defined rule, not reproducible across runs, and not inspectable by users or adversaries. Agentic behavior in the AI layer is therefore incompatible with Watchline's core commitments regardless of the AI framework used.*
 
+### 18. Bounded Exploratory Reasoning in Discovery
+
+The Discovery component may employ open-ended, multi-step AI reasoning — including autonomous selection of read-only queries against the Discovery knowledge graph, the Discovery component's source databases, and web search — to surface candidate leads for investigation. This exploratory reasoning is exempt from Principle 17's constraint that the language model be called exactly twice per pipeline execution.
+
+This exemption is bounded by three requirements. First, every tool invocation made during exploratory reasoning is logged in full and exposed to the user; the absence of a fixed, reproducible path is offset by complete transparency of the path actually taken. Second, Discovery's output is never a Claim. It is a Lead: a non-authoritative pointer identifying a candidate target and a candidate Investigative Intent, together with the reasoning that motivated it. A Lead carries no Interpretive Status and asserts nothing about the world; it becomes eligible to inform a Claim only after being taken up by the evidentiary component's Rule-governed pipeline. Third, if exploratory reasoning surfaces a pattern with no corresponding Canonical Question, it is recorded as a proposed addition and flagged for human review under Principle 15, not silently incorporated into the system's working vocabulary of questions.
+
+*This principle exists because Discovery's value depends on combinatorial search across heterogeneous, only partially structured sources, where the space of useful next queries cannot be enumerated the way it can for a defined Rule. Principle 17 was designed to protect Principles 7 and 8 for claims the system asserts about the world; it was not designed to forbid open-ended search for candidates to investigate, provided that search never itself produces an assertion and its process remains fully inspectable.*
+
 ---
 
 ## V. Amendment Log
@@ -117,6 +125,7 @@ The AI orchestration layer must implement a deterministic pipeline. No branching
 | Version | Date | Principle | Change | Author | Rationale |
 |---|---|---|---|---|---|
 | 1.1 | 2026-06-26 | 17 (new) | Added Principle 17: Deterministic AI Orchestration | Watchline project team | Adoption of LangGraph as the AI orchestration framework made explicit constitutional constraints on agentic use necessary. LangGraph's design center is autonomous agent behavior; Principle 17 establishes that Watchline uses it as a deterministic pipeline framework only. |
+| 1.2 | 2026-07-10 | 18 (new) | Added Principle 18: Bounded Exploratory Reasoning in Discovery | Watchline project team | Adding a Discovery component required a constitutional accommodation for open-ended, multi-step AI use. Principle 17 alone does not address exploratory search for investigative candidates; Principle 18 permits it while preserving Principles 7 and 8 through full process transparency and a strict Lead/Claim distinction. |
 
 ---
 

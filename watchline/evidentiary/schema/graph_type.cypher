@@ -1,15 +1,24 @@
--- Evidentiary KG graph type snapshot — 2026-07-16
+-- Evidentiary KG graph type snapshot — 2026-07-20
 -- Source: SHOW CURRENT GRAPH TYPE run against evidentiary database, immediately
--- after `make evidentiary-schema` applied scripts/01_schema.cypher with the
--- dof_* / rs_* Building fields added (notes/evidentiary-ingestion-plan.md task 1).
+-- after `make evidentiary-schema` applied scripts/01_schema.cypher v1.2
+-- (resolution_method_id removed from IdentityAssertion; APPLIES_METHOD added
+-- from Rule to ResolutionMethod). See notes/RESOLUTIONMETHOD-amendment.md for
+-- the full rationale.
 -- Re-run to verify schema has not drifted after ingestion pipeline changes.
 --
--- Note: the prior snapshot (2026-07-09) carried a standalone
--- `CONSTRAINT landlord_nodeid FOR (n:Landlord) REQUIRE (n.nodeid) IS UNIQUE`.
--- ALTER CURRENT GRAPH TYPE SET replaces the entire graph type and all existing
--- constraints, and :Landlord is intentionally not a declared element type
--- (intermediate node, cleared by `make evidentiary-clean-landlords`), so that
--- constraint did not survive this re-apply. Not a regression in practice:
+-- Note: the 2026-07-16 snapshot this replaces was itself stale by the time it
+-- was committed -- it still showed resolution_method_id and had no
+-- APPLIES_METHOD declaration, even though both had already been applied live.
+-- Always regenerate this file with a fresh SHOW CURRENT GRAPH TYPE immediately
+-- after the schema apply, not from a previously saved copy.
+--
+-- Note (carried forward from the 2026-07-09 snapshot): a standalone
+-- `CONSTRAINT landlord_nodeid FOR (n:Landlord) REQUIRE (n.nodeid) IS UNIQUE`
+-- does not appear here. ALTER CURRENT GRAPH TYPE SET replaces the entire graph
+-- type and all existing constraints, and :Landlord is intentionally not a
+-- declared element type (intermediate node, cleared by
+-- `make evidentiary-clean-landlords`), so that constraint does not survive a
+-- re-apply. Not a regression in practice:
 -- watchline/evidentiary/ingest/portfolio/load.py:150 re-creates it idempotently
 -- (`CREATE CONSTRAINT landlord_nodeid IF NOT EXISTS ...`) as the first step of
 -- its own `init` step, before any :Landlord MERGE.
@@ -21,7 +30,7 @@
   (:`Claim` => :`WatchlineNode` {`claim_id` :: STRING NOT NULL, `claim_text` :: STRING NOT NULL, `created_at` :: ZONED DATETIME NOT NULL, `interpretive_status` :: STRING NOT NULL, `subject_id` :: STRING NOT NULL, `subject_type` :: STRING NOT NULL, `superseded_by` :: STRING, `valid_from` :: DATE, `valid_to` :: DATE}),
   (:`Event` => :`WatchlineNode` {`closed_date` :: DATE, `created_at` :: ZONED DATETIME NOT NULL, `days_open` :: INTEGER, `description` :: STRING, `event_date` :: DATE, `event_id` :: STRING NOT NULL, `event_type` :: STRING NOT NULL, `legal_authority` :: STRING, `open_date` :: DATE, `raw_record` :: STRING NOT NULL, `section` :: STRING, `source_id` :: STRING NOT NULL, `source_name` :: STRING NOT NULL, `status` :: STRING NOT NULL, `violation_class` :: STRING, `violation_code` :: STRING}),
   (:`Evidence` => :`WatchlineNode` {`created_at` :: ZONED DATETIME NOT NULL, `evidence_id` :: STRING NOT NULL, `summary` :: STRING NOT NULL}),
-  (:`IdentityAssertion` => :`AuditableRecord`&`WatchlineNode` {`confidence` :: STRING NOT NULL, `created_at` :: ZONED DATETIME NOT NULL, `created_by` :: STRING NOT NULL, `iassertion_id` :: STRING NOT NULL, `interpretive_status` :: STRING NOT NULL, `rationale` :: STRING NOT NULL, `resolution_method_id` :: STRING NOT NULL}),
+  (:`IdentityAssertion` => :`AuditableRecord`&`WatchlineNode` {`confidence` :: STRING NOT NULL, `created_at` :: ZONED DATETIME NOT NULL, `created_by` :: STRING NOT NULL, `iassertion_id` :: STRING NOT NULL, `interpretive_status` :: STRING NOT NULL, `rationale` :: STRING NOT NULL}),
   (:`IdentityObservation` => :`WatchlineNode` {`context` :: STRING, `ingested_at` :: ZONED DATETIME NOT NULL, `iobs_id` :: STRING NOT NULL, `observation_id` :: STRING NOT NULL, `raw_name` :: STRING NOT NULL, `source_id` :: STRING NOT NULL}),
   (:`InvestigativeIntent` => :`WatchlineNode` {`applicable_rules` :: STRING NOT NULL, `canonical_question_ids` :: STRING NOT NULL, `description` :: STRING NOT NULL, `intent_id` :: STRING NOT NULL, `name` :: STRING NOT NULL}),
   (:`Observation` => :`WatchlineNode` {`ingested_at` :: ZONED DATETIME NOT NULL, `observation_id` :: STRING NOT NULL, `raw_content` :: STRING NOT NULL, `source_id` :: STRING NOT NULL, `source_record_id` :: STRING}),
@@ -30,6 +39,7 @@
   (:`Rule` => :`AuditableRecord`&`VersionedObject`&`WatchlineNode` {`amendment_notes` :: STRING, `author` :: STRING NOT NULL, `authority` :: STRING NOT NULL, `deprecated` :: BOOLEAN NOT NULL, `effective_date` :: DATE NOT NULL, `expiry_date` :: DATE, `explanation_template` :: STRING NOT NULL, `falsification_conditions` :: STRING NOT NULL, `input_types` :: STRING NOT NULL, `interpretive_concept` :: STRING NOT NULL, `name` :: STRING NOT NULL, `output_interpretive_status` :: STRING NOT NULL, `rule_id` :: STRING NOT NULL, `threshold_description` :: STRING NOT NULL, `threshold_logic` :: STRING NOT NULL, `title` :: STRING NOT NULL, `version` :: STRING NOT NULL}),
   (:`Source` => :`WatchlineNode` {`coverage_end` :: DATE, `coverage_start` :: DATE, `data_url` :: STRING, `description` :: STRING NOT NULL, `legal_authority` :: STRING, `producing_agency` :: STRING NOT NULL, `retrieval_date` :: DATE NOT NULL, `source_id` :: STRING NOT NULL, `source_name` :: STRING NOT NULL}),
   (:`Evidence` =>)-[:`AGGREGATES` =>]->(:`IdentityAssertion` =>),
+  (:`Rule` =>)-[:`APPLIES_METHOD` =>]->(:`ResolutionMethod` =>),
   (:`IdentityAssertion` =>)-[:`ASSERTS_IDENTITY_OF` =>]->(:`IdentityObservation` =>),
   (:`Evidence` =>)-[:`DERIVED_FROM` =>]->(:`Observation` =>),
   (:`Building` =>)-[:`HAS_EVENT` =>]->(:`Event` =>),
@@ -39,6 +49,7 @@
   (:`WatchlineNode`)-[:`ORIGINATES_IN` =>]->(:`Source` =>),
   (:`Actor` =>)-[:`PARTY_TO` =>]->(:`Event` =>),
   (:`WatchlineNode`)-[:`PRODUCED_BY` =>]->(:`Rule` =>),
+  (:`Event` =>)-[:`REFERENCES` => {`ref_type` :: STRING NOT NULL}]->(:`Event` =>),
   (:`Actor` =>)-[:`RESOLVED_FROM` =>]->(:`IdentityObservation` =>),
   (:`IdentityAssertion` =>)-[:`RESOLVES_TO` =>]->(:`Actor` =>),
   (:`Actor` =>)-[:`SPLIT_INTO` =>]->(:`Actor` =>),

@@ -243,7 +243,8 @@ Then update your handler's `evaluate()` to call `_load_rule_from_graph()`
 metadata are read from the graph at runtime, not hardcoded in Python.
 
 Increment `RUL-000XX` from the current highest rule_id in the graph.
-Current highest as of July 2026: `RUL-00009` (MA-001).
+Current highest as of July 2026: `RUL-00014` (OC-001) — corrected 2026-07-16;
+see the full "Rules in the graph" table below for all 14.
 
 ### Step 2: Create `watchline/fw/templates/intents/<name>.html`
 
@@ -322,13 +323,22 @@ ProbableAffiliation), involves_building →, involves_actor →
 OwnershipNetwork), interpretive_concept (PersistentHazardousConditions,
 ProbableBeneficialControl), interpretive_status, claim_text
 
-**Existing Rules in graph:**
+**Existing Rules in graph** (all 14; see "Current Graph State" below for
+implementation status per rule):
 - RUL-00001: PersistentHazardousConditions (PHC-001) — ≥3 open Class C, oldest >180 days
 - RUL-00002: ProbableBeneficialControl (PBC-001) — shared address/name connections
-- RUL-00003: NameBasedOwnershipConnection
-- RUL-00004: AddressBasedOwnershipConnection
-- RUL-00005: CandidateOwnershipNetwork (Weakly Connected Components)
-- RUL-00006: RefinedOwnershipNetwork (Louvain Community Detection)
+- RUL-00003: NameBasedOwnershipConnection (RMT-001)
+- RUL-00004: AddressBasedOwnershipConnection (RMT-002)
+- RUL-00005: CandidateOwnershipNetwork (RMT-003 — Weakly Connected Components)
+- RUL-00006: RefinedOwnershipNetwork (RMT-004 — Louvain Community Detection)
+- RUL-00007: DeteriorationTrajectory (DT-001) — rising violations + falling resolution rate
+- RUL-00008: NetworkExposure (NE-001) — ProbableAffiliation between split WCC siblings
+- RUL-00009: ManagementDifferential (MA-001) — stub, no handler or pipeline yet
+- RUL-00010: RentStabilizationLoss (RS-001) — falling RS units + active deregistration
+- RUL-00011: FineEvasion (FE-001) — outstanding ECB/OATH balance over $10,000
+- RUL-00012: EnforcementAccountabilityGap (EA-001) — long-open Class C, no court filing
+- RUL-00013: Recidivism (RCV-001) — multi-borough or multi-year persistent Class C
+- RUL-00014: OwnershipChangeDeterioration (OC-001) — violation rate jump after arm's-length deed transfer
 
 **Cypher date notes:**
 - `open_date` is a native date type — use `e.open_date.year` for year extraction
@@ -872,23 +882,30 @@ The epistemic KG was last fully rebuilt in July 2026. Current node counts:
 | Actor (ManagingAgent) | 76,697 | `make agents` |
 | Claim (PHC-001) | 41,897 | `make phc001` |
 | Claim (PBC-001) | 3,365 | `make portfolio` |
-| Rule | 9 | `make seed-rules` |
+| Rule | 14 | `make seed-rules` |
 
-**Rules in the graph:**
+**Rules in the graph** (corrected 2026-07-16 — this table previously stopped at RUL-00009 and was stale; verified against live `MATCH (r:Rule) RETURN ...` and against each `_GRAPH_RULE_ID` constant in `watchline/fw/intents/*.py`):
 
 | Rule ID | Name | Title | Status |
 |---------|------|-------|--------|
-| RUL-00001 | PHC-001 | Persistent Hazardous Conditions | Active |
-| RUL-00002 | PBC-001 | Probable Beneficial Control | Active |
-| RUL-00003 | RMT-001 | HPD Name-Based Connection | Active |
-| RUL-00004 | RMT-002 | HPD Address-Based Connection | Active |
-| RUL-00005 | RMT-003 | WCC Portfolio Detection | Active |
-| RUL-00006 | RMT-004 | Louvain Community Splitting | Active |
-| RUL-00007 | DT-001 | Deterioration Trajectory | Active |
-| RUL-00008 | NE-001 | Network Exposure | Active |
-| RUL-00009 | MA-001 | Management Differential | Stub (pipeline not yet implemented) |
+| RUL-00001 | PHC-001 | Persistent Hazardous Conditions | Active — batch-evaluated by `make phc001`, writes Claims |
+| RUL-00002 | PBC-001 | Probable Beneficial Control | Active — batch-evaluated by `make portfolio`, writes Claims |
+| RUL-00003 | RMT-001 | HPD Name-Based Connection | Active — Identity layer, used in portfolio load/matching |
+| RUL-00004 | RMT-002 | HPD Address-Based Connection | Active — Identity layer, used in portfolio load/matching |
+| RUL-00005 | RMT-003 | WCC Portfolio Detection | Active — Identity layer, `algorithms.py` |
+| RUL-00006 | RMT-004 | Louvain Community Splitting | Active — Identity layer, `algorithms.py` |
+| RUL-00007 | DT-001 | Deterioration Trajectory | Active — evaluated at query time by `fw/intents/deterioration.py` |
+| RUL-00008 | NE-001 | Network Exposure | Active — evaluated at query time by `fw/intents/network_exposure.py` |
+| RUL-00009 | MA-001 | Management Differential | Stub — Rule node registered (deprecated=false) but no `fw/intents` handler exists and no evaluation pipeline has been built; still the one true stub in this table |
+| RUL-00010 | RS-001 | Rent Stabilization Loss | Active — evaluated at query time by `fw/intents/rent_stabilization.py` |
+| RUL-00011 | FE-001 | Fine Evasion | Active — evaluated at query time by `fw/intents/fine_evasion.py` |
+| RUL-00012 | EA-001 | Enforcement Accountability Gap | Active — evaluated at query time by `fw/intents/enforcement_accountability.py` |
+| RUL-00013 | RCV-001 | Recidivism | Active — evaluated at query time by `fw/intents/recidivism.py` |
+| RUL-00014 | OC-001 | Ownership Change Deterioration | Active — evaluated at query time by `fw/intents/ownership_change.py`. Note: this contradicts the "OwnershipChange is data-constrained" guidance later in this file (Remaining Intents §11) — the handler is registered and implemented despite that guidance saying it should remain a stub pending ACRIS history. Not reconciled as of this edit; see ADR-015. |
 
-**Next available rule ID:** `RUL-00010`
+Rules with "evaluated at query time" status produce a `rule_evaluation` dict returned to the narrator per request (per the `IntentHandler.evaluate()` pattern) rather than persisting Claim nodes via a standalone batch pipeline the way PHC-001 and PBC-001 do — both are valid implementations of "Rules as first-class objects," just at different points in the pipeline.
+
+**Next available rule ID:** `RUL-00015`
 
 **Data sources not yet ingested** (see `next-steps.md` for specifications):
 - OCA housing court data (`oca_index`, `oca_judgments`, `oca_warrants`, `oca_parties`)

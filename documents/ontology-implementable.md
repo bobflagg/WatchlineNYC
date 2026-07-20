@@ -1,7 +1,19 @@
 # Watchline NYC: Ontology Specification
 ## Implementable Level
 
-**Version 1.1 -- June 2026.**
+**Version 1.2 -- July 2026.**
+
+**Amendment (2026-07-20):** `IdentityAssertion.resolution_method_id` removed; replaced
+by a `PRODUCED_BY` edge to `Rule`, matching how `Claim` and `Relationship` already
+reference the `Rule` that produced them. `ResolutionMethod.method_id` format changed
+from `RMT-[uuid]` to `MTH-[uuid]` to avoid colliding with `Rule.name` short codes.
+`Rule` gained an optional `APPLIES_METHOD` edge to `ResolutionMethod`. Rationale: no
+`ResolutionMethod` node had ever been created; every `IdentityAssertion` instead
+carried a `Rule.rule_id` in the mislabeled `resolution_method_id` field, an
+unenforceable convention rather than a real reference. `ResolutionMethod` is retained,
+not dropped, because upcoming entity-linking techniques (e.g. Splink) are trained and
+versioned independently of any single Rule's thresholds and may back more than one
+Rule at different confidence levels. See `notes/RESOLUTIONMETHOD-amendment.md`.
 
 ---
 
@@ -254,7 +266,6 @@ Represents a reasoned judgment that two or more IdentityObservations refer to th
 | Property | Type | Req | Description |
 |---|---|---|---|
 | iassertion_id | String | R | Watchline-assigned identifier. Format: IAS-[uuid]. |
-| resolution_method_id | String | R | Foreign key to ResolutionMethod. |
 | interpretive_status | String | R | Controlled vocabulary: Observed, Inferred, Estimated |
 | confidence | String | R | Controlled vocabulary: High, Medium, Low |
 | rationale | String | R | Plain-language explanation of why these observations were judged to refer to the same entity. |
@@ -264,21 +275,37 @@ Represents a reasoned judgment that two or more IdentityObservations refer to th
 **Edges out:**
 - `ASSERTS_IDENTITY_OF` to `IdentityObservation` (two or more)
 - `RESOLVES_TO` to `Actor`
+- `PRODUCED_BY` to `Rule` (required; see Constraints and Invariants #10)
+
+**Notes:** Prior to 2026-07-20 this node carried a `resolution_method_id` string
+property intended as a foreign key to `ResolutionMethod`. In practice it was always
+populated with a `Rule.rule_id` (no `ResolutionMethod` node was ever created), so it
+functioned as an unenforced, mislabeled alias for the relationship declared above.
+`PRODUCED_BY` replaces it, using the same edge `Claim` and `Relationship` already use
+to reference the `Rule` that produced them. See `notes/RESOLUTIONMETHOD-amendment.md`.
 
 ---
 
 ### ResolutionMethod
 
-Represents a named, versioned procedure for making Identity Assertions.
+Represents a named, versioned procedure for making Identity Assertions, operationalized
+by one or more `Rule`s via `APPLIES_METHOD`. Kept as a node type distinct from `Rule` so
+that a resolution technique (for example, a trained Splink model) can be versioned
+independently of any single `Rule`'s thresholds, and so more than one `Rule` can apply
+the same method at different thresholds (e.g., a high-confidence threshold feeding
+Claims and a looser threshold feeding Leads).
 
 | Property | Type | Req | Description |
 |---|---|---|---|
-| method_id | String | R | Watchline-assigned identifier. Format: RMT-[uuid]. |
+| method_id | String | R | Watchline-assigned identifier. Format: MTH-[uuid]. Deliberately distinct from `Rule.name` short codes (e.g. RMT-003) -- that prefix collision is what originally caused `IdentityAssertion.resolution_method_id` to be populated with a Rule ID instead of a real ResolutionMethod reference. |
 | name | String | R | Short name (e.g., ExactBBLMatch, SharedRegisteredAgent). |
 | version | String | R | Version number. |
 | description | String | R | Plain-language description of the method. |
 | expected_confidence | String | R | Controlled vocabulary: High, Medium, Low. The confidence level this method typically produces. |
 | effective_date | Date | R | Date from which this version applies. |
+
+**Edges in:**
+- `APPLIES_METHOD` from `Rule`
 
 ---
 
@@ -310,10 +337,13 @@ Represents a named, versioned procedure for producing a Claim from Evidence. Rul
 
 **Edges out:**
 - `SUPERSEDED_BY` to `Rule` (if deprecated)
+- `APPLIES_METHOD` to `ResolutionMethod` (optional; when this Rule operationalizes a
+  distinct, independently-versioned resolution technique)
 
 **Edges in:**
 - `PRODUCED_BY` from `Claim`
 - `PRODUCED_BY` from `Relationship` (if Inferred)
+- `PRODUCED_BY` from `IdentityAssertion`
 
 ### Worked Example: Rule PHC-001
 
@@ -382,7 +412,8 @@ Represents a reusable template for a class of user questions.
 | INVOLVES_ACTOR | Relationship | Actor | A relationship involves this actor. |
 | ORIGINATES_IN | Event, Observation | Source | An event or observation comes from this source. Declared in schema using shared WatchlineNode implied label. |
 | SUPPORTED_BY | Claim, Relationship | Evidence | A claim or relationship is supported by this evidence. Declared in schema using shared WatchlineNode implied label. |
-| PRODUCED_BY | Claim, Relationship | Rule | A claim or relationship was produced by this rule. Declared in schema using shared WatchlineNode implied label. |
+| PRODUCED_BY | Claim, Relationship, IdentityAssertion | Rule | A claim, relationship, or identity assertion was produced by this rule. Declared in schema using shared WatchlineNode implied label. |
+| APPLIES_METHOD | Rule | ResolutionMethod | A rule operationalizes this resolution method. Reach a method from an IdentityAssertion by traversing PRODUCED_BY then APPLIES_METHOD. |
 | DERIVED_FROM | Evidence | Observation | Evidence is derived from these observations. Used when Evidence links directly to raw source records. |
 | AGGREGATES | Evidence | IdentityAssertion | Evidence aggregates one or more IdentityAssertions. Used by the portfolio pipeline when Evidence is built from Identity layer outputs rather than raw Observations. |
 | ASSERTS_IDENTITY_OF | IdentityAssertion | IdentityObservation | An assertion links two or more observations. |
@@ -406,6 +437,7 @@ The following constraints must be enforced by ingestion pipelines and must be va
 7. No Rule node with deprecated=true may have PRODUCED_BY edges from active Claims. Deprecated Rules may only be referenced for historical audit purposes.
 8. Every Relationship with interpretive_status of Inferred must have a PRODUCED_BY edge to a Rule.
 9. Every OwnershipNetwork Actor must carry a run_id property matching the pipeline run that created or last updated it.
+10. Every IdentityAssertion must have a PRODUCED_BY edge to a Rule node. (Added 2026-07-20; replaces the removed resolution_method_id property.)
 
 ---
 

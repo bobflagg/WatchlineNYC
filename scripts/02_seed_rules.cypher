@@ -498,6 +498,51 @@ SET
 
 
 // =============================================================================
+// ResolutionMethod seeds -- added 2026-07-20, see notes/RESOLUTIONMETHOD-amendment.md
+//
+// RUL-00005 (RMT-003) and RUL-00006 (RMT-004) each APPLIES_METHOD to their own
+// ResolutionMethod node. Today method and Rule are effectively 1:1 for these two,
+// but the relationship is seeded explicitly so every identity-resolution Rule is
+// consistent, and so future Rules (e.g. Splink-based matching, which trains and
+// versions a model independently of any single Rule's threshold) can share a
+// ResolutionMethod across more than one Rule without a schema change.
+//
+// IdentityAssertion nodes no longer carry a resolution_method_id property; they
+// reference their producing Rule via PRODUCED_BY (same edge Claim and Relationship
+// use), and the ResolutionMethod is reached by traversing PRODUCED_BY then
+// APPLIES_METHOD.
+// -----------------------------------------------------------------------------
+// MTH-001: WeaklyConnectedComponents -- backs RUL-00005 (RMT-003)
+// -----------------------------------------------------------------------------
+MERGE (m1:ResolutionMethod:WatchlineNode:VersionedObject {method_id: 'MTH-001'})
+SET
+  m1.name                = 'WeaklyConnectedComponents',
+  m1.version              = '1.0',
+  m1.description          = 'Graph-theoretic identity-resolution technique that groups HPD registration contacts into candidate ownership networks by finding all IdentityObservations reachable from each other through any chain of name-based or address-based connections (RMT-001/RMT-002 edges), using Neo4j GDS Weakly Connected Components. Operationalized by Rule RUL-00005 (RMT-003 -- Weakly Connected Components Portfolio Detection).',
+  m1.expected_confidence  = 'Medium',
+  m1.effective_date       = date('2026-06-01');
+
+MATCH (r1:Rule {rule_id: 'RUL-00005'})
+MATCH (m1:ResolutionMethod {method_id: 'MTH-001'})
+MERGE (r1)-[:APPLIES_METHOD]->(m1);
+
+// -----------------------------------------------------------------------------
+// MTH-002: LouvainCommunityDetection -- backs RUL-00006 (RMT-004)
+// -----------------------------------------------------------------------------
+MERGE (m2:ResolutionMethod:WatchlineNode:VersionedObject {method_id: 'MTH-002'})
+SET
+  m2.name                = 'LouvainCommunityDetection',
+  m2.version              = '1.0',
+  m2.description          = 'Recursive Louvain community detection used to split candidate ownership networks exceeding 300 BBLs (as identified by MTH-001) into more cohesive sub-networks, using edge weights derived from name- and address-based HPD registration connections. Operationalized by Rule RUL-00006 (RMT-004 -- Louvain Community Detection for Oversized Portfolio Splitting).',
+  m2.expected_confidence  = 'Medium',
+  m2.effective_date       = date('2026-06-01');
+
+MATCH (r2:Rule {rule_id: 'RUL-00006'})
+MATCH (m2:ResolutionMethod {method_id: 'MTH-002'})
+MERGE (r2)-[:APPLIES_METHOD]->(m2);
+
+
+// =============================================================================
 // Verification query -- run after seeding to confirm all seventeen rules are present
 // =============================================================================
 //

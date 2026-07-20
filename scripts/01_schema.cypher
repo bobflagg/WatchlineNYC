@@ -2,12 +2,26 @@
 // Watchline NYC -- Initial GRAPH TYPE Declaration
 // File: watchline_schema.cypher
 //
-// Version : 1.1
-// Date    : 2026-06-26
+// Version : 1.2
+// Date    : 2026-07-20
 // Author  : Watchline NYC project team
 // Status  : Draft for early development and prototyping
 //
 // Changelog
+//   1.2 (2026-07-20): Removed IdentityAssertion.resolution_method_id (was a bare
+//       string property aliasing a Rule.rule_id, not a real reference to any
+//       ResolutionMethod -- 0 ResolutionMethod nodes existed in the live graph).
+//       Added (:Rule)-[:APPLIES_METHOD]->(:ResolutionMethod) so a Rule can
+//       operationalize a distinct, independently-versioned resolution technique.
+//       IdentityAssertion now uses the existing generic PRODUCED_BY->Rule edge
+//       (already declared for all WatchlineNode) instead. Fixed ResolutionMethod
+//       .method_id format comment from RMT-[uuid] to MTH-[uuid] -- the RMT prefix
+//       collided with Rule.name short codes (RMT-001..RMT-004), which is what
+//       produced the original confusion. Rationale: upcoming entity-linking
+//       techniques (e.g. Splink) are independently trained/versioned and may
+//       back more than one Rule at different confidence thresholds, so method
+//       and rule must remain distinct, addressable objects. See
+//       notes/RESOLUTIONMETHOD-amendment.md.
 //   1.1 (2026-06-26): Added OwnershipNetwork to Actor.actor_type;
 //       added ProbableAffiliation to Relationship.relationship_type;
 //       added MERGED_INTO and SPLIT_INTO edge types between Actor nodes;
@@ -45,6 +59,8 @@
 //   3. Every Evidence has at least one DERIVED_FROM edge to Observation
 //   4. Every Observation has an ORIGINATES_IN edge to Source
 //   5. Every IdentityAssertion has at least two ASSERTS_IDENTITY_OF edges
+//   10. Every IdentityAssertion has a PRODUCED_BY edge to a Rule node
+//      (added 2026-07-20; replaces the removed resolution_method_id property)
 //   6. Every Actor has at least one RESOLVED_FROM edge to IdentityObservation
 //      Exception: OwnershipNetwork Actors are resolved from IdentityAssertions,
 //      not directly from IdentityObservations. Pipeline must enforce that every
@@ -311,9 +327,11 @@ ALTER CURRENT GRAPH TYPE SET {
   // same real-world entity. Carries its own interpretive_status and confidence.
   // Pipeline invariant 5: must have at least two ASSERTS_IDENTITY_OF edges.
   // ---------------------------------------------------------------------------
+  // PRODUCED_BY edge to Rule required (invariant 10, added 2026-07-20; replaces
+  // the removed resolution_method_id property, which aliased a Rule.rule_id
+  // without a real edge -- see notes/RESOLUTIONMETHOD-amendment.md).
   (ia:IdentityAssertion => :WatchlineNode&AuditableRecord {
     iassertion_id        :: STRING NOT NULL,  // format: IAS-[uuid]
-    resolution_method_id :: STRING NOT NULL,  // foreign key to ResolutionMethod
     interpretive_status  :: STRING NOT NULL,  // controlled: Observed|Inferred|Estimated
     confidence           :: STRING NOT NULL,  // controlled: High|Medium|Low
     rationale            :: STRING NOT NULL,  // plain-language explanation
@@ -323,11 +341,18 @@ ALTER CURRENT GRAPH TYPE SET {
 
   // ---------------------------------------------------------------------------
   // ResolutionMethod
-  // A named, versioned procedure for producing IdentityAssertions.
-  // Examples: ExactBBLMatch, SharedRegisteredAgent, ProbabilisticNameMatch.
+  // A named, versioned procedure for producing IdentityAssertions, operationalized
+  // by one or more Rules via APPLIES_METHOD. Distinct from Rule so that a method
+  // (e.g. a trained Splink model) can be versioned independently of any single
+  // Rule's thresholds, and so more than one Rule can share the same method at
+  // different thresholds. Examples: ExactBBLMatch, SharedRegisteredAgent,
+  // ProbabilisticNameMatch.
   // ---------------------------------------------------------------------------
   (rm:ResolutionMethod => :WatchlineNode&VersionedObject {
-    method_id           :: STRING NOT NULL,  // format: RMT-[uuid]
+    method_id           :: STRING NOT NULL,  // format: MTH-[uuid] -- distinct from
+                                              // Rule.name short codes (e.g. RMT-003)
+                                              // to avoid the prefix collision that
+                                              // originally caused this confusion
     name                :: STRING NOT NULL,  // e.g. ExactBBLMatch
     version             :: STRING NOT NULL,
     description         :: STRING NOT NULL,
@@ -464,7 +489,14 @@ ALTER CURRENT GRAPH TYPE SET {
   // EDGES: INTERPRETATION LAYER
   // ===========================================================================
 
-  (:Rule)-[:SUPERSEDED_BY =>]->(:Rule)
+  (:Rule)-[:SUPERSEDED_BY =>]->(:Rule),
+  // APPLIES_METHOD: Rule -> ResolutionMethod (optional; added 2026-07-20)
+  // A Rule operationalizes a distinct, independently-versioned resolution
+  // technique. IdentityAssertions reference the Rule that produced them via
+  // the generic PRODUCED_BY edge (declared above as WatchlineNode->Rule);
+  // the ResolutionMethod backing that Rule is reached by traversing one hop
+  // further: IdentityAssertion-[:PRODUCED_BY]->Rule-[:APPLIES_METHOD]->ResolutionMethod.
+  (:Rule)-[:APPLIES_METHOD =>]->(:ResolutionMethod)
 
 }
 

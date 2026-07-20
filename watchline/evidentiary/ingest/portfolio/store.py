@@ -28,8 +28,16 @@ nodes with BELONGS_TO edges. This version writes:
 
 Rule references:
     PBC-001  (RUL-00002): Probable Beneficial Control -- generates Claims
-    RMT-003  (RUL-00005): WCC Portfolio Detection -- ResolutionMethod
-    RMT-004  (RUL-00006): Louvain Community Splitting -- ResolutionMethod
+    RMT-003  (RUL-00005): WCC Portfolio Detection -- Rule; APPLIES_METHOD -> MTH-001
+    RMT-004  (RUL-00006): Louvain Community Splitting -- Rule; APPLIES_METHOD -> MTH-002
+
+Note (2026-07-20): RUL-00005/RUL-00006 are Rules, not ResolutionMethods -- the
+comment above previously conflated the two, which is exactly the bug this
+change fixes. Each Rule now points to its own ResolutionMethod node
+(MTH-001 / MTH-002) via APPLIES_METHOD. IdentityAssertion nodes reference the
+Rule that produced them via a PRODUCED_BY edge (the same edge Claim and
+Relationship already use for this purpose), not via a resolution_method_id
+property. See notes/RESOLUTIONMETHOD-amendment.md.
 """
 
 import uuid
@@ -291,7 +299,7 @@ def _create_identity_assertion(
     confidence: str,
     split_info: Dict,
     run_id: str,
-    resolution_method_id: str,
+    rule_id: str,
 ) -> str:
     """
     Create an IdentityAssertion linking IdentityObservations to an
@@ -299,6 +307,13 @@ def _create_identity_assertion(
 
     Also supersedes any active IdentityAssertion for this Actor from a
     previous run.
+
+    rule_id identifies the Rule (RUL-00005/RMT-003 or RUL-00006/RMT-004) that
+    produced this assertion. A PRODUCED_BY edge to that Rule is created --
+    the same pattern Claim and Relationship nodes already use -- instead of
+    the old resolution_method_id string property, which aliased a Rule.rule_id
+    without a real edge and left ResolutionMethod permanently empty. See
+    notes/RESOLUTIONMETHOD-amendment.md.
     """
     now = datetime.now(timezone.utc).isoformat()
     iassertion_id = f"IAS-{uuid.uuid4()}"
@@ -327,12 +342,13 @@ def _create_identity_assertion(
         iassertion_id=iassertion_id,
     )
 
-    # Create new IdentityAssertion
+    # Create new IdentityAssertion, linked to the Actor and to the Rule that
+    # produced it (PRODUCED_BY -- replaces the old resolution_method_id
+    # property; see notes/RESOLUTIONMETHOD-amendment.md).
     session.run(
         """
         CREATE (ia:IdentityAssertion:WatchlineNode:AuditableRecord {
             iassertion_id:        $iassertion_id,
-            resolution_method_id: $resolution_method_id,
             interpretive_status:  'Inferred',
             confidence:           $confidence,
             rationale:            $rationale,
@@ -343,9 +359,12 @@ def _create_identity_assertion(
         WITH ia
         MATCH (a:Actor {canonical_id: $canonical_id})
         CREATE (ia)-[:RESOLVES_TO]->(a)
+        WITH ia
+        MATCH (r:Rule {rule_id: $rule_id})
+        CREATE (ia)-[:PRODUCED_BY]->(r)
         """,
         iassertion_id=iassertion_id,
-        resolution_method_id=resolution_method_id,
+        rule_id=rule_id,
         confidence=confidence,
         rationale=rationale,
         run_id=run_id,
@@ -937,13 +956,14 @@ def run(
         # Write IdentityObservations
         iobs_ids = _upsert_identity_observations(session, landlord_infos, run_id)
 
-        # Determine resolution method
-        resolution_method_id = RULE_ID_RMT004 if split_info["was_split"] else RULE_ID_RMT003
+        # Determine which Rule (and, transitively via APPLIES_METHOD, which
+        # ResolutionMethod) produced this assertion.
+        rule_id = RULE_ID_RMT004 if split_info["was_split"] else RULE_ID_RMT003
 
         # Write IdentityAssertion
         iassertion_id = _create_identity_assertion(
             session, canonical_id, iobs_ids, confidence,
-            split_info, run_id, resolution_method_id,
+            split_info, run_id, rule_id,
         )
 
         # Write Evidence
