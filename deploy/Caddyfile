@@ -1,0 +1,10 @@
+# Reverse proxy: one shared basic-auth login + automatic HTTPS (when SITE_ADDRESS
+# is a domain). For an IP-only POC set SITE_ADDRESS=:80 (plain HTTP).
+#
+# Generate BASIC_AUTH_HASH with:  docker run --rm caddy caddy hash-password --plaintext 'your-password'
+{$SITE_ADDRESS} {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+	reverse_proxy streamlit:8501
+}

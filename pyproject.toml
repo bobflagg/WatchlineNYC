@@ -1,0 +1,56 @@
+[project]
+name = "watchlinenyc-discovery"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    # Graph access
+    "neo4j>=6.2.0",
+    "python-dotenv>=1.2.2",
+    # Agent stack. LangChain 1.0 is the current LTS; 0.3 is maintenance-only.
+    # Both langgraph and deepagents are declared explicitly even though
+    # deepagents pulls langgraph transitively: this project uses LangGraph for
+    # the top-level agent and Deep Agents for the Tier-4 subagent, so the
+    # constraint on each should be visible. See requirements.md section 5.
+    "langchain>=1.0,<2.0",
+    "langchain-core>=1.0,<2.0",
+    "langgraph>=1.0,<2.0",
+    "langchain-anthropic>=1.0,<2.0",
+    "deepagents",
+    "langsmith[claude-agent-sdk]>=0.3.4",
+    # Geosupport sidecar client (D9)
+    "httpx",
+    "langchain-tavily>=0.2.18",
+    "streamlit>=1.61.0",
+    "markdown-it-py>=4.2.0",
+]
+
+# Makes the project an installable package, so `watchline.*` imports resolve
+# from the venv rather than depending on the current working directory. Also
+# what langgraph.json's `"dependencies": ["."]` expects.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["watchline"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    # provides `langgraph dev` with the in-memory checkpointer
+    "langgraph-cli[inmem]",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Hermetic by default: a plain `pytest` needs no Neo4j credentials and no
+# network. Integration tests hit the live discovery graph read-only and are
+# opted into explicitly with `pytest -m integration`. See validation.md.
+addopts = "-m 'not integration and not llm and not llm_deep'"
+markers = [
+    "integration: touches the live Neo4j discovery graph (read-only); requires .env",
+    "llm: calls a real Claude model; costs money. Requires ANTHROPIC_API_KEY. Runs on Haiku 4.5 (WATCHLINE_TEST_MODEL) since these assert on tool invocation, not prose.",
+    "llm_deep: runs a full Tier-4 deep-agent investigation — the single most expensive and slowest test. Runs on Sonnet 5 (WATCHLINE_TEST_DEEP_MODEL). Opt in explicitly with `pytest -m llm_deep`.",
+]

@@ -1,0 +1,5 @@
+# Sidecar-only dependencies — installed inside the linux/amd64 container, never
+# in the agent's own pyproject.toml (the agent stays on native Python 3.13).
+python-geosupport==1.1.0
+flask==3.1.0
+waitress==3.0.2

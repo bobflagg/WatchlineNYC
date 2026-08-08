@@ -1,0 +1,21 @@
+# Streamlit build context is the repo root — keep it lean (deps come from the lock).
+.git
+.venv
+**/__pycache__/
+*.pyc
+tests/
+specs/
+data/
+output/
+threads/
+__marimo__/
+evals/
+sidecar/
+deploy/
+*.ipynb
+.env
+.streamlit-ui.log
+Glen-Brown-Case-File.md
+dev_investigate.py
+stream_investigation.py
+test-tracing.py

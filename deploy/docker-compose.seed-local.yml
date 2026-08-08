@@ -1,0 +1,27 @@
+# Overlay for the FULL stack when testing locally: seed the in-Docker Neo4j from a
+# LOCAL dump file (bind-mounted) instead of Google Drive, and publish the app port
+# directly so you can skip Caddy/auth. Use alongside the main compose:
+#
+#   cd deploy
+#   DISCOVERY_DUMP=/abs/path/to/discovery.dump \
+#     docker compose -f docker-compose.yml -f docker-compose.seed-local.yml up -d --build
+#   docker compose logs -f neo4j        # watch the one-time offline load
+#   open http://localhost:8501          # app directly (Caddy still runs; ignore it locally)
+#
+# The dump loads once onto the neo4j-data volume; the sentinel makes restarts fast.
+# For a Mac: raise Docker Desktop → Resources (Memory and Virtual disk limit) and
+# lower NEO4J_HEAP / NEO4J_PAGECACHE in .env (see README).
+services:
+  neo4j:
+    environment:
+      DISCOVERY_LOCAL_DUMP: /seed/neo4j.dump
+    volumes:
+      # Your local dump (any filename) mounted as the file the loader expects.
+      - type: bind
+        source: ${DISCOVERY_DUMP:?set DISCOVERY_DUMP=/absolute/path/to/your.dump}
+        target: /seed/neo4j.dump
+        read_only: true
+
+  streamlit:
+    ports:
+      - "8501:8501"

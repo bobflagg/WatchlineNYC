@@ -1,0 +1,100 @@
+# WatchlineNYC Discovery — self-contained POC stack.
+#
+#   cd deploy && cp .env.example .env && $EDITOR .env && docker compose up -d --build
+#
+# Four services on one host: Neo4j (Community, seeded once from a Google Drive
+# dump), the Geosupport sidecar, the Streamlit app, and Caddy (HTTPS + basic-auth).
+# Only Caddy is published; the rest talk over the internal network.
+#
+# Env comes from ./.env (see .env.example). Never commit .env.
+
+services:
+  neo4j:
+    build: ./neo4j
+    restart: unless-stopped
+    environment:
+      # Enterprise is required for the source's block store format; this accepts
+      # Neo4j's evaluation license (dev/test/POC). Set to "yes" if you hold a
+      # commercial license.
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "${NEO4J_ACCEPT_LICENSE_AGREEMENT:-eval}"
+      # Single-sourced auth: the app reuses NEO4J_PASSWORD below.
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD}"
+      # Pulled + loaded once onto the neo4j-data volume (see neo4j/seed-and-start.sh).
+      DISCOVERY_GDRIVE_ID: "${DISCOVERY_GDRIVE_ID:-}"
+      # Size for your VM. Rule of thumb on a 32GB box: heap 8g + pagecache 12g,
+      # leaving room for Geosupport + Streamlit + Caddy + the OS.
+      NEO4J_server_memory_heap_initial__size: "${NEO4J_HEAP:-8g}"
+      NEO4J_server_memory_heap_max__size: "${NEO4J_HEAP:-8g}"
+      NEO4J_server_memory_pagecache_size: "${NEO4J_PAGECACHE:-12g}"
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      # Bolt port open == server up. Long start_period covers the first-boot
+      # download + offline load of the full dump (can be 10-20+ minutes).
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/7687'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30m
+
+  geosupport:
+    build:
+      context: ../sidecar
+      # Geosupport's native library is x86-only.
+      platforms:
+        - "linux/amd64"
+    restart: unless-stopped
+    expose:
+      - "8080"
+
+  streamlit:
+    build:
+      context: ..
+      dockerfile: deploy/streamlit/Dockerfile
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      # In-cluster addresses of the other services.
+      NEO4J_URI: "bolt://neo4j:7687"
+      NEO4J_USER: "neo4j"
+      NEO4J_PASSWORD: "${NEO4J_PASSWORD}"
+      # Community hosts one user DB, so the dump loads as the default `neo4j`.
+      NEO4J_DISCOVERY_DATABASE: "neo4j"
+      GEOSUPPORT_URL: "http://geosupport:8080"
+      TAVILY_API_KEY: "${TAVILY_API_KEY:-}"
+      WATCHLINE_MODEL: "${WATCHLINE_MODEL:-}"
+      # Optional tracing.
+      LANGSMITH_API_KEY: "${LANGSMITH_API_KEY:-}"
+      LANGSMITH_TRACING: "${LANGSMITH_TRACING:-}"
+      LANGSMITH_PROJECT: "${LANGSMITH_PROJECT:-}"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      geosupport:
+        condition: service_started
+    expose:
+      - "8501"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:-:80}"
+      BASIC_AUTH_USER: "${BASIC_AUTH_USER}"
+      BASIC_AUTH_HASH: "${BASIC_AUTH_HASH}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - streamlit
+
+volumes:
+  neo4j-data:
+  caddy-data:
+  caddy-config:

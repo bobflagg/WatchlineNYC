@@ -1,0 +1,31 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — contains live Neo4j credentials
+.env
+
+# macOS
+.DS_Store
+
+# langgraph dev server runtime state
+.langgraph_api/
+
+# pytest
+.pytest_cache/
+
+# Local scratch (directory name is self-describing)
+ignore-contents-of-this-directory/
+
+# Streamlit UI runtime log (make ui-start)
+.streamlit-ui.log
+
+# Neo4j dumps built for deployment seeding (make dump)
+dumps/

@@ -1,0 +1,676 @@
+{
+ "provenance": {
+  "captured_at": "2026-08-02",
+  "selection": "Deterministic: every anchor resolved by ORDER BY on a stable key with LIMIT 1, so re-running against unchanged data reproduces identical fixtures. No random seed is involved.",
+  "portfolio_runs": [
+   {
+    "run_id": "20260729T002106Z",
+    "method": "GDS WCC+Louvain"
+   }
+  ],
+  "node_counts": {
+   "Building": 859794,
+   "Actor": 14821930,
+   "Landlord": 118493,
+   "Event": 42296617,
+   "Portfolio": 97863
+  }
+ },
+ "anchors": {
+  "building_with_apparent_control": {
+   "bbl": "1000050010",
+   "address": "115 BROAD STREET",
+   "borough": "Manhattan",
+   "residential_units": 1320,
+   "year_built": 1969,
+   "zoning": "C5-5",
+   "recorded_owner": "25 WATER OWNER, LLC",
+   "landlord_actor_id": "ACT-LL-90202",
+   "landlord_name": "PETER HUNGERFORD"
+  },
+  "building_without_apparent_control": {
+   "bbl": "1000010010",
+   "address": "140 CARDER ROAD",
+   "borough": "Manhattan",
+   "recorded_owner": "GOVERNORS ISLAND CORPORATION"
+  },
+  "controller_cardinality": {
+   "max_controllers_per_building": 1,
+   "buildings_with_a_controller": 171347
+  },
+  "building_open_hpd_class_c": {
+   "bbl": "2028100045",
+   "address": "231 ECHO PLACE",
+   "borough": "Bronx",
+   "example_event_id": "EVT-HPD-10000179"
+  },
+  "building_with_recent_complaints": {
+   "bbl": "2025180028",
+   "example_event_id": "EVT-HPD-COMPLAINT-28922486",
+   "event_date": "2026-07-06"
+  },
+  "building_with_active_vacate_order": {
+   "bbl": "3070520014",
+   "example_event_id": "EVT-HPD-VACATE-100033",
+   "cause": "Fire Damage"
+  },
+  "building_with_deed_transfer": {
+   "bbl": "3004610030",
+   "example_event_id": "EVT-ACRIS-2026052700759001",
+   "last_sold": "2026-05-27"
+  },
+  "event_future_dated": {
+   "event_id": "EVT-HPD-VACATE-2327",
+   "event_type": "VacateOrder",
+   "source_name": "HPD",
+   "event_date": "2040-08-20",
+   "bbl": "4012700064"
+  },
+  "building_with_mortgage_chain": {
+   "bbl": "1018470015",
+   "mortgage_event_id": "EVT-ACRIS-2002122000013001",
+   "referencing_event_id": "EVT-ACRIS-2005052300431001",
+   "referencing_type": "MortgageSatisfaction"
+  },
+  "building_in_housing_court": {
+   "bbl": "3051210012",
+   "example_event_id": "EVT-HPD-LIT-100024",
+   "case_type": "Access Warrant - Non-Lead",
+   "status": "CLOSED"
+  },
+  "building_registered_and_controlled": {
+   "bbl": "1000050010",
+   "recorded_owner": "25 WATER OWNER, LLC",
+   "registered_actor_id": "ACT-LL-15987",
+   "registered_name": "BRIAN STEINWURTZEL"
+  },
+  "ownership_verdict_agrees": {
+   "bbl": "1001930024",
+   "recorded_owner": "ROBERT T MOSKOWITZ",
+   "controller_name": "ROBERT MOSKOWITZ",
+   "controller_actor_id": "ACT-LL-95758",
+   "verdict": "agrees"
+  },
+  "ownership_verdict_indeterminate": {
+   "bbl": "1000690001",
+   "recorded_owner": "LAM PEARL STREET HOTEL LLC",
+   "controller_name": "KINCHUNG LAM",
+   "controller_actor_id": "ACT-LL-65224",
+   "verdict": "indeterminate"
+  },
+  "ownership_verdict_differs": {
+   "bbl": "1000050010",
+   "recorded_owner": "25 WATER OWNER, LLC",
+   "controller_name": "PETER HUNGERFORD",
+   "controller_actor_id": "ACT-LL-90202",
+   "verdict": "differs"
+  },
+  "landlord_with_portfolio": {
+   "actor_id": "ACT-LL-42357",
+   "name": "GLEN BROWN",
+   "bizaddr": "625 BROADWAY 11 FL, MANHATTAN NY",
+   "bbl_count": 384,
+   "portfolio_id": "PF-20260729T002106Z-37051",
+   "portfolio_building_count": 424
+  },
+  "landlord_shared_business_address": {
+   "actor_id": "ACT-LL-1",
+   "name": ",MARIA CROSS",
+   "bizaddr": "3232 NEWMARK, MIAMISBURG OH",
+   "connected_actor_id": "ACT-LL-91593",
+   "connected_name": "PROPERTY PRESERVATION"
+  },
+  "landlord_connected_by_name": {
+   "actor_id": "ACT-LL-100020",
+   "name": "SANDRO CATALIC",
+   "connected_actor_id": "ACT-LL-100021",
+   "connected_name": "SANDRO CATALIC"
+  },
+  "landlord_ungeocodable_bizaddr": {
+   "actor_id": "ACT-LL-1",
+   "name": ",MARIA CROSS",
+   "bizaddr": "3232 NEWMARK, MIAMISBURG OH"
+  },
+  "raw_actor_not_landlord": {
+   "actor_id": "ACT-ACRIS-00000102840d98441b6057c0805c7f8999b29146",
+   "name": "LEVIEN HENRY",
+   "event_id": "EVT-ACRIS-BK_7640094001105"
+  },
+  "portfolio_multi_member": {
+   "portfolio_id": "PF-20260729T002106Z-1176",
+   "member_count": 111,
+   "building_count": 297,
+   "residential_units": 22774,
+   "method": "GDS WCC+Louvain",
+   "run_id": "20260729T002106Z"
+  },
+  "portfolio_singleton": {
+   "portfolio_id": "PF-20260729T002106Z-100",
+   "member_count": 1,
+   "building_count": 1
+  },
+  "event_null_date": {
+   "event_id": "EVT-DOB-104513",
+   "event_type": "Violation",
+   "source_name": "DOB"
+  },
+  "registered_for_null_role": {
+   "actor_id": "ACT-LL-15987",
+   "bbl": "1000050010",
+   "registrationid": 145301
+  },
+  "eviction_scope_bronx": {
+   "eviction_count": 4577
+  },
+  "dob_violation_recent_month": {
+   "latest_dob_violation_date": "2026-07-05"
+  }
+ },
+ "edge_cases": {
+  "building_without_apparent_control": {
+   "why": "~80% of buildings; the COMMON path",
+   "entity": {
+    "bbl": "1000010010",
+    "address": "140 CARDER ROAD",
+    "borough": "Manhattan",
+    "recorded_owner": "GOVERNORS ISLAND CORPORATION"
+   }
+  },
+  "landlord_ungeocodable_bizaddr": {
+   "why": "business address Geosupport cannot resolve",
+   "entity": {
+    "actor_id": "ACT-LL-1",
+    "name": ",MARIA CROSS",
+    "bizaddr": "3232 NEWMARK, MIAMISBURG OH"
+   }
+  },
+  "portfolio_singleton": {
+   "why": "near-singleton portfolio (most of the 97,863 are)",
+   "entity": {
+    "portfolio_id": "PF-20260729T002106Z-100",
+    "member_count": 1,
+    "building_count": 1
+   }
+  },
+  "event_null_date": {
+   "why": "Event with a null event_date",
+   "entity": {
+    "event_id": "EVT-DOB-104513",
+    "event_type": "Violation",
+    "source_name": "DOB"
+   }
+  },
+  "event_future_dated": {
+   "why": "impossible future date; wrecks per-building 'latest' queries",
+   "entity": {
+    "event_id": "EVT-HPD-VACATE-2327",
+    "event_type": "VacateOrder",
+    "source_name": "HPD",
+    "event_date": "2040-08-20",
+    "bbl": "4012700064"
+   }
+  },
+  "registered_for_null_role": {
+   "why": "REGISTERED_FOR with a null role",
+   "entity": {
+    "actor_id": "ACT-LL-15987",
+    "bbl": "1000050010",
+    "registrationid": 145301
+   }
+  },
+  "raw_actor_not_landlord": {
+   "why": "raw ACRIS party with no resolution to a Landlord",
+   "entity": {
+    "actor_id": "ACT-ACRIS-00000102840d98441b6057c0805c7f8999b29146",
+    "name": "LEVIEN HENRY",
+    "event_id": "EVT-ACRIS-BK_7640094001105"
+   }
+  }
+ },
+ "known_absent": {
+  "building_with_multiple_controllers": "APPARENT_CONTROL is strictly 1:1 in run 20260729T002106Z \u2014 all 171,347 buildings carrying the edge have exactly one controller (verified 2026-07-31). graph_type.cypher does not constrain it to one, so tools should still handle a collection rather than assume a scalar, but no fixture can exercise that path."
+ },
+ "queries": [
+  {
+   "tier": 1,
+   "n": 1,
+   "text": "Who owns <address>?",
+   "params": {
+    "bbl": "1000050010",
+    "address": "115 BROAD STREET",
+    "borough": "Manhattan",
+    "recorded_owner": "25 WATER OWNER, LLC",
+    "landlord_actor_id": "ACT-LL-90202",
+    "landlord_name": "PETER HUNGERFORD"
+   },
+   "tool": "lookup_building_ownership",
+   "notes": "The flagship dual-answer case. The skill's literal address (456 West 24th Street) is unresolvable \u2014 see spike-findings.md."
+  },
+  {
+   "tier": 1,
+   "n": 2,
+   "text": "What is the BBL for <address>?",
+   "params": {
+    "address": "115 BROAD STREET",
+    "borough": "Manhattan",
+    "bbl": "1000050010"
+   },
+   "tool": "resolve_address"
+  },
+  {
+   "tier": 1,
+   "n": 3,
+   "text": "Show current open violations at <bbl>.",
+   "params": {
+    "bbl": "2028100045"
+   },
+   "tool": "lookup_building_events",
+   "notes": "Requires source_name=HPD; DOB reuses class codes A/B/C."
+  },
+  {
+   "tier": 1,
+   "n": 4,
+   "text": "Business address on file for landlord <actor_id>?",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "name": "GLEN BROWN",
+    "bizaddr": "625 BROADWAY 11 FL, MANHATTAN NY"
+   },
+   "tool": "lookup_landlord",
+   "notes": "Type II via Landlord alone \u2014 needs the identity caveat."
+  },
+  {
+   "tier": 1,
+   "n": 5,
+   "text": "How many residential units at <address>?",
+   "params": {
+    "bbl": "1000050010",
+    "address": "115 BROAD STREET",
+    "borough": "Manhattan",
+    "residential_units": 1320
+   },
+   "tool": "lookup_building"
+  },
+  {
+   "tier": 1,
+   "n": 6,
+   "text": "When was this building last sold?",
+   "params": {
+    "bbl": "3004610030",
+    "last_sold": "2026-05-27"
+   },
+   "tool": "lookup_building_events"
+  },
+  {
+   "tier": 1,
+   "n": 7,
+   "text": "Is there an active vacate order on this building?",
+   "params": {
+    "bbl": "3070520014",
+    "cause": "Fire Damage"
+   },
+   "tool": "lookup_building_events"
+  },
+  {
+   "tier": 1,
+   "n": 8,
+   "text": "What year was this built, and its zoning?",
+   "params": {
+    "bbl": "1000050010",
+    "year_built": 1969,
+    "zoning": "C5-5"
+   },
+   "tool": "lookup_building"
+  },
+  {
+   "tier": 1,
+   "n": 9,
+   "text": "Most recent HPD complaint at this address?",
+   "params": {
+    "bbl": "2025180028",
+    "event_date": "2026-07-06"
+   },
+   "tool": "lookup_building_events"
+  },
+  {
+   "tier": 1,
+   "n": 10,
+   "text": "Which portfolio is this landlord a member of?",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051"
+   },
+   "tool": "landlord_portfolio_membership"
+  },
+  {
+   "tier": 2,
+   "n": 1,
+   "text": "How many open Class C HPD violations right now?",
+   "params": {
+    "bbl": "2028100045",
+    "source_name": "HPD",
+    "violation_class": "C",
+    "status": "OPEN"
+   },
+   "tool": "aggregate_building_events",
+   "notes": "Class C, not A. Class I must be excluded from hazard counts."
+  },
+  {
+   "tier": 2,
+   "n": 2,
+   "text": "How many HPD complaints in the past 12 months?",
+   "params": {
+    "bbl": "2025180028",
+    "source_name": "HPD",
+    "months": 12
+   },
+   "tool": "aggregate_building_events"
+  },
+  {
+   "tier": 2,
+   "n": 3,
+   "text": "Violation class breakdown across this portfolio.",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051"
+   },
+   "tool": "aggregate_landlord_portfolio_events",
+   "notes": "Legitimately shows all four classes incl. I, but must label which are hazards."
+  },
+  {
+   "tier": 2,
+   "n": 4,
+   "text": "How many eviction filings in the Bronx in 2025?",
+   "params": {
+    "borough": "Bronx",
+    "event_type": "Eviction",
+    "date_from": "2025-01-01",
+    "date_to": "2026-01-01",
+    "eviction_count": 4577
+   },
+   "tool": "aggregate_events_by_geo_time"
+  },
+  {
+   "tier": 2,
+   "n": 5,
+   "text": "How many ECB judgments across this landlord's buildings?",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "source_name": "ECB"
+   },
+   "tool": "aggregate_landlord_portfolio_events"
+  },
+  {
+   "tier": 2,
+   "n": 6,
+   "text": "Total residential units and building count for this portfolio.",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "building_count": 297,
+    "residential_units": 22774
+   },
+   "tool": "portfolio_summary",
+   "notes": "Read the precomputed properties; do not recompute from members."
+  },
+  {
+   "tier": 2,
+   "n": 7,
+   "text": "How many DOB violations citywide last month?",
+   "params": {
+    "source_name": "DOB",
+    "event_type": "Violation",
+    "latest_dob_violation_date": "2026-07-05"
+   },
+   "tool": "aggregate_events_by_geo_time",
+   "notes": "Rides the requested Event(source_name, event_type, event_date) index."
+  },
+  {
+   "tier": 2,
+   "n": 8,
+   "text": "What percentage of this building's HPD violations are open?",
+   "params": {
+    "bbl": "2028100045",
+    "source_name": "HPD"
+   },
+   "tool": "aggregate_building_events"
+  },
+  {
+   "tier": 2,
+   "n": 9,
+   "text": "Housing court filings for this portfolio, past two years.",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051",
+    "source_name": "HPD-Litigations",
+    "years": 2
+   },
+   "tool": "aggregate_landlord_portfolio_events"
+  },
+  {
+   "tier": 2,
+   "n": 10,
+   "text": "Buildings in this portfolio, broken down by borough.",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "building_count": 297
+   },
+   "tool": "portfolio_buildings_by_borough"
+  },
+  {
+   "tier": 3,
+   "n": 1,
+   "text": "Who else controls buildings at the same business address?",
+   "params": {
+    "actor_id": "ACT-LL-1",
+    "bizaddr": "3232 NEWMARK, MIAMISBURG OH",
+    "connected_actor_id": "ACT-LL-91593"
+   },
+   "tool": "shared_address_landlords",
+   "notes": "CONNECTED_BY_ADDRESS under-connects; disclose incompleteness."
+  },
+  {
+   "tier": 3,
+   "n": 2,
+   "text": "Trace the deed and mortgage history of this BBL.",
+   "params": {
+    "bbl": "1018470015",
+    "mortgage_event_id": "EVT-ACRIS-2002122000013001",
+    "referencing_event_id": "EVT-ACRIS-2005052300431001"
+   },
+   "tool": "trace_ownership_chain"
+  },
+  {
+   "tier": 3,
+   "n": 3,
+   "text": "Every building in this portfolio with open-violation counts.",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051"
+   },
+   "tool": "portfolio_buildings_with_violations"
+  },
+  {
+   "tier": 3,
+   "n": 4,
+   "text": "Given a typed name, find the likely landlord and network.",
+   "params": {
+    "name": "GLEN BROWN",
+    "actor_id": "ACT-LL-42357"
+   },
+   "tool": "resolve_landlord_name",
+   "notes": "Needs FULLTEXT Landlord.name. Names are dirty: leading punctuation, surname-first."
+  },
+  {
+   "tier": 3,
+   "n": 5,
+   "text": "Parties on the most recent mortgage; still outstanding?",
+   "params": {
+    "bbl": "1018470015",
+    "mortgage_event_id": "EVT-ACRIS-2002122000013001",
+    "referencing_type": "MortgageSatisfaction"
+   },
+   "tool": "trace_ownership_chain"
+  },
+  {
+   "tier": 3,
+   "n": 6,
+   "text": "Which portfolio buildings are in housing court, and parties?",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051",
+    "bbl": "3051210012"
+   },
+   "tool": "portfolio_litigation"
+  },
+  {
+   "tier": 3,
+   "n": 7,
+   "text": "Does the registered landlord match the DOF-recorded owner?",
+   "params": {
+    "bbl": "1000050010",
+    "recorded_owner": "25 WATER OWNER, LLC",
+    "registered_actor_id": "ACT-LL-15987"
+   },
+   "tool": "ownership_vs_registration_diff",
+   "notes": "REGISTERED_FOR originates on :Actor, not :Landlord."
+  },
+  {
+   "tier": 3,
+   "n": 8,
+   "text": "Full apparent-control network for a portfolio.",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "member_count": 111,
+    "building_count": 297
+   },
+   "tool": "control_network"
+  },
+  {
+   "tier": 3,
+   "n": 9,
+   "text": "Sister buildings \u2014 shared owner, address, or portfolio.",
+   "params": {
+    "bbl": "1000050010",
+    "landlord_actor_id": "ACT-LL-90202"
+   },
+   "tool": "sister_buildings"
+  },
+  {
+   "tier": 3,
+   "n": 10,
+   "text": "Walk a raw ACRIS deed-party name to a resolved Landlord.",
+   "params": {
+    "actor_id": "ACT-ACRIS-00000102840d98441b6057c0805c7f8999b29146",
+    "name": "LEVIEN HENRY",
+    "event_id": "EVT-ACRIS-BK_7640094001105"
+   },
+   "tool": "trace_actor_to_landlord",
+   "notes": "KNOWN GAP: no resolution edge exists. Must return 'no resolved landlord found, but N possibly-related' \u2014 never over-claim."
+  },
+  {
+   "tier": 4,
+   "n": 1,
+   "text": "Portfolios with a systemic pattern of unresolved Class C violations.",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "violation_class": "C",
+    "source_name": "HPD"
+   },
+   "tool": "deep_investigation",
+   "subroutine": "PortfolioCondition"
+  },
+  {
+   "tier": 4,
+   "n": 2,
+   "text": "Which buildings are deteriorating fastest right now?",
+   "params": {
+    "borough": "Bronx"
+   },
+   "tool": "deep_investigation",
+   "subroutine": "DeteriorationTrajectory"
+  },
+  {
+   "tier": 4,
+   "n": 3,
+   "text": "Landlords routing properties through serial LLCs.",
+   "params": {
+    "actor_id": "ACT-LL-42357"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 4,
+   "text": "Referral-ready case file on a specific landlord.",
+   "params": {
+    "actor_id": "ACT-LL-42357",
+    "portfolio_id": "PF-20260729T002106Z-37051"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 5,
+   "text": "Eviction clusters alongside open Class B/C violations.",
+   "params": {
+    "borough": "Bronx",
+    "violation_class": [
+     "B",
+     "C"
+    ],
+    "source_name": "HPD"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 6,
+   "text": "Rank landlords posing greatest cumulative tenant risk in an area.",
+   "params": {
+    "borough": "Brooklyn"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 7,
+   "text": "Are this portfolio's ECB judgments resolved or accumulating?",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "source_name": "ECB"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 8,
+   "text": "Do recent acquisitions correlate with a violation spike?",
+   "params": {
+    "actor_id": "ACT-LL-42357"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 9,
+   "text": "Is this complaint isolated or part of a broader pattern?",
+   "params": {
+    "bbl": "2025180028",
+    "example_event_id": "EVT-HPD-COMPLAINT-28922486"
+   },
+   "tool": "deep_investigation"
+  },
+  {
+   "tier": 4,
+   "n": 10,
+   "text": "Comparative dossier on the worst portfolios of a size class.",
+   "params": {
+    "portfolio_id": "PF-20260729T002106Z-1176",
+    "min_member_count": 5,
+    "min_building_count": 10
+   },
+   "tool": "deep_investigation",
+   "notes": "Must filter by size \u2014 most of 97,863 portfolios are singletons."
+  }
+ ]
+}
