@@ -12,7 +12,8 @@ explicit rules, and explains the result in plain language — making public hous
 data accessible to everyone without sacrificing transparency or accountability.
 
 A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) shows Watchline
-answering *"Is 122 West 97th Street in Manhattan getting worse?"*
+answering *"Build a referral-ready case file on landlord Steven Croman. Investigate patterns of neglect across their
+      portfolio, worst buildings first. Corroborate with public reporting and any enforcement or litigation history."*
 
 ## Run it locally
 
