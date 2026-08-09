@@ -48,6 +48,15 @@ def test_self_contained_and_branded():
     assert 'src="http' not in html                   # no external image/script host
 
 
+def test_unbranded_preview_omits_the_logo():
+    # branded=True keeps the logo (standalone artifact); branded=False drops it
+    # (the in-app preview, where the brand already lives in the sidebar).
+    assert '<img class="logo"' in _html()
+    plain = _html(branded=False)
+    assert '<img class="logo"' not in plain
+    assert "grounded in the public record" in plain      # report chrome still present
+
+
 def test_narrative_markdown_becomes_styled_html():
     html = _html()
     assert '<div class="tablewrap"><table>' in html  # tables wrapped for scroll

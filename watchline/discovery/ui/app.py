@@ -148,18 +148,22 @@ def _render_report_panel(turn) -> None:
     if turn is None:
         st.caption("Run a query — the formatted, shareable report will appear here.")
         return
-    html = report.to_html(
-        turn["question"], turn["answer"], turn["evidence"],
+    kw = dict(
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
         cost=turn.get("cost"),
         model=(turn["cost"].usage.model if turn.get("cost") else None),
         trust_level=turn.get("trust_level"),
     )
+    args = (turn["question"], turn["answer"], turn["evidence"])
+    # Standalone artifact keeps the branding; the in-app preview drops it (the brand
+    # already lives in the sidebar).
+    html_branded = report.to_html(*args, branded=True, **kw)
+    html_preview = report.to_html(*args, branded=False, **kw)
     st.download_button(
-        "⬇  Download report (.html)", html, file_name="watchline-report.html",
+        "⬇  Download report (.html)", html_branded, file_name="watchline-report.html",
         mime="text/html", width="stretch", key="download_html")
-    _open_report_in_new_tab(html)
-    st.iframe(html, height=760)
+    _open_report_in_new_tab(html_branded)
+    st.iframe(html_preview, height=760)
     with st.expander("Markdown source"):
         markdown = to_markdown(turn["question"], turn["answer"], turn["evidence"])
         st.download_button(
@@ -256,7 +260,7 @@ if not os.environ.get("TAVILY_API_KEY"):
 prompt = st.chat_input("Ask about a building, landlord, or portfolio") or _pending_sample(sample)
 
 # --- split layout: conversation on the left, the report artifact on the right ---
-chat_col, report_col = st.columns([5, 4], gap="large")
+chat_col, report_col = st.columns([4, 5], gap="large")
 
 with chat_col:
     # transcript

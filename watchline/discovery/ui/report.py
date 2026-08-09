@@ -197,17 +197,21 @@ _DISCLAIMER = (
 # Entry point
 # --------------------------------------------------------------------------- #
 def to_html(question, answer, evidence, *, generated_at=None, cost=None,
-            model=None, trust_level=None) -> str:
+            model=None, trust_level=None, branded=True) -> str:
     """A self-contained branded HTML page for one result. Pure — no I/O beyond the
     (import-time, cached) embedded logo."""
     narrative, toc = _render_markdown(answer or "")
-    # The logo is a self-contained brand banner (wordmark + tagline + art), so it
-    # carries the masthead; fall back to text only if the logo failed to embed.
-    masthead_brand = (
-        f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
-        if _LOGO_DATA_URI else
-        '<div class="brandtext"><div class="eyebrow">Accountability infrastructure for NYC housing</div>'
-        '<h1>Watchline NYC — Discovery</h1></div>')
+    # The logo is a self-contained brand banner (wordmark + tagline + art). The
+    # standalone artifact (download / open-in-tab) carries it; the in-app preview
+    # sets branded=False since the brand already sits in the sidebar. Fall back to
+    # text only if the logo failed to embed.
+    masthead_brand = ""
+    if branded:
+        masthead_brand = (
+            f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
+            if _LOGO_DATA_URI else
+            '<div class="brandtext"><div class="eyebrow">Accountability infrastructure for NYC housing</div>'
+            '<h1>Watchline NYC — Discovery</h1></div>')
     kicker = "Result report · grounded in the public record"
     if generated_at:
         _d, _, _t = generated_at.partition(" ")
