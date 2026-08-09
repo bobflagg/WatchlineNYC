@@ -159,11 +159,15 @@ def _render_report_panel(turn) -> None:
     # already lives in the sidebar).
     html_branded = report.to_html(*args, branded=True, **kw)
     html_preview = report.to_html(*args, branded=False, **kw)
-    st.download_button(
-        "⬇  Download report (.html)", html_branded, file_name="watchline-report.html",
-        mime="text/html", width="stretch", key="download_html")
-    _open_report_in_new_tab(html_branded)
     st.iframe(html_preview, height=760)
+    # Download + open-in-tab on one centered line, below the preview.
+    _sl, dl_col, tab_col, _sr = st.columns([1, 2, 2, 1], vertical_alignment="center")
+    with dl_col:
+        st.download_button(
+            "⬇  Download report (.html)", html_branded, file_name="watchline-report.html",
+            mime="text/html", width="stretch", key="download_html")
+    with tab_col:
+        _open_report_in_new_tab(html_branded)
     with st.expander("Markdown source"):
         markdown = to_markdown(turn["question"], turn["answer"], turn["evidence"])
         st.download_button(
