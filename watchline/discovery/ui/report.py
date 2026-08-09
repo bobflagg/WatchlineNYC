@@ -111,7 +111,7 @@ def _toc_html(toc: list[tuple[int, str, str]]) -> str:
     return f'<nav class="toc" aria-label="Contents"><b>Contents</b><ol>{items}</ol></nav>'
 
 
-def _provenance_html(generated_at, model, trust_level, cost, evidence) -> str:
+def _provenance_html(generated_at, model, trust_level, cost, evidence, *, standalone=False) -> str:
     bits: list[tuple[str, str]] = []
     if model:
         bits.append(("Model", _esc(model)))
@@ -123,7 +123,8 @@ def _provenance_html(generated_at, model, trust_level, cost, evidence) -> str:
     if cost is not None:
         bits.append(("Est. cost", f"${cost.usd:.4f}"))
     inner = "".join(f"<span><b>{_esc(k)}</b> {v}</span>" for k, v in bits)
-    return f'<div class="provenance">{inner}</div>'
+    cls = "provenance standalone" if standalone else "provenance"
+    return f'<div class="{cls}">{inner}</div>'
 
 
 _LEGEND = (
@@ -201,21 +202,26 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
     """A self-contained branded HTML page for one result. Pure — no I/O beyond the
     (import-time, cached) embedded logo."""
     narrative, toc = _render_markdown(answer or "")
-    # The logo is a self-contained brand banner (wordmark + tagline + art). The
-    # standalone artifact (download / open-in-tab) carries it; the in-app preview
-    # sets branded=False since the brand already sits in the sidebar. Fall back to
-    # text only if the logo failed to embed.
-    masthead_brand = ""
+    # The masthead (brand banner + kicker + disclaimer) belongs to the standalone
+    # artifact (download / open-in-tab). The in-app preview passes branded=False and
+    # drops it entirely — the app already frames the result. Fall back to text only
+    # if the logo failed to embed.
+    masthead = ""
     if branded:
-        masthead_brand = (
+        brand = (
             f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
             if _LOGO_DATA_URI else
             '<div class="brandtext"><div class="eyebrow">Accountability infrastructure for NYC housing</div>'
             '<h1>Watchline NYC — Discovery</h1></div>')
-    kicker = "Result report · grounded in the public record"
-    if generated_at:
-        _d, _, _t = generated_at.partition(" ")
-        kicker += f" on {_d} at {_t}" if _t else f" on {_d}"
+        kicker = "Result report · grounded in the public record"
+        if generated_at:
+            _d, _, _t = generated_at.partition(" ")
+            kicker += f" on {_d} at {_t}" if _t else f" on {_d}"
+        masthead = (
+            f'<header class="masthead">{brand}<div class="mast-right">'
+            f'<div class="kicker">{_esc(kicker)}</div>'
+            f'<div class="mast-disclaimer">{_DISCLAIMER}</div>'
+            "</div></header>")
     question_block = (
         f'<div class="question"><b>Investigation request</b>{_esc(question)}</div>'
         if question else "")
@@ -226,12 +232,8 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         "<title>Watchline NYC — Discovery · Result report</title>"
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
-        f'<header class="masthead">{masthead_brand}'
-        '<div class="mast-right">'
-        f'<div class="kicker">{_esc(kicker)}</div>'
-        f'<div class="mast-disclaimer">{_DISCLAIMER}</div>'
-        "</div></header>"
-        f"{_provenance_html(generated_at, model, trust_level, cost, evidence)}"
+        f"{masthead}"
+        f"{_provenance_html(generated_at, model, trust_level, cost, evidence, standalone=not branded)}"
         f"{question_block}"
         '<main class="doc">'
         f"{_toc_html(toc)}"
@@ -272,6 +274,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);fon
 .masthead .mast-disclaimer{font-family:var(--sans);color:#aebace;font-size:.82rem;line-height:1.5}
 .provenance{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
   background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:10px 30px}
+.provenance.standalone{border-radius:12px}
 .provenance span{white-space:nowrap}
 .provenance b{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.68rem;margin-right:.35rem}
 .question{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;
