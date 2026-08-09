@@ -80,18 +80,18 @@ def test_turn_renders_answer_and_evidence(monkeypatch):
     assert len(at.status) >= 1                              # the progress panel
 
 
-def test_export_control_offers_html_and_markdown(monkeypatch):
+def test_report_panel_offers_download_and_markdown(monkeypatch):
     _stub_agent(monkeypatch, [])
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.chat_input[0].set_value("Who owns BBL 1000050010?").run()
 
-    assert any("Export this result" in e.label for e in at.expander)
-    # Markdown source still shown/downloadable.
-    md = " ".join(getattr(c, "value", "") or "" for c in at.code)
-    assert "# Watchline NYC" in md and "PETER HUNGERFORD" in md
+    # The right-hand report panel: HTML download + Markdown source (behind an expander).
     labels = [b.label for b in at.download_button]
     assert any("Download report (.html)" in ell for ell in labels)
     assert any("Download Markdown (.md)" in ell for ell in labels)
+    assert any("Markdown source" in e.label for e in at.expander)
+    md = " ".join(getattr(c, "value", "") or "" for c in at.code)
+    assert "# Watchline NYC" in md and "PETER HUNGERFORD" in md
 
 
 def test_cost_caption_renders_after_a_turn(monkeypatch):

@@ -139,9 +139,15 @@ def _open_report_in_new_tab(html: str) -> None:
     )
 
 
-def _render_export(turn) -> None:
-    """Export the latest result: a branded HTML report (download / open in a new
-    tab) plus the Markdown source (copy / download)."""
+def _render_report_panel(turn) -> None:
+    """Right-hand artifact panel: the branded HTML report rendered inline, isolated
+    in its own iframe so its page-level CSS can't touch the app. Download and
+    open-in-new-tab sit above it; the Markdown source is one expander down. Shows the
+    latest result, with a placeholder before the first one."""
+    st.markdown("#### Report")
+    if turn is None:
+        st.caption("Run a query — the formatted, shareable report will appear here.")
+        return
     html = report.to_html(
         turn["question"], turn["answer"], turn["evidence"],
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -149,19 +155,16 @@ def _render_export(turn) -> None:
         model=(turn["cost"].usage.model if turn.get("cost") else None),
         trust_level=turn.get("trust_level"),
     )
-    markdown = to_markdown(turn["question"], turn["answer"], turn["evidence"])
-    with st.expander("Export this result", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                "⬇  Download report (.html)", html, file_name="watchline-report.html",
-                mime="text/html", width="stretch", key="download_html")
-        with col2:
-            _open_report_in_new_tab(html)
-        st.caption("Or grab the Markdown source (copy icon at the top-right of the box):")
+    st.download_button(
+        "⬇  Download report (.html)", html, file_name="watchline-report.html",
+        mime="text/html", width="stretch", key="download_html")
+    _open_report_in_new_tab(html)
+    st.iframe(html, height=760)
+    with st.expander("Markdown source"):
+        markdown = to_markdown(turn["question"], turn["answer"], turn["evidence"])
         st.download_button(
             "Download Markdown (.md)", markdown, file_name="watchline-result.md",
-            mime="text/markdown", width="content", key="download_md")
+            mime="text/markdown", key="download_md")
         st.code(markdown, language="markdown")
 
 
@@ -249,37 +252,43 @@ st.caption("Ask about a building, landlord, or portfolio. Every answer is ground
 if not os.environ.get("TAVILY_API_KEY"):
     _render_web_search_notice()
 
-# --- transcript ---
-for message in st.session_state.messages:
-    st.chat_message(message["role"]).markdown(display_safe(message["content"]))
-
-# --- submission ---
+# --- submission (chat input docks to the bottom, spanning both panels) ---
 prompt = st.chat_input("Ask about a building, landlord, or portfolio") or _pending_sample(sample)
 
-if prompt:
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").markdown(display_safe(prompt))
-    st.session_state.last_evidence = None
-    st.session_state.last_turn = None
+# --- split layout: conversation on the left, the report artifact on the right ---
+chat_col, report_col = st.columns([5, 4], gap="large")
 
-    config = {"configurable": {
-        "thread_id": st.session_state.thread_id,
-        "trust_level": trust_level,
-        "persona": persona,
-    }}
-    with st.chat_message("assistant"):
-        answer, evidence, cost = _render_turn(get_agent(), prompt, config)
+with chat_col:
+    # transcript
+    for message in st.session_state.messages:
+        st.chat_message(message["role"]).markdown(display_safe(message["content"]))
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
-    st.session_state.last_evidence = evidence
-    st.session_state.last_turn = {
-        "question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
-        "trust_level": trust_level}
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").markdown(display_safe(prompt))
+        st.session_state.last_evidence = None
+        st.session_state.last_turn = None
 
-# --- cost + evidence + copy/download for the latest answer (persist across reruns) ---
-if st.session_state.last_turn is not None and st.session_state.last_turn.get("cost") is not None:
-    st.caption(summary_line(st.session_state.last_turn["cost"]))
-if st.session_state.last_evidence is not None and not st.session_state.last_evidence.is_empty:
-    _render_evidence(st.session_state.last_evidence)
-if st.session_state.last_turn is not None:
-    _render_export(st.session_state.last_turn)
+        config = {"configurable": {
+            "thread_id": st.session_state.thread_id,
+            "trust_level": trust_level,
+            "persona": persona,
+        }}
+        with st.chat_message("assistant"):
+            answer, evidence, cost = _render_turn(get_agent(), prompt, config)
+
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.session_state.last_evidence = evidence
+        st.session_state.last_turn = {
+            "question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
+            "trust_level": trust_level}
+
+    # cost + evidence for the latest answer (persist across reruns)
+    if (st.session_state.last_turn is not None
+            and st.session_state.last_turn.get("cost") is not None):
+        st.caption(summary_line(st.session_state.last_turn["cost"]))
+    if st.session_state.last_evidence is not None and not st.session_state.last_evidence.is_empty:
+        _render_evidence(st.session_state.last_evidence)
+
+with report_col:
+    _render_report_panel(st.session_state.last_turn)
