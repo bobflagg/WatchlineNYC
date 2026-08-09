@@ -41,6 +41,15 @@ from watchline.discovery.agent.reliability import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILL_PATH = REPO_ROOT / ".claude/skills/discovery-schema-reference/SKILL.md"
 
+# The two classes below diff caveat wording against the discovery-schema-reference
+# skill, which isn't vendored into this lean repo. Skip them when it's absent (as the
+# integration/llm tiers skip without their prerequisites); they run wherever the skill
+# file is present (the full development checkout).
+_needs_skill = pytest.mark.skipif(
+    not SKILL_PATH.exists(),
+    reason="discovery-schema-reference skill not present in this checkout",
+)
+
 
 def _normalize(text: str) -> str:
     """Collapse the skill file's line wrapping to single spaces."""
@@ -72,6 +81,7 @@ def _parse_skill_caveats() -> dict[str, dict[str, str]]:
     return found
 
 
+@_needs_skill
 class TestSkillParsing:
     """Guard the parser itself — a broken parser would make 4.1 vacuous."""
 
@@ -95,6 +105,7 @@ class TestSkillParsing:
             assert len(forms["long"]) > 100, element
 
 
+@_needs_skill
 class TestTextMatchesSkillExactly:
     """Validation 4.1 — drift between module and skill fails the build."""
 
