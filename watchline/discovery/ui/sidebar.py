@@ -22,7 +22,7 @@ def _logo() -> None:
     if _LOGO.exists():
         b64 = base64.b64encode(_LOGO.read_bytes()).decode()
         st.html(
-            '<div style="display:flex;justify-content:center;padding:0 0 1rem 0;">'
+            '<div style="display:flex;justify-content:center;margin-top:-2.5rem;padding:0 0 1rem 0;">'
             f'<img src="data:image/png;base64,{b64}" '
             'style="width:100%;border-radius:12px;" alt="Watchline NYC"/></div>'
         )
