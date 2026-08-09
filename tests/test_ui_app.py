@@ -87,7 +87,7 @@ def test_report_panel_offers_download_and_markdown(monkeypatch):
 
     # The right-hand report panel: HTML download + Markdown source (behind an expander).
     labels = [b.label for b in at.download_button]
-    assert any("Download report (.html)" in ell for ell in labels)
+    assert "Download" in labels                                  # the report download (relabeled)
     assert any("Download Markdown (.md)" in ell for ell in labels)
     assert any("Markdown source" in e.label for e in at.expander)
     md = " ".join(getattr(c, "value", "") or "" for c in at.code)

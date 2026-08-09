@@ -127,9 +127,9 @@ def _open_report_in_new_tab(html: str) -> None:
         <a id="wl-open" href="#" target="_blank" rel="noopener"
            style="display:inline-flex;align-items:center;justify-content:center;width:100%;
                   box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                  background:#0a1629;color:#fff;text-decoration:none;padding:.5rem 1rem;
-                  border:1px solid #d4a017;border-radius:.5rem;font-size:.9rem;font-weight:600;">
-          ↗&nbsp;&nbsp;Open report in a new tab</a>
+                  background:#000000;color:#fff;text-decoration:none;padding:.5rem 1rem;
+                  border:1px solid #000000;border-radius:.5rem;font-size:.9rem;font-weight:600;">
+          Open</a>
         <script>
           const blob = new Blob([{payload}], {{type: "text/html"}});
           document.getElementById("wl-open").href = URL.createObjectURL(blob);
@@ -160,11 +160,18 @@ def _render_report_panel(turn) -> None:
     html_branded = report.to_html(*args, branded=True, **kw)
     html_preview = report.to_html(*args, branded=False, **kw)
     st.iframe(html_preview, height=760)
-    # Download + open-in-tab on one centered line, below the preview.
+    # Download + open-in-tab on one centered line below the preview, both black.
+    # The CSS is scoped to the report download's key so the Markdown one stays default.
+    st.markdown(
+        "<style>.st-key-download_html button{background:#000!important;color:#fff!important;"
+        "border:1px solid #000!important}.st-key-download_html button:hover,"
+        ".st-key-download_html button:focus{background:#1a1a1a!important;color:#fff!important;"
+        "border-color:#1a1a1a!important}.st-key-download_html button *{color:#fff!important}</style>",
+        unsafe_allow_html=True)
     _sl, dl_col, tab_col, _sr = st.columns([1, 2, 2, 1], vertical_alignment="center")
     with dl_col:
         st.download_button(
-            "⬇  Download report (.html)", html_branded, file_name="watchline-report.html",
+            "Download", html_branded, file_name="watchline-report.html",
             mime="text/html", width="stretch", key="download_html")
     with tab_col:
         _open_report_in_new_tab(html_branded)
