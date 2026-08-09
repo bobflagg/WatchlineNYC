@@ -57,6 +57,7 @@ def test_unbranded_preview_omits_masthead_and_provenance():
     assert 'class="masthead"' not in plain
     assert 'class="provenance"' not in plain
     assert '<img class="logo"' not in plain
+    assert "Investigation request" not in plain          # the question isn't repeated
     assert "Executive Summary" in plain                  # the report body is still there
 
 

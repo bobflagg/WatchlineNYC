@@ -233,7 +233,7 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
         f"{masthead}"
         f"{_provenance_html(generated_at, model, trust_level, cost, evidence) if branded else ''}"
-        f"{question_block}"
+        f"{question_block if branded else ''}"
         '<main class="doc">'
         f"{_toc_html(toc)}"
         f'<div class="narrative">{narrative}</div>'
