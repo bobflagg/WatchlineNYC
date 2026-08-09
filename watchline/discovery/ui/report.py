@@ -266,7 +266,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);fon
 .masthead .mast-right{min-width:0}
 .masthead .kicker{font-family:var(--sans);color:#e7edf5;font-size:1.02rem;font-weight:600;margin-bottom:.5rem;white-space:nowrap}
 .masthead .mast-disclaimer{font-family:var(--sans);color:#aebace;font-size:.82rem;line-height:1.5}
-.provenance{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
+.provenance{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
   background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:10px 30px}
 .provenance span{white-space:nowrap}
 .provenance b{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.68rem;margin-right:.35rem}
