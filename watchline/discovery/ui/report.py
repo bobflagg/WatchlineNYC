@@ -111,7 +111,7 @@ def _toc_html(toc: list[tuple[int, str, str]]) -> str:
     return f'<nav class="toc" aria-label="Contents"><b>Contents</b><ol>{items}</ol></nav>'
 
 
-def _provenance_html(generated_at, model, trust_level, cost, evidence, *, standalone=False) -> str:
+def _provenance_html(generated_at, model, trust_level, cost, evidence) -> str:
     bits: list[tuple[str, str]] = []
     if model:
         bits.append(("Model", _esc(model)))
@@ -123,8 +123,7 @@ def _provenance_html(generated_at, model, trust_level, cost, evidence, *, standa
     if cost is not None:
         bits.append(("Est. cost", f"${cost.usd:.4f}"))
     inner = "".join(f"<span><b>{_esc(k)}</b> {v}</span>" for k, v in bits)
-    cls = "provenance standalone" if standalone else "provenance"
-    return f'<div class="{cls}">{inner}</div>'
+    return f'<div class="provenance">{inner}</div>'
 
 
 _LEGEND = (
@@ -233,7 +232,7 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         "<title>Watchline NYC — Discovery · Result report</title>"
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
         f"{masthead}"
-        f"{_provenance_html(generated_at, model, trust_level, cost, evidence, standalone=not branded)}"
+        f"{_provenance_html(generated_at, model, trust_level, cost, evidence) if branded else ''}"
         f"{question_block}"
         '<main class="doc">'
         f"{_toc_html(toc)}"
@@ -274,7 +273,6 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);fon
 .masthead .mast-disclaimer{font-family:var(--sans);color:#aebace;font-size:.82rem;line-height:1.5}
 .provenance{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
   background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:10px 30px}
-.provenance.standalone{border-radius:12px}
 .provenance span{white-space:nowrap}
 .provenance b{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.68rem;margin-right:.35rem}
 .question{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;

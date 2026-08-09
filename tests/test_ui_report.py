@@ -48,15 +48,16 @@ def test_self_contained_and_branded():
     assert 'src="http' not in html                   # no external image/script host
 
 
-def test_unbranded_preview_omits_the_masthead():
-    # branded=True keeps the full masthead (standalone artifact); branded=False drops
-    # it entirely (the in-app preview, where the app already frames the result).
+def test_unbranded_preview_omits_masthead_and_provenance():
+    # branded=True keeps the masthead + provenance (standalone artifact); branded=False
+    # drops both (the in-app preview, where the app already frames the result).
     branded = _html()
-    assert 'class="masthead"' in branded and '<img class="logo"' in branded
+    assert 'class="masthead"' in branded and 'class="provenance"' in branded
     plain = _html(branded=False)
     assert 'class="masthead"' not in plain
+    assert 'class="provenance"' not in plain
     assert '<img class="logo"' not in plain
-    assert 'class="provenance' in plain                  # metadata strip retained (rounded)
+    assert "Executive Summary" in plain                  # the report body is still there
 
 
 def test_narrative_markdown_becomes_styled_html():

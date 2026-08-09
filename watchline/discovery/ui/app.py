@@ -144,7 +144,6 @@ def _render_report_panel(turn) -> None:
     in its own iframe so its page-level CSS can't touch the app. Download and
     open-in-new-tab sit above it; the Markdown source is one expander down. Shows the
     latest result, with a placeholder before the first one."""
-    st.markdown("#### Report")
     if turn is None:
         st.caption("Run a query — the formatted, shareable report will appear here.")
         return
