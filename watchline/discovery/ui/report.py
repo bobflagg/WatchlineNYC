@@ -113,8 +113,6 @@ def _toc_html(toc: list[tuple[int, str, str]]) -> str:
 
 def _provenance_html(generated_at, model, trust_level, cost, evidence) -> str:
     bits: list[tuple[str, str]] = []
-    if generated_at:
-        bits.append(("Generated", _esc(generated_at)))
     if model:
         bits.append(("Model", _esc(model)))
     if trust_level:
@@ -210,6 +208,10 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         if _LOGO_DATA_URI else
         '<div class="brandtext"><div class="eyebrow">Accountability infrastructure for NYC housing</div>'
         '<h1>Watchline NYC — Discovery</h1></div>')
+    kicker = "Result report · grounded in the public record"
+    if generated_at:
+        _d, _, _t = generated_at.partition(" ")
+        kicker += f" on {_d} at {_t}" if _t else f" on {_d}"
     question_block = (
         f'<div class="question"><b>Investigation request</b>{_esc(question)}</div>'
         if question else "")
@@ -222,7 +224,7 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
         f'<header class="masthead">{masthead_brand}'
         '<div class="mast-right">'
-        '<div class="kicker">Result report · grounded in the public record</div>'
+        f'<div class="kicker">{_esc(kicker)}</div>'
         f'<div class="mast-disclaimer">{_DISCLAIMER}</div>'
         "</div></header>"
         f"{_provenance_html(generated_at, model, trust_level, cost, evidence)}"
@@ -262,7 +264,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);fon
 .masthead .eyebrow{font-family:var(--sans);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem}
 .masthead h1{font-family:var(--sans);font-weight:800;font-size:1.7rem;line-height:1.12;margin:0}
 .masthead .mast-right{min-width:0}
-.masthead .kicker{font-family:var(--sans);color:#e7edf5;font-size:1.02rem;font-weight:600;margin-bottom:.5rem}
+.masthead .kicker{font-family:var(--sans);color:#e7edf5;font-size:1.02rem;font-weight:600;margin-bottom:.5rem;white-space:nowrap}
 .masthead .mast-disclaimer{font-family:var(--sans);color:#aebace;font-size:.82rem;line-height:1.5}
 .provenance{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
   background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:10px 30px}
