@@ -203,8 +203,13 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
     """A self-contained branded HTML page for one result. Pure — no I/O beyond the
     (import-time, cached) embedded logo."""
     narrative, toc = _render_markdown(answer or "")
-    logo = (f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
-            if _LOGO_DATA_URI else "")
+    # The logo is a self-contained brand banner (wordmark + tagline + art), so it
+    # carries the masthead; fall back to text only if the logo failed to embed.
+    masthead_brand = (
+        f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
+        if _LOGO_DATA_URI else
+        '<div class="eyebrow">Accountability infrastructure for NYC housing</div>'
+        '<h1>Watchline NYC — Discovery</h1>')
     question_block = (
         f'<div class="question"><b>Investigation request</b>{_esc(question)}</div>'
         if question else "")
@@ -215,11 +220,9 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         "<title>Watchline NYC — Discovery · Result report</title>"
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
-        f'<header class="masthead">{logo}<div class="mast-text">'
-        '<div class="eyebrow">Accountability infrastructure for NYC housing</div>'
-        "<h1>Watchline NYC — Discovery</h1>"
+        f'<header class="masthead">{masthead_brand}'
         '<div class="kicker">Result report · grounded in the public record</div>'
-        "</div></header>"
+        "</header>"
         f"{_provenance_html(generated_at, model, trust_level, cost, evidence)}"
         f'<div class="disclaimer">{_DISCLAIMER}</div>'
         f"{question_block}"
@@ -249,14 +252,14 @@ REPORT_CSS = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.6}
 .wrap{max-width:920px;margin:0 auto;padding:28px 18px 64px}
-.masthead{display:flex;align-items:center;gap:24px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
-  border-left:6px solid var(--gold);border-radius:12px 12px 0 0;padding:22px 30px;color:#fff;
+.masthead{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  background:linear-gradient(180deg,var(--navy),var(--navy-2));
+  border-left:6px solid var(--gold);border-radius:12px 12px 0 0;padding:26px 30px;color:#fff;
   box-shadow:0 12px 30px rgba(10,22,41,.28)}
-.masthead .logo{width:150px;height:auto;flex:none;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
-.masthead .mast-text{min-width:0}
-.masthead .eyebrow{font-family:var(--sans);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.45rem}
+.masthead .logo{width:100%;max-width:360px;height:auto;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+.masthead .eyebrow{font-family:var(--sans);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700}
 .masthead h1{font-family:var(--sans);font-weight:800;font-size:1.8rem;line-height:1.12;margin:0}
-.masthead .kicker{font-family:var(--sans);color:#c7d2e2;font-size:.92rem;margin-top:.45rem;font-weight:500}
+.masthead .kicker{font-family:var(--sans);color:#c7d2e2;font-size:.92rem;font-weight:500}
 .provenance{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
   background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0;padding:10px 30px}
 .provenance span{white-space:nowrap}

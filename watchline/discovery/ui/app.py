@@ -241,8 +241,7 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
 with st.sidebar:
     trust_level, persona, sample = sidebar.render()
 
-# --- brand header ---
-st.html(_BRAND_HEADER)
+# --- intro caption (brand now lives in the sidebar logo) ---
 st.caption("Ask about a building, landlord, or portfolio. Every answer is grounded "
            "in the public record; nothing is asserted that a tool did not return.")
 

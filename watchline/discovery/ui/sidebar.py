@@ -24,7 +24,7 @@ def _logo() -> None:
         st.html(
             '<div style="display:flex;justify-content:center;padding:0 0 1rem 0;">'
             f'<img src="data:image/png;base64,{b64}" '
-            'style="width:100%;max-width:210px;border-radius:12px;" alt="Watchline NYC"/></div>'
+            'style="width:100%;border-radius:12px;" alt="Watchline NYC"/></div>'
         )
 
 
