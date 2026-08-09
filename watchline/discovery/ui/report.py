@@ -208,8 +208,8 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
     masthead_brand = (
         f'<img class="logo" src="{_LOGO_DATA_URI}" alt="Watchline NYC — Discovery">'
         if _LOGO_DATA_URI else
-        '<div class="eyebrow">Accountability infrastructure for NYC housing</div>'
-        '<h1>Watchline NYC — Discovery</h1>')
+        '<div class="brandtext"><div class="eyebrow">Accountability infrastructure for NYC housing</div>'
+        '<h1>Watchline NYC — Discovery</h1></div>')
     question_block = (
         f'<div class="question"><b>Investigation request</b>{_esc(question)}</div>'
         if question else "")
@@ -221,10 +221,11 @@ def to_html(question, answer, evidence, *, generated_at=None, cost=None,
         "<title>Watchline NYC — Discovery · Result report</title>"
         f"<style>{REPORT_CSS}</style></head><body><div class=\"wrap\">"
         f'<header class="masthead">{masthead_brand}'
+        '<div class="mast-right">'
         '<div class="kicker">Result report · grounded in the public record</div>'
-        "</header>"
+        f'<div class="mast-disclaimer">{_DISCLAIMER}</div>'
+        "</div></header>"
         f"{_provenance_html(generated_at, model, trust_level, cost, evidence)}"
-        f'<div class="disclaimer">{_DISCLAIMER}</div>'
         f"{question_block}"
         '<main class="doc">'
         f"{_toc_html(toc)}"
@@ -252,20 +253,21 @@ REPORT_CSS = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.6}
 .wrap{max-width:920px;margin:0 auto;padding:28px 18px 64px}
-.masthead{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+.masthead{display:flex;align-items:center;gap:26px;
   background:linear-gradient(180deg,var(--navy),var(--navy-2));
-  border-left:6px solid var(--gold);border-radius:12px 12px 0 0;padding:26px 30px;color:#fff;
+  border-left:6px solid var(--gold);border-radius:12px 12px 0 0;padding:24px 30px;color:#fff;
   box-shadow:0 12px 30px rgba(10,22,41,.28)}
-.masthead .logo{width:100%;max-width:360px;height:auto;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
-.masthead .eyebrow{font-family:var(--sans);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700}
-.masthead h1{font-family:var(--sans);font-weight:800;font-size:1.8rem;line-height:1.12;margin:0}
-.masthead .kicker{font-family:var(--sans);color:#c7d2e2;font-size:.92rem;font-weight:500}
+.masthead .logo{width:220px;max-width:42%;height:auto;flex:none;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+.masthead .brandtext{flex:none}
+.masthead .eyebrow{font-family:var(--sans);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:.35rem}
+.masthead h1{font-family:var(--sans);font-weight:800;font-size:1.7rem;line-height:1.12;margin:0}
+.masthead .mast-right{min-width:0}
+.masthead .kicker{font-family:var(--sans);color:#e7edf5;font-size:1.02rem;font-weight:600;margin-bottom:.5rem}
+.masthead .mast-disclaimer{font-family:var(--sans);color:#aebace;font-size:.82rem;line-height:1.5}
 .provenance{display:flex;flex-wrap:wrap;gap:8px 22px;font-family:var(--sans);font-size:.76rem;color:var(--muted);
-  background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0;padding:10px 30px}
+  background:var(--navy-2);border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:10px 30px}
 .provenance span{white-space:nowrap}
 .provenance b{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.68rem;margin-right:.35rem}
-.disclaimer{font-family:var(--sans);font-size:.82rem;color:#5a3d00;background:var(--warn-bg);
-  border-left:6px solid var(--gold);border-radius:0 0 12px 12px;padding:11px 30px}
 .question{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;
   padding:16px 20px;margin:18px 0 24px;color:var(--muted);font-size:.98rem}
 .question b{font-family:var(--sans);color:var(--navy);text-transform:uppercase;letter-spacing:.08em;font-size:.7rem;display:block;margin-bottom:.35rem}
