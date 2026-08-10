@@ -33,6 +33,11 @@ st.set_page_config(page_title="Watchline NYC — Discovery", page_icon="⚖️",
 # of import order (connections.py also loads it, as an import side-effect).
 load_dotenv()
 
+#: Shared height (px) for the split view: the report iframe and the scrollable chat
+#: box both use it, so the report's HTML aligns with the conversation instead of
+#: being stranded at the top while a long chat scrolls past below.
+_PANEL_HEIGHT = 760
+
 
 @st.cache_resource
 def get_agent():
@@ -158,7 +163,7 @@ def _render_report_panel(turn) -> None:
     # already lives in the sidebar).
     html_branded = report.to_html(*args, branded=True, **kw)
     html_preview = report.to_html(*args, branded=False, **kw)
-    st.iframe(html_preview, height=760)
+    st.iframe(html_preview, height=_PANEL_HEIGHT)
     # Download + open-in-tab on one centered line below the preview, both black.
     # The CSS is scoped to the report download's key so the Markdown one stays default.
     st.markdown(
@@ -320,7 +325,11 @@ if prompt:
 if st.session_state.last_turn is not None and st.session_state.last_turn.get("is_investigation"):
     chat_col, report_col = st.columns([4, 5], gap="large")
     with chat_col:
-        _render_transcript()
+        # Scroll the transcript inside a fixed-height box the same height as the
+        # report, auto-scrolled to the latest message — so the answer and the report
+        # sit on the same screen instead of the report being stranded above.
+        with st.container(height=_PANEL_HEIGHT, border=False, autoscroll=True):
+            _render_transcript()
         _render_cost_and_evidence()
     with report_col:
         _render_report_panel(st.session_state.last_turn)
