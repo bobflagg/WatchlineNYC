@@ -58,11 +58,37 @@ def _scripted_chunks():
     ]
 
 
-def _stub_agent(monkeypatch, captured: list):
+def _scripted_investigation_chunks():
+    """Like _scripted_chunks, but the top-level agent calls the Tier-4
+    ``deep_investigation`` tool — so the turn is flagged as an investigation and
+    earns the right-hand report panel."""
+    ai_call = NS(type="ai", content=[],
+                 tool_calls=[{"name": "deep_investigation",
+                              "args": {"query": "Investigate the portfolio"}, "id": "1"}])
+    tool_msg = NS(type="tool", name="deep_investigation", content=json.dumps({
+        "report": "PETER HUNGERFORD apparently controls the portfolio.",
+        "citations": [{"tool": "lookup_building_ownership", "run_id": "run-9"}],
+        "reliability": {"type": "III", "caveats": [
+            {"element": "apparent_control", "text": "Apparent control is inferred, not a legal finding."}]},
+    }))
+    final = NS(type="ai", tool_calls=[],
+               content=[{"type": "text",
+                         "text": "The apparent controller is PETER HUNGERFORD; the AG settlement was $8M."}],
+               usage_metadata={"input_tokens": 3200, "output_tokens": 180,
+                               "input_token_details": {"cache_read": 2800}},
+               response_metadata={"model": "claude-haiku-4-5"})
+    return [
+        ("updates", {"model": {"messages": [ai_call]}}),
+        ("updates", {"tools": {"messages": [tool_msg]}}),
+        ("updates", {"model": {"messages": [final]}}),
+    ]
+
+
+def _stub_agent(monkeypatch, captured: list, chunks_fn=_scripted_chunks):
     class _Agent:
         def stream(self, inputs, config=None, stream_mode=None):
             captured.append(config)
-            return iter(_scripted_chunks())
+            return iter(chunks_fn())
 
     monkeypatch.setattr("watchline.discovery.agent.graph.build_agent",
                         lambda checkpointer=None: _Agent())
@@ -81,9 +107,10 @@ def test_turn_renders_answer_and_evidence(monkeypatch):
 
 
 def test_report_panel_offers_download_and_markdown(monkeypatch):
-    _stub_agent(monkeypatch, [])
+    # The report panel appears only for investigations.
+    _stub_agent(monkeypatch, [], chunks_fn=_scripted_investigation_chunks)
     at = AppTest.from_file(APP, default_timeout=30).run()
-    at.chat_input[0].set_value("Who owns BBL 1000050010?").run()
+    at.chat_input[0].set_value("Investigate landlord ACT-LL-42357").run()
 
     # The right-hand report panel: HTML download + Markdown source (behind an expander).
     labels = [b.label for b in at.download_button]
@@ -92,6 +119,17 @@ def test_report_panel_offers_download_and_markdown(monkeypatch):
     assert any("Markdown source" in e.label for e in at.expander)
     md = " ".join(getattr(c, "value", "") or "" for c in at.code)
     assert "# Watchline NYC" in md and "PETER HUNGERFORD" in md
+
+
+def test_plain_lookup_shows_no_report_panel(monkeypatch):
+    # A Tier 1-3 lookup stays full-width — no artifact panel.
+    _stub_agent(monkeypatch, [])
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.chat_input[0].set_value("Who owns BBL 1000050010?").run()
+
+    assert not at.exception
+    assert "Download" not in [b.label for b in at.download_button]
+    assert not any("Markdown source" in e.label for e in at.expander)
 
 
 def test_cost_caption_renders_after_a_turn(monkeypatch):
@@ -108,9 +146,9 @@ def test_dollar_signs_escaped_on_screen_but_raw_in_download(monkeypatch):
     """Streamlit renders $…$ as KaTeX; a report full of dollar amounts must show
     literal dollars. Escaped at the render boundary only — the downloadable
     Markdown keeps raw $ (other renderers don't do inline math)."""
-    _stub_agent(monkeypatch, [])
+    _stub_agent(monkeypatch, [], chunks_fn=_scripted_investigation_chunks)  # code block is in the panel
     at = AppTest.from_file(APP, default_timeout=30).run()
-    at.chat_input[0].set_value("Who owns BBL 1000050010?").run()
+    at.chat_input[0].set_value("Investigate landlord ACT-LL-42357").run()
 
     rendered = " ".join(m.value or "" for m in at.markdown)
     assert "\\$8M" in rendered            # escaped → literal dollar, no math

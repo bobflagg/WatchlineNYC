@@ -217,12 +217,13 @@ def _render_evidence(evidence) -> None:
 def _render_turn(agent, prompt: str, config: dict):
     """Stream one turn: progress panel + token-streamed answer.
 
-    Returns ``(text, evidence, cost)``. ``cost`` is the terminal ``Cost`` event; it
-    is persisted and rendered from ``last_turn`` (like the Evidence panel), so it
-    survives reruns rather than living only in this live pass."""
+    Returns ``(text, evidence, cost, is_investigation)``. ``is_investigation`` is
+    True when a Tier-4 ``deep_investigation`` ran (a top-level call or any nested
+    step) — it decides whether the turn gets the right-hand artifact panel."""
     status = st.status("Working…", expanded=True)
     placeholder = st.empty()
     answer, steps, evidence, cost = "", 0, None, None
+    is_investigation = False
 
     for event in run_turn(agent, prompt, config):
         if isinstance(event, Token):
@@ -230,12 +231,16 @@ def _render_turn(agent, prompt: str, config: dict):
             placeholder.markdown(display_safe(answer) + " ▌")
         elif isinstance(event, ToolStart):
             steps += 1
+            if event.name == "deep_investigation" or event.depth:
+                is_investigation = True
             prefix = "↳ " if event.depth else ""   # deep-investigation sub-step
             line = f"{prefix}\U0001f527 **{event.name}**"
             if event.summary:
                 line += f" · {event.summary}"
             status.markdown(line)
         elif isinstance(event, ToolResult):
+            if event.depth:
+                is_investigation = True
             if event.detail:
                 prefix = "↳ " if event.depth else ""
                 status.markdown(f"{prefix}&nbsp;&nbsp;→ {event.detail}")
@@ -247,7 +252,20 @@ def _render_turn(agent, prompt: str, config: dict):
 
     placeholder.markdown(display_safe(answer) or "_(no answer returned)_")
     status.update(label=f"Done · {steps} step(s)", state="complete", expanded=False)
-    return answer, evidence, cost
+    return answer, evidence, cost, is_investigation
+
+
+def _render_transcript() -> None:
+    for message in st.session_state.messages:
+        st.chat_message(message["role"]).markdown(display_safe(message["content"]))
+
+
+def _render_cost_and_evidence() -> None:
+    if (st.session_state.last_turn is not None
+            and st.session_state.last_turn.get("cost") is not None):
+        st.caption(summary_line(st.session_state.last_turn["cost"]))
+    if st.session_state.last_evidence is not None and not st.session_state.last_evidence.is_empty:
+        _render_evidence(st.session_state.last_evidence)
 
 
 # --- API-key gate: the agent can't run without an Anthropic key (blocks here) ---
@@ -266,43 +284,46 @@ st.caption("Ask about a building, landlord, or portfolio. Every answer is ground
 if not os.environ.get("TAVILY_API_KEY"):
     _render_web_search_notice()
 
-# --- submission (chat input docks to the bottom, spanning both panels) ---
+# --- submission (chat input docks to the bottom) ---
 prompt = st.chat_input("Ask about a building, landlord, or portfolio") or _pending_sample(sample)
 
-# --- split layout: conversation on the left, the report artifact on the right ---
-chat_col, report_col = st.columns([4, 5], gap="large")
+if prompt:
+    # The layout depends on whether this turn is a deep investigation — which we only
+    # know once it runs. So process it full-width, persist the result, then rerun into
+    # the split layout (investigation → report panel) or stop (plain lookup → chat only).
+    _render_transcript()
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.chat_message("user").markdown(display_safe(prompt))
+    st.session_state.last_evidence = None
+    st.session_state.last_turn = None
 
-with chat_col:
-    # transcript
-    for message in st.session_state.messages:
-        st.chat_message(message["role"]).markdown(display_safe(message["content"]))
+    config = {"configurable": {
+        "thread_id": st.session_state.thread_id,
+        "trust_level": trust_level,
+        "persona": persona,
+    }}
+    with st.chat_message("assistant"):
+        answer, evidence, cost, is_investigation = _render_turn(get_agent(), prompt, config)
 
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").markdown(display_safe(prompt))
-        st.session_state.last_evidence = None
-        st.session_state.last_turn = None
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+    st.session_state.last_evidence = evidence
+    st.session_state.last_turn = {
+        "question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
+        "trust_level": trust_level, "is_investigation": is_investigation}
 
-        config = {"configurable": {
-            "thread_id": st.session_state.thread_id,
-            "trust_level": trust_level,
-            "persona": persona,
-        }}
-        with st.chat_message("assistant"):
-            answer, evidence, cost = _render_turn(get_agent(), prompt, config)
+    if is_investigation:
+        st.rerun()                     # re-render into the split layout with the report
+    _render_cost_and_evidence()        # plain lookup: finish full-width
+    st.stop()
 
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-        st.session_state.last_evidence = evidence
-        st.session_state.last_turn = {
-            "question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
-            "trust_level": trust_level}
-
-    # cost + evidence for the latest answer (persist across reruns)
-    if (st.session_state.last_turn is not None
-            and st.session_state.last_turn.get("cost") is not None):
-        st.caption(summary_line(st.session_state.last_turn["cost"]))
-    if st.session_state.last_evidence is not None and not st.session_state.last_evidence.is_empty:
-        _render_evidence(st.session_state.last_evidence)
-
-with report_col:
-    _render_report_panel(st.session_state.last_turn)
+# --- display: the report artifact panel appears only for investigations ---
+if st.session_state.last_turn is not None and st.session_state.last_turn.get("is_investigation"):
+    chat_col, report_col = st.columns([4, 5], gap="large")
+    with chat_col:
+        _render_transcript()
+        _render_cost_and_evidence()
+    with report_col:
+        _render_report_panel(st.session_state.last_turn)
+else:
+    _render_transcript()
+    _render_cost_and_evidence()
