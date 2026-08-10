@@ -49,6 +49,8 @@ def render() -> tuple[str, str, str]:
     if st.button("New chat", width="stretch"):
         st.session_state.thread_id = str(uuid.uuid4())
         st.session_state.messages = []
+        st.session_state.artifacts = {}
+        st.session_state.open_artifact = None
         for key in ("_last_sample", "last_evidence", "last_turn"):
             st.session_state.pop(key, None)
         st.rerun()

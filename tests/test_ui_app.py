@@ -132,6 +132,20 @@ def test_plain_lookup_shows_no_report_panel(monkeypatch):
     assert not any("Markdown source" in e.label for e in at.expander)
 
 
+def test_artifact_card_open_and_close(monkeypatch):
+    # A fresh investigation auto-opens its report; closing returns to full-width but
+    # leaves a reopenable card in the chat.
+    _stub_agent(monkeypatch, [], chunks_fn=_scripted_investigation_chunks)
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.chat_input[0].set_value("Investigate landlord ACT-LL-42357").run()
+    assert "Download" in [b.label for b in at.download_button]      # auto-opened
+
+    at.session_state["open_artifact"] = None                        # close the panel
+    at.run()
+    assert "Download" not in [b.label for b in at.download_button]   # back to full-width
+    assert any(b.label == "Open report" for b in at.button)         # card can reopen it
+
+
 def test_cost_caption_renders_after_a_turn(monkeypatch):
     _stub_agent(monkeypatch, [])
     at = AppTest.from_file(APP, default_timeout=30).run()

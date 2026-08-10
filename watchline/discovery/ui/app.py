@@ -50,6 +50,8 @@ st.session_state.setdefault("thread_id", str(uuid.uuid4()))
 st.session_state.setdefault("messages", [])
 st.session_state.setdefault("last_evidence", None)
 st.session_state.setdefault("last_turn", None)
+st.session_state.setdefault("artifacts", {})        # id -> turn dict (investigation reports)
+st.session_state.setdefault("open_artifact", None)  # id shown in the side panel, or None
 
 
 _BRAND_HEADER = (
@@ -145,13 +147,19 @@ def _open_report_in_new_tab(html: str) -> None:
 
 
 def _render_report_panel(turn) -> None:
-    """Right-hand artifact panel: the branded HTML report rendered inline, isolated
-    in its own iframe so its page-level CSS can't touch the app. Download and
-    open-in-new-tab sit above it; the Markdown source is one expander down. Shows the
-    latest result, with a placeholder before the first one."""
+    """Right-hand artifact panel: a header row (title + ✕ close) over the branded
+    HTML report rendered inline, isolated in its own iframe so its page-level CSS
+    can't touch the app. Download and open-in-new-tab sit below; the Markdown source
+    is one expander down."""
     if turn is None:
-        st.caption("Run a query — the formatted, shareable report will appear here.")
         return
+    hcol, xcol = st.columns([5, 1], vertical_alignment="center")
+    with hcol:
+        st.markdown("📄 **Investigation report**")
+    with xcol:
+        if st.button("✕", key="close_artifact", help="Close the report", width="stretch"):
+            st.session_state.open_artifact = None
+            st.rerun()
     kw = dict(
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
         cost=turn.get("cost"),
@@ -262,7 +270,27 @@ def _render_turn(agent, prompt: str, config: dict):
 
 def _render_transcript() -> None:
     for message in st.session_state.messages:
-        st.chat_message(message["role"]).markdown(display_safe(message["content"]))
+        with st.chat_message(message["role"]):
+            st.markdown(display_safe(message["content"]))
+            if message.get("artifact_id"):
+                _render_artifact_card(message["artifact_id"])
+
+
+def _render_artifact_card(artifact_id: str) -> None:
+    """A compact in-chat card for an investigation's report artifact; opens it into
+    the side panel. The card for the artifact already on screen just points at it."""
+    art = st.session_state.artifacts.get(artifact_id)
+    if not art:
+        return
+    with st.container(border=True):
+        st.markdown("📄 **Investigation report**")
+        question = art.get("question") or ""
+        st.caption(question[:90] + ("…" if len(question) > 90 else ""))
+        if artifact_id == st.session_state.get("open_artifact"):
+            st.caption("Open in the panel →")
+        elif st.button("Open report", key=f"open_{artifact_id}", width="stretch"):
+            st.session_state.open_artifact = artifact_id
+            st.rerun()
 
 
 def _render_cost_and_evidence() -> None:
@@ -293,9 +321,8 @@ if not os.environ.get("TAVILY_API_KEY"):
 prompt = st.chat_input("Ask about a building, landlord, or portfolio") or _pending_sample(sample)
 
 if prompt:
-    # The layout depends on whether this turn is a deep investigation — which we only
-    # know once it runs. So process it full-width, persist the result, then rerun into
-    # the split layout (investigation → report panel) or stop (plain lookup → chat only).
+    # Process full-width; an investigation registers + auto-opens a report artifact.
+    # Then rerun into the split layout if an artifact is open, else stop (full-width).
     _render_transcript()
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").markdown(display_safe(prompt))
@@ -310,29 +337,39 @@ if prompt:
     with st.chat_message("assistant"):
         answer, evidence, cost, is_investigation = _render_turn(get_agent(), prompt, config)
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    turn = {"question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
+            "trust_level": trust_level, "is_investigation": is_investigation}
     st.session_state.last_evidence = evidence
-    st.session_state.last_turn = {
-        "question": prompt, "answer": answer, "evidence": evidence, "cost": cost,
-        "trust_level": trust_level, "is_investigation": is_investigation}
+    st.session_state.last_turn = turn
 
+    assistant_msg = {"role": "assistant", "content": answer}
     if is_investigation:
-        st.rerun()                     # re-render into the split layout with the report
-    _render_cost_and_evidence()        # plain lookup: finish full-width
+        # An investigation is a report artifact: register it, tag the message with a
+        # card, and auto-open it in the side panel.
+        artifact_id = uuid.uuid4().hex[:8]
+        st.session_state.artifacts[artifact_id] = turn
+        st.session_state.open_artifact = artifact_id
+        assistant_msg["artifact_id"] = artifact_id
+    st.session_state.messages.append(assistant_msg)
+
+    if st.session_state.open_artifact:
+        st.rerun()                     # an artifact is open → re-render into the split
+    _render_cost_and_evidence()        # nothing open: finish full-width
     st.stop()
 
-# --- display: the report artifact panel appears only for investigations ---
-if st.session_state.last_turn is not None and st.session_state.last_turn.get("is_investigation"):
+# --- display: split when an artifact is open, else full-width chat ---
+_open_art = st.session_state.artifacts.get(st.session_state.open_artifact)
+if _open_art is not None:
     chat_col, report_col = st.columns([4, 5], gap="large")
     with chat_col:
-        # Scroll the transcript inside a fixed-height box the same height as the
-        # report, auto-scrolled to the latest message — so the answer and the report
-        # sit on the same screen instead of the report being stranded above.
+        # Scroll the transcript inside a fixed-height box the same height as the report,
+        # auto-scrolled to the latest message — so the conversation and the open
+        # artifact sit on the same screen instead of the report being stranded above.
         with st.container(height=_PANEL_HEIGHT, border=False, autoscroll=True):
             _render_transcript()
         _render_cost_and_evidence()
     with report_col:
-        _render_report_panel(st.session_state.last_turn)
+        _render_report_panel(_open_art)
 else:
     _render_transcript()
     _render_cost_and_evidence()
