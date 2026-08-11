@@ -44,12 +44,13 @@ from watchline.shared.connections import NEO4J_DISCOVERY_DATABASE, neo4j_driver
 _LEADERBOARD = """
 CALL gds.wcc.stream($graph, {relationshipTypes: ['CONNECTED_BY_NAME']})
   YIELD nodeId, componentId
-WITH componentId, gds.util.asNode(nodeId) AS l
-WHERE EXISTS { (l)-[:APPARENT_CONTROL]->(:Building) }
-MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
-WITH componentId,
+WITH componentId, collect(gds.util.asNode(nodeId)) AS members
+WITH componentId, members, size(members) AS records
+WHERE records >= $min_records
+UNWIND members AS l
+OPTIONAL MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
+WITH componentId, records,
      collect(DISTINCT l.name) AS names,
-     count(DISTINCT l) AS records,
      count(DISTINCT b) AS buildings
 WHERE buildings >= $min_buildings
 RETURN names[0] AS operator, size(names) AS distinct_names, records, buildings
@@ -95,12 +96,17 @@ ORDER BY events DESC
 """
 
 
-def top_operators(limit: int = 15, min_buildings: int = 40) -> dict[str, Any]:
+def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = False) -> dict[str, Any]:
     """Return a ranked operator leaderboard + a resolved-cluster subgraph for #1.
+
+    ``hidden=True`` restricts to *fragmented* operators — name-clusters of >= 2 records
+    (aliases / misspelled variants), i.e. the ones whose true portfolio a per-record
+    (relational) view would split apart. That is where identity resolution is the win.
 
     Structure matches what the production read-only tool would emit, so the UI /
     artifact panel can be built against it now.
     """
+    min_records = 2 if hidden else 1
     graph = f"top_operators_{uuid.uuid4().hex[:8]}"
     driver = neo4j_driver()
     with driver.session(database=NEO4J_DISCOVERY_DATABASE, default_access_mode=WRITE_ACCESS) as s:
@@ -112,7 +118,7 @@ def top_operators(limit: int = 15, min_buildings: int = 40) -> dict[str, Any]:
             ).consume()
             leaderboard = [
                 dict(r) for r in s.run(_LEADERBOARD, graph=graph, limit=limit,
-                                       min_buildings=min_buildings)
+                                       min_buildings=min_buildings, min_records=min_records)
             ]
         finally:
             s.run("CALL gds.graph.drop($g, false)", g=graph).consume()
@@ -127,6 +133,7 @@ def top_operators(limit: int = 15, min_buildings: int = 40) -> dict[str, Any]:
             detail["events"] = [dict(e) for e in s.run(_EVENTS, operator=top)]
 
     return {
+        "view": "hidden operators — fragmented identity (>= 2 records)" if hidden else "top operators",
         "reliability": "II — inferred (APPARENT_CONTROL heuristic; name-link identity "
                        "resolution). Leads to investigate, not legal determinations.",
         "leaderboard": leaderboard,
@@ -135,7 +142,7 @@ def top_operators(limit: int = 15, min_buildings: int = 40) -> dict[str, Any]:
 
 
 def _print(payload: dict[str, Any]) -> None:
-    print("\n=== Top operators (resolved identity, ranked by buildings) ===")
+    print(f"\n=== {payload.get('view', 'top operators')} (ranked by buildings) ===")
     for i, r in enumerate(payload["leaderboard"], 1):
         frag = "" if r["records"] == 1 else f"  ({r['records']} records unified)"
         print(f"{i:>2}. {r['operator']:<24} {r['buildings']:>4} buildings{frag}")
@@ -155,7 +162,7 @@ def _print(payload: dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
-    payload = top_operators()
+    payload = top_operators(hidden=True)   # the "hidden operators" view (fragmented identity)
     _print(payload)
     print("\n--- raw payload (first 1200 chars) ---")
     print(json.dumps(payload, default=str)[:1200])
