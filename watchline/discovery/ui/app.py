@@ -233,19 +233,33 @@ def _render_cluster_body(artifact) -> None:
     _render_leaderboard_table(artifact, leaderboard, selected)
     cluster = clusters[selected]
     _render_operator_graph(artifact, cluster)
-    # Events are heavy across the whole leaderboard, so load this operator's fingerprint
-    # on demand and cache it on the cluster; the viz re-renders with it.
-    if not cluster.get("_events_loaded"):
-        if st.button("＋  Load event fingerprint", key=f"ev_{selected}",
-                     help="Scan this operator's public-record events (a few seconds)"):
-            with st.spinner("Scanning public-record events…"):
-                cluster["events"] = operator_events([r["actor_id"] for r in cluster.get("records", [])])
-            cluster["_events_loaded"] = True
-            st.rerun()
-    st.download_button(
-        "Download network (.html)", cluster_viz.to_html(cluster, branded=True),
-        file_name="watchline-operator-network.html", mime="text/html",
-        width="content", key="download_cluster")
+    # Action row: load-events (on demand — events are heavy across the whole leaderboard,
+    # so this operator's fingerprint is fetched lazily and cached) + download, on one
+    # centred line, both black with white labels. When events are loaded the first button
+    # drops and the download sits centred on its own.
+    st.markdown(
+        "<style>.st-key-load_events button,.st-key-download_cluster button{"
+        "background:#000!important;color:#fff!important;border:1px solid #000!important}"
+        ".st-key-load_events button:hover,.st-key-load_events button:focus,"
+        ".st-key-download_cluster button:hover,.st-key-download_cluster button:focus{"
+        "background:#1a1a1a!important;border-color:#1a1a1a!important}"
+        ".st-key-load_events button *,.st-key-download_cluster button *{color:#fff!important}"
+        "</style>", unsafe_allow_html=True)
+    do_load = False
+    with st.container(horizontal=True, horizontal_alignment="center"):
+        if not cluster.get("_events_loaded"):
+            do_load = st.button(
+                "Load event fingerprint", icon=":material/fingerprint:", key="load_events",
+                help="Scan this operator's public-record events (a few seconds)")
+        st.download_button(
+            "Download network", cluster_viz.to_html(cluster, branded=True),
+            file_name="watchline-operator-network.html", mime="text/html",
+            icon=":material/download:", key="download_cluster")
+    if do_load:
+        with st.spinner("Scanning public-record events…"):
+            cluster["events"] = operator_events([r["actor_id"] for r in cluster.get("records", [])])
+        cluster["_events_loaded"] = True
+        st.rerun()
 
 
 def _render_operator_graph(artifact, cluster) -> None:
