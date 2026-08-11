@@ -26,15 +26,20 @@ from neo4j import READ_ACCESS, WRITE_ACCESS
 
 from watchline.shared.connections import NEO4J_DISCOVERY_DATABASE, neo4j_driver
 
-# Augmented projection: CONNECTED_BY_NAME edges UNION exact-name star edges. WCC over
-# it resolves one operator per component, used everywhere (so numbers agree).
+# Augmented projection: CONNECTED_BY_NAME edges UNION exact-name star edges, but the
+# exact-name merge is gated on the SAME STATE — a same-name record at an unrelated
+# (out-of-state) address is more likely a different entity than an alias, so gating on
+# the trailing state token stops cross-state over-merges (e.g. a Dallas-TX "Eric Moore"
+# and a Temecula-CA "Eric Moore") while keeping same-state aliases together. WCC over
+# this resolves one operator per component, used everywhere (so numbers agree).
 _NODE_QUERY = "MATCH (l:Landlord) RETURN id(l) AS id"
 _REL_QUERY = (
     "MATCH (a:Landlord)-[:CONNECTED_BY_NAME]-(b:Landlord) "
     "RETURN id(a) AS source, id(b) AS target "
     "UNION "
-    "MATCH (a:Landlord) WHERE a.name IS NOT NULL "
-    "WITH a.name AS nm, collect(id(a)) AS ids WHERE size(ids) > 1 "
+    "MATCH (a:Landlord) WHERE a.name IS NOT NULL AND a.bizaddr IS NOT NULL "
+    "WITH a.name + '|' + split(a.bizaddr, ' ')[-1] AS key, collect(id(a)) AS ids "
+    "WHERE size(ids) > 1 "
     "UNWIND ids[1..] AS t RETURN ids[0] AS source, t AS target"
 )
 
@@ -181,8 +186,9 @@ def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = Fa
     return {
         "view": "hidden operators — fragmented identity (>= 2 records)" if hidden else "top operators",
         "reliability": "II — inferred. APPARENT_CONTROL is a heuristic; identity is "
-                       "CONNECTED_BY_NAME unioned with exact-name equality. distinct_names > 1 "
-                       "flags a cross-name merge to check. Leads, not legal determinations.",
+                       "CONNECTED_BY_NAME unioned with same-state exact-name (cross-state "
+                       "same-name records are not merged). distinct_names > 1 flags a "
+                       "cross-name merge to check. Leads, not legal determinations.",
         "leaderboard": leaderboard,
         "clusters": clusters,
         "top_operator": clusters.get(board[0]["componentId"]) if board else {},
