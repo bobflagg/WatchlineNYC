@@ -251,16 +251,21 @@ def _render_operator_graph(artifact, cluster) -> None:
                                     f"{bd.get('events', 0)} events"))
             edges.append(Edge(source=sel_record, target=bbl, color="#c9d3e0"))
 
-    # The agraph canvas is a fixed 760px block; in the expanded (full-panel) view that
-    # leaves it stranded at the left, so centre the component iframe there. In the split
-    # view 760px already ~fills the report column, so left-aligned is fine.
+    # The agraph canvas is a fixed 760px block inside a full-width component iframe, so
+    # in the expanded (full-panel) view it strands at the left and outer CSS can't reach
+    # inside the iframe to move it. Instead pin the *container* to the canvas width and
+    # centre it in the panel, so the iframe (and the canvas that fills it) sit in the
+    # middle. Split view keeps the full column (760px ~fills it there).
     if st.session_state.get("artifact_expanded"):
-        st.markdown(
-            "<style>iframe[title$='agraph']{display:block;margin-left:auto;margin-right:auto}</style>",
-            unsafe_allow_html=True)
-    clicked = agraph(nodes=nodes, edges=edges,
-                     config=Config(height=440, width=760, directed=False, physics=True,
-                                   nodeHighlightBehavior=True))
+        centred = st.container(horizontal_alignment="center")
+        with centred:
+            box = st.container(width=760)
+    else:
+        box = st.container()
+    with box:
+        clicked = agraph(nodes=nodes, edges=edges,
+                         config=Config(height=440, width=760, directed=False, physics=True,
+                                       nodeHighlightBehavior=True))
     if clicked and clicked != artifact.get("_last_click"):
         artifact["_last_click"] = clicked
         if clicked in record_ids:

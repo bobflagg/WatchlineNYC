@@ -197,6 +197,21 @@ def test_operator_cluster_artifact_renders(monkeypatch):
     assert "SCOTT CASTELLANO" in body                                        # the selected (marked) row
 
 
+def test_operator_cluster_renders_expanded(monkeypatch):
+    # Expanded, the graph is centred by wrapping it in a fixed-width container inside a
+    # centre-aligned parent — exercise that path so it renders without error.
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.session_state["artifacts"] = _cluster_artifact()
+    at.session_state["open_artifact"] = "c1"
+    at.session_state["artifact_expanded"] = True
+    at.run()
+
+    assert not at.exception
+    assert any("Download network" in b.label for b in at.download_button)
+
+
 def test_operator_cluster_row_click_switches(monkeypatch):
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
