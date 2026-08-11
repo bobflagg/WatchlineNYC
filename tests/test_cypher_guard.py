@@ -482,6 +482,7 @@ class TestEveryCypherLiteralInTheRepoIsAllowed:
             "test_db.py",  # asserts db.read refuses write shapes
             "test_db_readonly.py",  # probes the server's own refusal
             "test_investigator.py",  # feeds run_cypher deliberate write shapes
+            "operators.py",  # analytics/operators.py: GDS runs via its own write session, not the agent path
         }
     )
 

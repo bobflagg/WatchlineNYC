@@ -146,6 +146,27 @@ def test_artifact_card_open_and_close(monkeypatch):
     assert any(b.label == "Open report" for b in at.button)         # card can reopen it
 
 
+def test_operator_cluster_artifact_renders(monkeypatch):
+    # A typed operator-cluster artifact renders the network panel (not the report panel).
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.session_state["artifacts"] = {"c1": {
+        "kind": "operator_cluster", "question": "Top hidden operators",
+        "cluster": {"name": "SCOTT CASTELLANO", "buildings": 356,
+                    "residential_units": 9637, "rent_stabilized_units": 3065,
+                    "records": [{"actor_id": "ACT-LL-1", "buildings": 356}],
+                    "name_edges": [], "events": []},
+        "leaderboard": [{"operator": "SCOTT CASTELLANO", "buildings": 356, "records": 2}]}}
+    at.session_state["open_artifact"] = "c1"
+    at.run()
+
+    assert not at.exception
+    assert any("Download network" in b.label for b in at.download_button)   # the network panel
+    body = " ".join(m.value or "" for m in at.markdown)
+    assert "SCOTT CASTELLANO" in body                                        # the leaderboard table
+
+
 def test_cost_caption_renders_after_a_turn(monkeypatch):
     _stub_agent(monkeypatch, [])
     at = AppTest.from_file(APP, default_timeout=30).run()

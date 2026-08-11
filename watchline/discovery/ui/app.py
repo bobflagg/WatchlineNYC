@@ -21,7 +21,8 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 
 from watchline.discovery.agent.graph import build_agent
-from watchline.discovery.ui import report, sidebar
+from watchline.discovery.analytics.operators import top_operators
+from watchline.discovery.ui import cluster_viz, report, sidebar
 from watchline.discovery.ui.cost import Cost, summary_line
 from watchline.discovery.ui.stream import (
     Answer, ToolResult, ToolStart, Token, display_safe, run_turn, to_markdown, web_search_note,
@@ -146,20 +147,45 @@ def _open_report_in_new_tab(html: str) -> None:
     )
 
 
-def _render_report_panel(turn) -> None:
-    """Right-hand artifact panel: a header row (title + ✕ close) over the branded
-    HTML report rendered inline, isolated in its own iframe so its page-level CSS
-    can't touch the app. Download and open-in-new-tab sit below; the Markdown source
-    is one expander down."""
-    if turn is None:
+def _render_artifact_panel(artifact) -> None:
+    """Right-hand artifact panel: a header (title + ✕ close) over a *typed* artifact —
+    an investigation report or an operator-network graph — each rendered inline in its
+    own iframe so its page-level CSS can't touch the app."""
+    if artifact is None:
         return
+    kind = artifact.get("kind", "report")
+    title = "🕸 Operator network" if kind == "operator_cluster" else "📄 Investigation report"
     hcol, xcol = st.columns([5, 1], vertical_alignment="center")
     with hcol:
-        st.markdown("📄 **Investigation report**")
+        st.markdown(f"**{title}**")
     with xcol:
-        if st.button("✕", key="close_artifact", help="Close the report", width="stretch"):
+        if st.button("✕", key="close_artifact", help="Close", width="stretch"):
             st.session_state.open_artifact = None
             st.rerun()
+    if kind == "operator_cluster":
+        _render_cluster_body(artifact)
+    else:
+        _render_report_body(artifact)
+
+
+def _render_cluster_body(artifact) -> None:
+    """Operator-network artifact: a compact leaderboard + the resolved #1 cluster as a
+    self-contained SVG graph (isolated in an iframe)."""
+    leaderboard = artifact.get("leaderboard", [])
+    if leaderboard:
+        rows = "\n".join(
+            f"| {i} | {r['operator']} | {r['buildings']} | {r['records']} |"
+            for i, r in enumerate(leaderboard[:8], 1))
+        st.markdown("| # | Operator | Buildings | Records |\n|---|---|---|---|\n" + rows)
+    cluster = artifact.get("cluster", {})
+    st.iframe(cluster_viz.to_html(cluster, branded=False), height=_PANEL_HEIGHT)
+    st.download_button(
+        "Download network (.html)", cluster_viz.to_html(cluster, branded=True),
+        file_name="watchline-operator-network.html", mime="text/html",
+        width="content", key="download_cluster")
+
+
+def _render_report_body(turn) -> None:
     kw = dict(
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
         cost=turn.get("cost"),
@@ -308,6 +334,19 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
 # --- sidebar ---
 with st.sidebar:
     trust_level, persona, sample = sidebar.render()
+    # Prototype trigger: the operator analysis runs GDS (not the read-only agent path),
+    # so it lives behind a demo button rather than a chat turn for now.
+    st.divider()
+    if st.button("🕸  Top hidden operators", width="stretch", key="demo_operators",
+                 help="GDS: resolve fragmented landlord identities and rank by portfolio"):
+        with st.spinner("Resolving operators via GDS…"):
+            _payload = top_operators(hidden=True)
+        _aid = uuid.uuid4().hex[:8]
+        st.session_state.artifacts[_aid] = {
+            "kind": "operator_cluster", "question": "Top hidden operators",
+            "cluster": _payload["top_operator"], "leaderboard": _payload["leaderboard"]}
+        st.session_state.open_artifact = _aid
+        st.rerun()
 
 # --- intro caption (brand now lives in the sidebar logo) ---
 st.caption("Ask about a building, landlord, or portfolio. Every answer is grounded "
@@ -369,7 +408,7 @@ if _open_art is not None:
             _render_transcript()
         _render_cost_and_evidence()
     with report_col:
-        _render_report_panel(_open_art)
+        _render_artifact_panel(_open_art)
 else:
     _render_transcript()
     _render_cost_and_evidence()
