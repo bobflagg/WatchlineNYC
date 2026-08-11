@@ -22,7 +22,7 @@ import uuid
 from collections import defaultdict
 from typing import Any
 
-from neo4j import WRITE_ACCESS
+from neo4j import READ_ACCESS, WRITE_ACCESS
 
 from watchline.shared.connections import NEO4J_DISCOVERY_DATABASE, neo4j_driver
 
@@ -87,6 +87,26 @@ MATCH (a:Landlord)-[:CONNECTED_BY_NAME]-(b:Landlord)
 WHERE a.actor_id IN $ids AND b.actor_id IN $ids AND a.actor_id < b.actor_id
 RETURN DISTINCT a.actor_id AS source, b.actor_id AS target
 """
+
+# One operator's event fingerprint (its records' buildings). Pure Cypher, read-only.
+_OPERATOR_EVENTS = """
+UNWIND $ids AS aid
+MATCH (l:Landlord {actor_id: aid})-[:APPARENT_CONTROL]->(b:Building)
+WITH DISTINCT b
+MATCH (b)-[:HAS_EVENT]->(e:Event)
+RETURN e.event_type AS event_type, count(*) AS events
+ORDER BY events DESC
+"""
+
+
+def operator_events(member_ids: list[str]) -> list[dict[str, Any]]:
+    """Event fingerprint for one operator, fetched lazily on drill-down — scanning
+    events for the whole leaderboard at once is too slow (~2 min), one operator is ~5s."""
+    if not member_ids:
+        return []
+    with neo4j_driver().session(database=NEO4J_DISCOVERY_DATABASE,
+                                default_access_mode=READ_ACCESS) as s:
+        return [dict(r) for r in s.run(_OPERATOR_EVENTS, ids=member_ids)]
 
 
 def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = False,

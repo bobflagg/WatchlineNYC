@@ -189,6 +189,24 @@ def test_operator_cluster_row_click_switches(monkeypatch):
     assert at.session_state["artifacts"]["c1"]["selected"] == 9
 
 
+def test_operator_cluster_lazy_events(monkeypatch):
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.setattr("watchline.discovery.analytics.operators.operator_events",
+                        lambda ids: [{"event_type": "Complaint", "events": 42}])
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.session_state["artifacts"] = _cluster_artifact()
+    at.session_state["open_artifact"] = "c1"
+    at.run()
+
+    btn = [b for b in at.button if "event fingerprint" in (b.label or "").lower()]
+    assert btn                                                   # offered before load
+    btn[0].click()
+    at.run()
+    assert at.session_state["artifacts"]["c1"]["clusters"][7]["events"] == [
+        {"event_type": "Complaint", "events": 42}]              # loaded + cached
+
+
 def test_cost_caption_renders_after_a_turn(monkeypatch):
     _stub_agent(monkeypatch, [])
     at = AppTest.from_file(APP, default_timeout=30).run()

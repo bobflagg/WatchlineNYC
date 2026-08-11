@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 
 from watchline.discovery.agent.graph import build_agent
-from watchline.discovery.analytics.operators import top_operators
+from watchline.discovery.analytics.operators import operator_events, top_operators
 from watchline.discovery.ui import cluster_viz, report, sidebar
 from watchline.discovery.ui.cost import Cost, summary_line
 from watchline.discovery.ui.stream import (
@@ -192,6 +192,15 @@ def _render_cluster_body(artifact) -> None:
                 st.rerun()
     cluster = clusters[selected]
     st.iframe(cluster_viz.to_html(cluster, branded=False), height=_PANEL_HEIGHT)
+    # Events are heavy across the whole leaderboard, so load this operator's fingerprint
+    # on demand and cache it on the cluster; the viz re-renders with it.
+    if not cluster.get("_events_loaded"):
+        if st.button("＋  Load event fingerprint", key=f"ev_{selected}",
+                     help="Scan this operator's public-record events (a few seconds)"):
+            with st.spinner("Scanning public-record events…"):
+                cluster["events"] = operator_events([r["actor_id"] for r in cluster.get("records", [])])
+            cluster["_events_loaded"] = True
+            st.rerun()
     st.download_button(
         "Download network (.html)", cluster_viz.to_html(cluster, branded=True),
         file_name="watchline-operator-network.html", mime="text/html",
