@@ -99,6 +99,23 @@ ORDER BY events DESC
 """
 
 
+_RECORD_BUILDINGS = """
+MATCH (l:Landlord {actor_id: $aid})-[:APPARENT_CONTROL]->(b:Building)
+WITH b ORDER BY coalesce(b.residential_units, 0) DESC LIMIT $limit
+RETURN b.bbl AS bbl, b.address AS address, b.borough AS borough,
+       coalesce(b.residential_units, 0) AS units,
+       COUNT { (b)-[:HAS_EVENT]->() } AS events
+"""
+
+
+def record_buildings(actor_id: str, limit: int = 15) -> list[dict[str, Any]]:
+    """The buildings one landlord record apparently controls (top by units), fetched
+    lazily when its node is clicked in the interactive graph. Pure read-only Cypher."""
+    with neo4j_driver().session(database=NEO4J_DISCOVERY_DATABASE,
+                                default_access_mode=READ_ACCESS) as s:
+        return [dict(r) for r in s.run(_RECORD_BUILDINGS, aid=actor_id, limit=limit)]
+
+
 def operator_events(member_ids: list[str]) -> list[dict[str, Any]]:
     """Event fingerprint for one operator, fetched lazily on drill-down — scanning
     events for the whole leaderboard at once is too slow (~2 min), one operator is ~5s."""

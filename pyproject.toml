@@ -24,6 +24,7 @@ dependencies = [
     "langchain-tavily>=0.2.18",
     "streamlit>=1.61.0",
     "markdown-it-py>=4.2.0",
+    "streamlit-agraph>=0.0.45",
 ]
 
 # Makes the project an installable package, so `watchline.*` imports resolve

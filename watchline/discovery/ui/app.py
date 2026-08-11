@@ -19,9 +19,10 @@ from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
+from streamlit_agraph import Config, Edge, Node, agraph
 
 from watchline.discovery.agent.graph import build_agent
-from watchline.discovery.analytics.operators import operator_events, top_operators
+from watchline.discovery.analytics.operators import operator_events, record_buildings, top_operators
 from watchline.discovery.ui import cluster_viz, report, sidebar
 from watchline.discovery.ui.cost import Cost, summary_line
 from watchline.discovery.ui.stream import (
@@ -181,7 +182,7 @@ def _render_cluster_body(artifact) -> None:
         selected = leaderboard[0]["componentId"] if leaderboard else next(iter(clusters))
         artifact["selected"] = selected
     # Clickable leaderboard in a scroll box; the current pick is marked, not a button.
-    with st.container(height=190):
+    with st.container(height=150):
         for i, r in enumerate(leaderboard, 1):
             cid = r["componentId"]
             label = f"{i}. {r['operator']} · {r['buildings']} bldgs · {r['records']} recs"
@@ -189,9 +190,11 @@ def _render_cluster_body(artifact) -> None:
                 st.markdown(f"**▸ {label}**")
             elif st.button(label, key=f"op_{cid}", width="stretch"):
                 artifact["selected"] = cid
+                for k in ("graph_record", "graph_building", "_last_click"):
+                    artifact.pop(k, None)
                 st.rerun()
     cluster = clusters[selected]
-    st.iframe(cluster_viz.to_html(cluster, branded=False), height=_PANEL_HEIGHT)
+    _render_operator_graph(artifact, cluster)
     # Events are heavy across the whole leaderboard, so load this operator's fingerprint
     # on demand and cache it on the cluster; the viz re-renders with it.
     if not cluster.get("_events_loaded"):
@@ -205,6 +208,63 @@ def _render_cluster_body(artifact) -> None:
         "Download network (.html)", cluster_viz.to_html(cluster, branded=True),
         file_name="watchline-operator-network.html", mime="text/html",
         width="content", key="download_cluster")
+
+
+def _render_operator_graph(artifact, cluster) -> None:
+    """Interactive operator network (streamlit-agraph): operator → records → a record's
+    buildings on click. Clicking a record loads its buildings as nodes; clicking a
+    building shows its detail. The Download (self-contained SVG) mirrors the static view."""
+    records = cluster.get("records", [])
+    record_ids = {r["actor_id"] for r in records}
+    sel_record = artifact.get("graph_record")
+    bcache = artifact.setdefault("record_buildings", {})
+    max_b = max([r.get("buildings", 0) for r in records] + [1])
+
+    nodes = [Node(id="__op__", label=cluster.get("name", "Operator"), size=32, color="#d4a017",
+                  title="Resolved operator")]
+    edges = [Edge(source="__op__", target=r["actor_id"]) for r in records]
+    for r in records:
+        b = r.get("buildings", 0)
+        nodes.append(Node(id=r["actor_id"], label=str(b), size=int(14 + 18 * (b / max_b) ** 0.5),
+                          color="#12243f" if b else "#7a8aa0",
+                          title=f"{r['actor_id']} · {r.get('address', '')} · {b} buildings"))
+    for e in cluster.get("name_edges", []):
+        edges.append(Edge(source=e["source"], target=e["target"], color="#d4a017"))
+
+    building_bbls = set()
+    if sel_record and sel_record in bcache:
+        for bd in bcache[sel_record]:
+            bbl = str(bd["bbl"])
+            building_bbls.add(bbl)
+            nodes.append(Node(id=bbl, label="", size=9, color="#4c9be8",
+                              title=f"{bd.get('address', '')} · {bd.get('units', 0)} units · "
+                                    f"{bd.get('events', 0)} events"))
+            edges.append(Edge(source=sel_record, target=bbl, color="#c9d3e0"))
+
+    clicked = agraph(nodes=nodes, edges=edges,
+                     config=Config(height=440, width=760, directed=False, physics=True,
+                                   nodeHighlightBehavior=True))
+    if clicked and clicked != artifact.get("_last_click"):
+        artifact["_last_click"] = clicked
+        if clicked in record_ids:
+            artifact["graph_record"], artifact["graph_building"] = clicked, None
+            if clicked not in bcache:
+                with st.spinner("Loading this record's buildings…"):
+                    bcache[clicked] = record_buildings(clicked)
+            st.rerun()
+        elif clicked in building_bbls:
+            artifact["graph_building"] = clicked
+            st.rerun()
+
+    st.caption("Click a **record** node to load its buildings; click a **building** for detail.")
+    if sel_record:
+        st.caption(f"▸ Record **{sel_record}** — {len(bcache.get(sel_record, []))} buildings shown (top by units).")
+    sel_b = artifact.get("graph_building")
+    if sel_b:
+        bd = next((x for x in bcache.get(sel_record, []) if str(x["bbl"]) == sel_b), None)
+        if bd:
+            st.caption(f"🏢 **{bd.get('address', '')}** ({bd.get('borough', '')}) · BBL {bd['bbl']} · "
+                       f"{bd.get('units', 0)} units · {bd.get('events', 0)} events")
 
 
 def _render_report_body(turn) -> None:
