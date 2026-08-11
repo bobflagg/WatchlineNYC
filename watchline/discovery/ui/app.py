@@ -16,6 +16,7 @@ import os
 import uuid
 from datetime import datetime
 
+import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
@@ -179,8 +180,43 @@ def _render_artifact_panel(artifact) -> None:
         _render_report_body(artifact)
 
 
+def _render_leaderboard_table(artifact, leaderboard, selected) -> None:
+    """Operator leaderboard as an interactive table: a proportional buildings bar and a
+    single-row selection that switches the operator whose network is shown below.
+
+    The row order matches ``leaderboard``, so the selected row index maps back to its
+    ``componentId``. The pick is applied only when it differs from the current one, so
+    the persisted selection doesn't loop the rerun."""
+    if not leaderboard:
+        return
+    max_b = max([r["buildings"] for r in leaderboard] + [1])
+    df = pd.DataFrame([
+        {"Operator": r["operator"], "Buildings": r["buildings"], "Records": r["records"]}
+        for r in leaderboard])
+    event = st.dataframe(
+        df, hide_index=True, width="stretch", height=min(48 + 35 * len(df), 300),
+        on_select="rerun", selection_mode="single-row", key="operator_leaderboard",
+        column_config={
+            "Operator": st.column_config.TextColumn("Operator", width="medium"),
+            "Buildings": st.column_config.ProgressColumn(
+                "Buildings", help="Buildings apparently controlled",
+                format="%d", min_value=0, max_value=int(max_b)),
+            "Records": st.column_config.NumberColumn(
+                "Recs", help="Landlord records unified into this operator", format="%d"),
+        })
+    st.caption("Select a row to view that operator's network.")
+    rows = event.selection.rows if event and getattr(event, "selection", None) else []
+    if rows:
+        cid = leaderboard[rows[0]]["componentId"]
+        if cid != selected:
+            artifact["selected"] = cid
+            for k in ("graph_record", "graph_building", "_last_click"):
+                artifact.pop(k, None)
+            st.rerun()
+
+
 def _render_cluster_body(artifact) -> None:
-    """Operator-network artifact: a clickable leaderboard (pick an operator) over the
+    """Operator-network artifact: an interactive leaderboard (pick an operator) over the
     selected cluster as a self-contained SVG graph (isolated in an iframe)."""
     leaderboard = artifact.get("leaderboard", [])
     clusters = artifact.get("clusters", {})
@@ -191,18 +227,10 @@ def _render_cluster_body(artifact) -> None:
     if selected not in clusters:
         selected = leaderboard[0]["componentId"] if leaderboard else next(iter(clusters))
         artifact["selected"] = selected
-    # Clickable leaderboard in a scroll box; the current pick is marked, not a button.
-    with st.container(height=150):
-        for i, r in enumerate(leaderboard, 1):
-            cid = r["componentId"]
-            label = f"{i}. {r['operator']} · {r['buildings']} bldgs · {r['records']} recs"
-            if cid == selected:
-                st.markdown(f"**▸ {label}**")
-            elif st.button(label, key=f"op_{cid}", width="stretch"):
-                artifact["selected"] = cid
-                for k in ("graph_record", "graph_building", "_last_click"):
-                    artifact.pop(k, None)
-                st.rerun()
+    # Leaderboard as a compact, sortable table: buildings render as a proportional bar,
+    # and a single-row selection switches the operator shown below. Rows are in the same
+    # order as `leaderboard`, so a selected row index maps straight back to its cluster.
+    _render_leaderboard_table(artifact, leaderboard, selected)
     cluster = clusters[selected]
     _render_operator_graph(artifact, cluster)
     # Events are heavy across the whole leaderboard, so load this operator's fingerprint

@@ -193,8 +193,8 @@ def test_operator_cluster_artifact_renders(monkeypatch):
 
     assert not at.exception
     assert any("Download network" in b.label for b in at.download_button)   # the network panel
-    body = " ".join(m.value or "" for m in at.markdown)
-    assert "SCOTT CASTELLANO" in body                                        # the selected (marked) row
+    df = at.dataframe[0].value                                               # the leaderboard table
+    assert "SCOTT CASTELLANO" in df["Operator"].values
 
 
 def test_operator_cluster_renders_expanded(monkeypatch):
@@ -218,10 +218,9 @@ def test_operator_cluster_row_click_switches(monkeypatch):
     at = AppTest.from_file(APP, default_timeout=30)
     at.session_state["artifacts"] = _cluster_artifact()
     at.session_state["open_artifact"] = "c1"
-    at.run()
-
-    # #7 is selected (a marker, not a button); #9 (Rashad) is a clickable row.
-    [b for b in at.button if "DIVYA RASHAD" in (b.label or "")][0].click()
+    # Selecting the second table row (DIVYA RASHAD, cid 9) switches the shown operator.
+    # AppTest has no dataframe-selection API, so seed the widget's selection state.
+    at.session_state["operator_leaderboard"] = {"selection": {"rows": [1], "columns": []}}
     at.run()
     assert at.session_state["artifacts"]["c1"]["selected"] == 9
 
