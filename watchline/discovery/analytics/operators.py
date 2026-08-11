@@ -19,6 +19,7 @@ cluster flags a cross-name merge to check. Leads, not legal determinations.
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from typing import Any
 
 from neo4j import WRITE_ACCESS
@@ -26,7 +27,7 @@ from neo4j import WRITE_ACCESS
 from watchline.shared.connections import NEO4J_DISCOVERY_DATABASE, neo4j_driver
 
 # Augmented projection: CONNECTED_BY_NAME edges UNION exact-name star edges. WCC over
-# it resolves one operator per component, used by leaderboard + detail (so they agree).
+# it resolves one operator per component, used everywhere (so numbers agree).
 _NODE_QUERY = "MATCH (l:Landlord) RETURN id(l) AS id"
 _REL_QUERY = (
     "MATCH (a:Landlord)-[:CONNECTED_BY_NAME]-(b:Landlord) "
@@ -37,46 +38,47 @@ _REL_QUERY = (
     "UNWIND ids[1..] AS t RETURN ids[0] AS source, t AS target"
 )
 
+# Leaderboard: rank resolved operators by buildings; also return each cluster's member
+# actor_ids so the detail below can run in pure Cypher (no more GDS).
 _LEADERBOARD = """
 CALL gds.wcc.stream($graph) YIELD nodeId, componentId
 WITH componentId, collect(gds.util.asNode(nodeId)) AS members
 WITH componentId, members, size(members) AS records
 WHERE records >= $min_records
-UNWIND members AS l
-OPTIONAL MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
-WITH componentId, records,
-     collect(DISTINCT l.name) AS names,
-     count(DISTINCT b) AS buildings
+CALL (members) {
+  UNWIND members AS l
+  OPTIONAL MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
+  RETURN collect(DISTINCT l.name) AS names, count(DISTINCT b) AS buildings
+}
+WITH componentId, records, [m IN members | m.actor_id] AS member_ids, names, buildings
 WHERE buildings >= $min_buildings
-RETURN componentId, names[0] AS operator, size(names) AS distinct_names, records, buildings
+RETURN componentId, names[0] AS operator, size(names) AS distinct_names, records, buildings, member_ids
 ORDER BY buildings DESC
 LIMIT $limit
 """
 
-_DETAIL = """
-CALL gds.wcc.stream($graph) YIELD nodeId, componentId
-WITH gds.util.asNode(nodeId) AS l, componentId
-WHERE componentId = $component
-WITH collect(l) AS members
-UNWIND members AS l
+# Batched detail for every leaderboard component, keyed by actor_id (pure Cypher).
+_DETAILS = """
+UNWIND $rows AS row
+UNWIND row.ids AS aid
+MATCH (l:Landlord {actor_id: aid})
+WITH row.cid AS cid, l, COUNT { (l)-[:APPARENT_CONTROL]->(:Building) } AS lb
 OPTIONAL MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
-WITH members, collect(DISTINCT b) AS bldgs
-RETURN
-  [m IN members | {actor_id: m.actor_id, name: m.name, address: m.bizaddr,
-                   buildings: COUNT { (m)-[:APPARENT_CONTROL]->(:Building) }}] AS records,
-  size(bldgs) AS buildings,
-  reduce(u = 0, b IN bldgs | u + coalesce(b.residential_units, 0)) AS residential_units,
-  reduce(u = 0, b IN bldgs | u + coalesce(b.rs_units_current, 0)) AS rent_stabilized_units
+WITH cid, collect(DISTINCT b) AS bldgs,
+     collect(DISTINCT {actor_id: l.actor_id, name: l.name, address: l.bizaddr, buildings: lb}) AS records
+RETURN cid, records, size(bldgs) AS buildings,
+       reduce(u = 0, b IN bldgs | u + coalesce(b.residential_units, 0)) AS residential_units,
+       reduce(u = 0, b IN bldgs | u + coalesce(b.rs_units_current, 0)) AS rent_stabilized_units
 """
 
 _EVENTS = """
-CALL gds.wcc.stream($graph) YIELD nodeId, componentId
-WITH gds.util.asNode(nodeId) AS l, componentId
-WHERE componentId = $component
-MATCH (l)-[:APPARENT_CONTROL]->(b:Building)
-WITH DISTINCT b
+UNWIND $rows AS row
+UNWIND row.ids AS aid
+MATCH (l:Landlord {actor_id: aid})-[:APPARENT_CONTROL]->(b:Building)
+WITH row.cid AS cid, collect(DISTINCT b) AS bldgs
+UNWIND bldgs AS b
 MATCH (b)-[:HAS_EVENT]->(e:Event)
-RETURN e.event_type AS event_type, count(*) AS events
+RETURN cid, e.event_type AS event_type, count(*) AS events
 ORDER BY events DESC
 """
 
@@ -87,12 +89,15 @@ RETURN DISTINCT a.actor_id AS source, b.actor_id AS target
 """
 
 
-def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = False) -> dict[str, Any]:
-    """Return a ranked operator leaderboard + a resolved-cluster subgraph for #1.
+def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = False,
+                  with_events: bool = False) -> dict[str, Any]:
+    """Rank resolved operators and return a full cluster (records, name-links,
+    portfolio, events) for *each* leaderboard entry, keyed by component id — so a UI
+    can switch between them without re-querying.
 
-    ``hidden=True`` restricts to *fragmented* operators — clusters of >= 2 records
-    (aliases / misspelled variants), where identity resolution changes the answer.
-    Leaderboard and detail share one augmented WCC resolution, so their numbers agree.
+    ``hidden=True`` keeps only *fragmented* operators (clusters of >= 2 records),
+    where identity resolution changes the answer. One augmented WCC resolution feeds
+    the leaderboard and every detail, so the numbers agree.
     """
     min_records = 2 if hidden else 1
     graph = f"top_operators_{uuid.uuid4().hex[:8]}"
@@ -101,27 +106,47 @@ def top_operators(limit: int = 15, min_buildings: int = 40, *, hidden: bool = Fa
         try:
             s.run("CALL gds.graph.project.cypher($g, $nq, $rq)",
                   g=graph, nq=_NODE_QUERY, rq=_REL_QUERY).consume()
-            leaderboard = [
-                dict(r) for r in s.run(_LEADERBOARD, graph=graph, limit=limit,
-                                       min_buildings=min_buildings, min_records=min_records)
-            ]
-            detail: dict[str, Any] = {}
-            if leaderboard:
-                component = leaderboard[0]["componentId"]
-                row = s.run(_DETAIL, graph=graph, component=component).single()
-                detail = dict(row) if row else {}
-                ids = [r["actor_id"] for r in detail.get("records", [])]
-                detail["name_edges"] = [dict(e) for e in s.run(_NAME_EDGES, ids=ids)]
-                detail["events"] = [dict(e) for e in s.run(_EVENTS, graph=graph, component=component)]
+            board = [dict(r) for r in s.run(_LEADERBOARD, graph=graph, limit=limit,
+                                            min_buildings=min_buildings, min_records=min_records)]
         finally:
             s.run("CALL gds.graph.drop($g, false)", g=graph).consume()
 
-    top = leaderboard[0]["operator"] if leaderboard else None
+        rows = [{"cid": r["componentId"], "ids": r["member_ids"]} for r in board]
+        all_ids = [aid for r in board for aid in r["member_ids"]]
+        details = {r["cid"]: dict(r) for r in s.run(_DETAILS, rows=rows)} if rows else {}
+        events: dict[Any, list] = defaultdict(list)
+        if rows and with_events:
+            for e in s.run(_EVENTS, rows=rows):
+                events[e["cid"]].append({"event_type": e["event_type"], "events": e["events"]})
+        cid_of = {aid: r["componentId"] for r in board for aid in r["member_ids"]}
+        name_edges: dict[Any, list] = defaultdict(list)
+        for edge in (s.run(_NAME_EDGES, ids=all_ids) if all_ids else []):
+            cid = cid_of.get(edge["source"])
+            if cid is not None and cid == cid_of.get(edge["target"]):
+                name_edges[cid].append({"source": edge["source"], "target": edge["target"]})
+
+    clusters: dict[Any, dict[str, Any]] = {}
+    for r in board:
+        cid = r["componentId"]
+        d = details.get(cid, {})
+        clusters[cid] = {
+            "name": r["operator"],
+            "records": d.get("records", []),
+            "name_edges": name_edges.get(cid, []),
+            "buildings": d.get("buildings", r["buildings"]),
+            "residential_units": d.get("residential_units", 0),
+            "rent_stabilized_units": d.get("rent_stabilized_units", 0),
+            "events": events.get(cid, []),
+        }
+
+    leaderboard = [{k: r[k] for k in ("componentId", "operator", "distinct_names", "records", "buildings")}
+                   for r in board]
     return {
         "view": "hidden operators — fragmented identity (>= 2 records)" if hidden else "top operators",
         "reliability": "II — inferred. APPARENT_CONTROL is a heuristic; identity is "
                        "CONNECTED_BY_NAME unioned with exact-name equality. distinct_names > 1 "
                        "flags a cross-name merge to check. Leads, not legal determinations.",
         "leaderboard": leaderboard,
-        "top_operator": {"name": top, **detail},
+        "clusters": clusters,
+        "top_operator": clusters.get(board[0]["componentId"]) if board else {},
     }

@@ -146,25 +146,47 @@ def test_artifact_card_open_and_close(monkeypatch):
     assert any(b.label == "Open report" for b in at.button)         # card can reopen it
 
 
+def _cluster_artifact():
+    def c(name, buildings):
+        return {"name": name, "buildings": buildings, "residential_units": 1,
+                "rent_stabilized_units": 1, "records": [{"actor_id": "ACT-LL-1", "buildings": buildings}],
+                "name_edges": [], "events": []}
+    return {"c1": {
+        "kind": "operator_cluster", "question": "Top hidden operators",
+        "clusters": {7: c("SCOTT CASTELLANO", 356), 9: c("DIVYA RASHAD", 239)},
+        "leaderboard": [
+            {"componentId": 7, "operator": "SCOTT CASTELLANO", "buildings": 356, "records": 5, "distinct_names": 1},
+            {"componentId": 9, "operator": "DIVYA RASHAD", "buildings": 239, "records": 13, "distinct_names": 1}],
+        "selected": 7}}
+
+
 def test_operator_cluster_artifact_renders(monkeypatch):
     # A typed operator-cluster artifact renders the network panel (not the report panel).
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     at = AppTest.from_file(APP, default_timeout=30)
-    at.session_state["artifacts"] = {"c1": {
-        "kind": "operator_cluster", "question": "Top hidden operators",
-        "cluster": {"name": "SCOTT CASTELLANO", "buildings": 356,
-                    "residential_units": 9637, "rent_stabilized_units": 3065,
-                    "records": [{"actor_id": "ACT-LL-1", "buildings": 356}],
-                    "name_edges": [], "events": []},
-        "leaderboard": [{"operator": "SCOTT CASTELLANO", "buildings": 356, "records": 2}]}}
+    at.session_state["artifacts"] = _cluster_artifact()
     at.session_state["open_artifact"] = "c1"
     at.run()
 
     assert not at.exception
     assert any("Download network" in b.label for b in at.download_button)   # the network panel
     body = " ".join(m.value or "" for m in at.markdown)
-    assert "SCOTT CASTELLANO" in body                                        # the leaderboard table
+    assert "SCOTT CASTELLANO" in body                                        # the selected (marked) row
+
+
+def test_operator_cluster_row_click_switches(monkeypatch):
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.session_state["artifacts"] = _cluster_artifact()
+    at.session_state["open_artifact"] = "c1"
+    at.run()
+
+    # #7 is selected (a marker, not a button); #9 (Rashad) is a clickable row.
+    [b for b in at.button if "DIVYA RASHAD" in (b.label or "")][0].click()
+    at.run()
+    assert at.session_state["artifacts"]["c1"]["selected"] == 9
 
 
 def test_cost_caption_renders_after_a_turn(monkeypatch):

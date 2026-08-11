@@ -169,15 +169,28 @@ def _render_artifact_panel(artifact) -> None:
 
 
 def _render_cluster_body(artifact) -> None:
-    """Operator-network artifact: a compact leaderboard + the resolved #1 cluster as a
-    self-contained SVG graph (isolated in an iframe)."""
+    """Operator-network artifact: a clickable leaderboard (pick an operator) over the
+    selected cluster as a self-contained SVG graph (isolated in an iframe)."""
     leaderboard = artifact.get("leaderboard", [])
-    if leaderboard:
-        rows = "\n".join(
-            f"| {i} | {r['operator']} | {r['buildings']} | {r['records']} |"
-            for i, r in enumerate(leaderboard[:8], 1))
-        st.markdown("| # | Operator | Buildings | Records |\n|---|---|---|---|\n" + rows)
-    cluster = artifact.get("cluster", {})
+    clusters = artifact.get("clusters", {})
+    if not clusters:
+        st.caption("No operators resolved.")
+        return
+    selected = artifact.get("selected")
+    if selected not in clusters:
+        selected = leaderboard[0]["componentId"] if leaderboard else next(iter(clusters))
+        artifact["selected"] = selected
+    # Clickable leaderboard in a scroll box; the current pick is marked, not a button.
+    with st.container(height=190):
+        for i, r in enumerate(leaderboard, 1):
+            cid = r["componentId"]
+            label = f"{i}. {r['operator']} · {r['buildings']} bldgs · {r['records']} recs"
+            if cid == selected:
+                st.markdown(f"**▸ {label}**")
+            elif st.button(label, key=f"op_{cid}", width="stretch"):
+                artifact["selected"] = cid
+                st.rerun()
+    cluster = clusters[selected]
     st.iframe(cluster_viz.to_html(cluster, branded=False), height=_PANEL_HEIGHT)
     st.download_button(
         "Download network (.html)", cluster_viz.to_html(cluster, branded=True),
@@ -344,7 +357,8 @@ with st.sidebar:
         _aid = uuid.uuid4().hex[:8]
         st.session_state.artifacts[_aid] = {
             "kind": "operator_cluster", "question": "Top hidden operators",
-            "cluster": _payload["top_operator"], "leaderboard": _payload["leaderboard"]}
+            "clusters": _payload["clusters"], "leaderboard": _payload["leaderboard"],
+            "selected": _payload["leaderboard"][0]["componentId"] if _payload["leaderboard"] else None}
         st.session_state.open_artifact = _aid
         st.rerun()
 

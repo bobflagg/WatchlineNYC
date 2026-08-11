@@ -56,8 +56,8 @@ def _svg(cluster: dict[str, Any]) -> str:
             f'stroke="{_GOLD}" stroke-width="{2 if b else 1}" {dash}/>'
             f'<text x="{x:.0f}" y="{y + 4:.0f}" text-anchor="middle" fill="#fff" '
             f'font-size="{13 if b else 11}" font-weight="700">{b}</text>'
-            f'<text x="{x:.0f}" y="{y + r + 13:.0f}" text-anchor="middle" fill="#5c6b80" '
-            f'font-size="9">{short}</text></g>')
+            f'<text x="{x:.0f}" y="{y + r + 14:.0f}" text-anchor="middle" fill="#2b3a4f" '
+            f'font-size="10" font-weight="600">{short}</text></g>')
 
     name_lines = []
     for e in edges:
