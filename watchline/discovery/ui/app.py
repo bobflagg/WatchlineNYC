@@ -529,10 +529,6 @@ with st.sidebar:
         st.session_state.artifact_expanded = False
         st.rerun()
 
-# --- intro caption (brand now lives in the sidebar logo) ---
-st.caption("Ask about a building, landlord, or portfolio. Every answer is grounded "
-           "in the public record; nothing is asserted that a tool did not return.")
-
 # --- web search availability (Tavily is optional) ---
 if not os.environ.get("TAVILY_API_KEY"):
     _render_web_search_notice()
