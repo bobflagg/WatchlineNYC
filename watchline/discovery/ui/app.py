@@ -54,6 +54,7 @@ st.session_state.setdefault("last_evidence", None)
 st.session_state.setdefault("last_turn", None)
 st.session_state.setdefault("artifacts", {})        # id -> turn dict (investigation reports)
 st.session_state.setdefault("open_artifact", None)  # id shown in the side panel, or None
+st.session_state.setdefault("artifact_expanded", False)  # artifact fills the whole main panel
 
 
 _BRAND_HEADER = (
@@ -156,12 +157,21 @@ def _render_artifact_panel(artifact) -> None:
         return
     kind = artifact.get("kind", "report")
     title = "🕸 Operator network" if kind == "operator_cluster" else "📄 Investigation report"
-    hcol, xcol = st.columns([5, 1], vertical_alignment="center")
+    expanded = st.session_state.get("artifact_expanded", False)
+    hcol, ecol, xcol = st.columns([6, 1, 1], vertical_alignment="center")
     with hcol:
         st.markdown(f"**{title}**")
+    with ecol:
+        # Toggle the artifact between the split view and the full main panel.
+        exp_glyph = "⤡" if expanded else "⤢"
+        exp_help = "Collapse to split view" if expanded else "Expand to full width"
+        if st.button(exp_glyph, key="expand_artifact", help=exp_help, width="stretch"):
+            st.session_state.artifact_expanded = not expanded
+            st.rerun()
     with xcol:
         if st.button("✕", key="close_artifact", help="Close", width="stretch"):
             st.session_state.open_artifact = None
+            st.session_state.artifact_expanded = False
             st.rerun()
     if kind == "operator_cluster":
         _render_cluster_body(artifact)
@@ -398,6 +408,7 @@ def _render_artifact_card(artifact_id: str) -> None:
             st.caption("Open in the panel →")
         elif st.button("Open report", key=f"open_{artifact_id}", width="stretch"):
             st.session_state.open_artifact = artifact_id
+            st.session_state.artifact_expanded = False
             st.rerun()
 
 
@@ -429,6 +440,7 @@ with st.sidebar:
             "clusters": _payload["clusters"], "leaderboard": _payload["leaderboard"],
             "selected": _payload["leaderboard"][0]["componentId"] if _payload["leaderboard"] else None}
         st.session_state.open_artifact = _aid
+        st.session_state.artifact_expanded = False
         st.rerun()
 
 # --- intro caption (brand now lives in the sidebar logo) ---
@@ -471,6 +483,7 @@ if prompt:
         artifact_id = uuid.uuid4().hex[:8]
         st.session_state.artifacts[artifact_id] = turn
         st.session_state.open_artifact = artifact_id
+        st.session_state.artifact_expanded = False
         assistant_msg["artifact_id"] = artifact_id
     st.session_state.messages.append(assistant_msg)
 
@@ -479,9 +492,11 @@ if prompt:
     _render_cost_and_evidence()        # nothing open: finish full-width
     st.stop()
 
-# --- display: split when an artifact is open, else full-width chat ---
+# --- display: expanded artifact fills the panel; else split; else full-width chat ---
 _open_art = st.session_state.artifacts.get(st.session_state.open_artifact)
-if _open_art is not None:
+if _open_art is not None and st.session_state.get("artifact_expanded"):
+    _render_artifact_panel(_open_art)              # artifact takes the whole main panel
+elif _open_art is not None:
     chat_col, report_col = st.columns([4, 5], gap="large")
     with chat_col:
         # Scroll the transcript inside a fixed-height box the same height as the report,

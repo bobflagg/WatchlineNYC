@@ -146,6 +146,28 @@ def test_artifact_card_open_and_close(monkeypatch):
     assert any(b.label == "Open report" for b in at.button)         # card can reopen it
 
 
+def test_artifact_expand_toggles_full_width(monkeypatch):
+    # The expand button fills the main panel with the artifact; collapse restores the
+    # split. Closing resets the expanded state.
+    _stub_agent(monkeypatch, [], chunks_fn=_scripted_investigation_chunks)
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.chat_input[0].set_value("Investigate landlord ACT-LL-42357").run()
+    assert at.session_state["artifact_expanded"] is False           # opens split
+
+    [b for b in at.button if b.label == "⤢"][0].click()             # expand
+    at.run()
+    assert at.session_state["artifact_expanded"] is True
+    assert "Download" in [b.label for b in at.download_button]       # artifact still rendered
+
+    [b for b in at.button if b.label == "⤡"][0].click()             # collapse
+    at.run()
+    assert at.session_state["artifact_expanded"] is False
+
+    at.session_state["open_artifact"] = None                         # close resets expand
+    at.run()
+    assert at.session_state["artifact_expanded"] is False
+
+
 def _cluster_artifact():
     def c(name, buildings):
         return {"name": name, "buildings": buildings, "residential_units": 1,
