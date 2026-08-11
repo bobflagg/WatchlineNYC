@@ -242,6 +242,12 @@ def test_operator_cluster_lazy_events(monkeypatch):
     assert at.session_state["artifacts"]["c1"]["clusters"][7]["events"] == [
         {"event_type": "Complaint", "events": 42}]              # loaded + cached
 
+    body = " ".join(m.value or "" for m in at.markdown)
+    assert "Portfolio event fingerprint" in body                # surfaced in-app as chips
+    assert "Complaint" in body and "42" in body
+    assert not any("event fingerprint" in (b.label or "").lower()
+                   for b in at.button)                          # load button now gone
+
 
 def test_cost_caption_renders_after_a_turn(monkeypatch):
     _stub_agent(monkeypatch, [])

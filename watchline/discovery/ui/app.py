@@ -11,6 +11,7 @@ reliability caveats, resolved reference, web sources). All stream parsing lives 
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import uuid
@@ -215,6 +216,35 @@ def _render_leaderboard_table(artifact, leaderboard, selected) -> None:
             st.rerun()
 
 
+def _render_event_fingerprint(cluster) -> None:
+    """The selected operator's portfolio events by type, as a compact centred row of
+    chips under the graph — the on-screen form of what ``operator_events`` loads (the
+    downloadable HTML prints the same data as a text line). Called only once the
+    fingerprint has been loaded; an empty portfolio just says so."""
+    events = cluster.get("events") or []
+    if not events:
+        st.caption("No public-record events found for this portfolio.")
+        return
+    total = sum(int(e["events"]) for e in events)
+    chips = [
+        f'<span style="background:#12243f;color:#fff;border:1px solid #d4a017;'
+        f'border-radius:999px;padding:.15rem .6rem;font-size:.8rem;white-space:nowrap">'
+        f'{html.escape(str(e["event_type"]))} '
+        f'<b style="color:#d4a017">{int(e["events"]):,}</b></span>'
+        for e in events[:8]]
+    if len(events) > 8:
+        chips.append(
+            f'<span style="color:#5c6b80;font-size:.8rem;align-self:center">'
+            f'+{len(events) - 8} more</span>')
+    st.markdown(
+        '<div style="text-align:center;font-size:.66rem;letter-spacing:.14em;'
+        'text-transform:uppercase;color:#8a97a8;margin:.1rem 0 .4rem">'
+        f'Portfolio event fingerprint · {total:,} events</div>'
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;'
+        f'margin-bottom:.5rem">{"".join(chips)}</div>',
+        unsafe_allow_html=True)
+
+
 def _render_cluster_body(artifact) -> None:
     """Operator-network artifact: an interactive leaderboard (pick an operator) over the
     selected cluster as a self-contained SVG graph (isolated in an iframe)."""
@@ -233,6 +263,8 @@ def _render_cluster_body(artifact) -> None:
     _render_leaderboard_table(artifact, leaderboard, selected)
     cluster = clusters[selected]
     _render_operator_graph(artifact, cluster)
+    if cluster.get("_events_loaded"):
+        _render_event_fingerprint(cluster)
     # Action row: load-events (on demand — events are heavy across the whole leaderboard,
     # so this operator's fingerprint is fetched lazily and cached) + download, on one
     # centred line, both black with white labels. When events are loaded the first button
