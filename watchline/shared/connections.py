@@ -1,13 +1,23 @@
-import os
-
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
+import os
+import psycopg2
 
 load_dotenv()
 
 
 NEO4J_DISCOVERY_DATABASE   = os.environ.get("NEO4J_DISCOVERY_DATABASE",   "discovery")
 
+def pg_conn():
+    kwargs = dict(
+        host=os.environ["PGHOST"],
+        port=os.environ["PGPORT"],
+        dbname=os.environ["PGDATABASE"],
+        user=os.environ["PGUSER"],
+        password=os.environ["PGPASSWORD"],
+        keepalives=1,
+    )
+    return psycopg2.connect(**kwargs)
 
 
 def neo4j_driver():
