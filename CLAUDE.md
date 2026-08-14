@@ -4,6 +4,12 @@ Guidance for Claude Code sessions working in this repository. Read this before
 adding features or refactoring — it captures the architecture and the
 non-negotiable invariants that aren't obvious from any single file.
 
+> **Continuing the entity-linking / portfolio-construction pipeline (Splink)?**
+> That's a separate sub-project with its own scoped handoff notes — read
+> [`watchline/discovery/ingest/portfolio/CLAUDE.md`](watchline/discovery/ingest/portfolio/CLAUDE.md)
+> first. It lives on the `entity-linking-prototype` branch and is independent of
+> the app/agent documented below.
+
 ## What this is
 
 WatchlineNYC is accountability infrastructure for NYC housing: it lets
