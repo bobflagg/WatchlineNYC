@@ -142,6 +142,28 @@ def address_degrees(conn) -> pd.DataFrame:
     return pd.read_sql(ADDR_DEGREE_SQL, conn)
 
 
+# Distinct landlords per corporation name — the corp analog of address degree. A
+# corp used by many unrelated landlords is a registered agent / big manager, a weak
+# cross-office bridge; a private umbrella (Croman's Centennial) is used by few.
+CORP_DEGREE_SQL = r"""
+SELECT corp, count(DISTINCT who) AS degree
+FROM (
+  SELECT DISTINCT upper(btrim(c.corporationname)) AS corp,
+                  upper(btrim(c.firstname)) || '|' || upper(btrim(c.lastname)) AS who
+  FROM hpd_contacts c
+  WHERE c.corporationname IS NOT NULL AND length(btrim(c.corporationname)) > 3
+    AND (c.firstname IS NOT NULL OR c.lastname IS NOT NULL)
+) t
+GROUP BY corp
+"""
+
+
+def corp_degrees(conn) -> pd.DataFrame:
+    """Full-population corp -> distinct-landlord count, to cap aggregator corps in
+    the feedback merge."""
+    return pd.read_sql(CORP_DEGREE_SQL, conn)
+
+
 def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
         aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
     """Build + train the Splink model and return ``(linker, predictions)``.
@@ -244,3 +266,65 @@ def build_portfolios(df: pd.DataFrame, clusters: pd.DataFrame) -> pd.DataFrame:
                      "n_bbls": len(bbls), "bbls": bbls})
     return (pd.DataFrame(rows).sort_values("n_bbls", ascending=False)
               .reset_index(drop=True))
+
+
+def corp_owners_for(conn, bbls) -> pd.DataFrame:
+    """Corporate co-owner names on a set of buildings — the cross-office bridge.
+    Returns (bbl, corp). E.g. CENTENNIAL PROPERTIES NY spans all of Croman's
+    offices, so his 740 Broadway and 424 W 51 entities share it."""
+    q = ("SELECT DISTINCT btrim(r.bbl) AS bbl, upper(btrim(c.corporationname)) AS corp "
+         "FROM hpd_contacts c JOIN hpd_registrations r ON r.registrationid = c.registrationid "
+         "WHERE c.corporationname IS NOT NULL AND length(btrim(c.corporationname)) > 3 "
+         "AND btrim(r.bbl) = ANY(%(bbls)s)")
+    return pd.read_sql(q, conn, params={"bbls": list(bbls)})
+
+
+def feedback_merge(df: pd.DataFrame, clusters: pd.DataFrame, corp_df: pd.DataFrame,
+                   corp_deg: pd.DataFrame | None = None, corp_cap: int = 25) -> pd.DataFrame:
+    """One feedback-loop pass: merge pass-1 entities that are name-compatible
+    (same last name + first initial) AND share a corporate co-owner across their
+    buildings. This bridges the cross-office splits name+address alone can't
+    (Croman's 740 Broadway <-> 424 W 51, via Centennial Properties). Corps shared by
+    more than ``corp_cap`` distinct landlords (registered agents / big managers) are
+    excluded — they're weak bridges, the corp analog of the aggregator address cap.
+    Returns the clusters frame with a re-mapped ``cluster_id``."""
+    from collections import defaultdict
+
+    if corp_deg is not None:
+        keep = set(corp_deg.loc[corp_deg["degree"] <= corp_cap, "corp"])
+        corp_df = corp_df[corp_df["corp"].isin(keep)]
+    corp_by_bbl = corp_df.groupby("bbl")["corp"].apply(set).to_dict()
+    m = clusters[["unique_id", "cluster_id", "last_name", "first_initial"]].merge(
+        df[["unique_id", "bbls"]], on="unique_id")
+
+    ent = {}
+    for cid, g in m.groupby("cluster_id"):
+        bbls = {b for lst in g["bbls"] for b in (lst or [])}
+        corps = set().union(*(corp_by_bbl.get(b, set()) for b in bbls)) if bbls else set()
+        last = g["last_name"].mode()
+        init = g["first_initial"].mode()
+        ent[cid] = {"corps": corps,
+                    "last": last.iloc[0] if len(last) else None,
+                    "init": init.iloc[0] if len(init) else None}
+
+    parent = {cid: cid for cid in ent}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]; x = parent[x]
+        return x
+
+    # Block by (last name, first initial); only same-name entities can merge.
+    groups = defaultdict(list)
+    for cid, e in ent.items():
+        if e["last"] and e["corps"]:
+            groups[(e["last"], e["init"])].append(cid)
+    for ids in groups.values():
+        for i in range(len(ids)):
+            for j in range(i + 1, len(ids)):
+                if ent[ids[i]]["corps"] & ent[ids[j]]["corps"]:
+                    parent[find(ids[i])] = find(ids[j])
+
+    remap = {cid: find(cid) for cid in ent}
+    out = clusters.copy()
+    out["cluster_id"] = out["cluster_id"].map(lambda c: remap.get(c, c))
+    return out

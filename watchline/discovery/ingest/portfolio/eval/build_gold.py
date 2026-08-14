@@ -76,6 +76,11 @@ def adjudicate(r) -> tuple[str, str]:
         who = "divya" if fn.startswith("DIVYA") else ("jamal" if fn.startswith("JAMAL") else fn.lower())
         return f"e_rashad_{who}_{ok}", f"rashad_{who} @ {ok}"
     if ln == "CASTELLANO":
+        if fn == "SCOTT":
+            # Choice NY Management (private, 8 landlords) bridges his 22 W 21 and
+            # 254 W 31 offices across 40 buildings -> one operator (evidence, not the
+            # model): the loop surfaced this; verified independently.
+            return "e_castellano_scott", "castellano_scott (one operator — corp-bridged offices)"
         return f"e_castellano_{fn.lower()}_{ok}", f"castellano_{fn.lower()} @ {ok}"
     # Decoys keyed on the person, so a decoy's own duplicate records are one entity.
     return f"e_nbr_{fn}_{ln}", "aggregator_neighbour (must-NOT-merge)"
