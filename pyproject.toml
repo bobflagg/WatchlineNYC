@@ -25,6 +25,13 @@ dependencies = [
     "streamlit>=1.61.0",
     "markdown-it-py>=4.2.0",
     "streamlit-agraph>=0.0.45",
+]
+
+# Ingest / entity-linking pipeline deps — optional, kept out of the default
+# install so the app + agent stay lean. Install with: uv sync --extra ingest
+# (or `pip install '.[ingest]'`). `splink` pulls duckdb transitively.
+[project.optional-dependencies]
+ingest = [
     "psycopg2-binary>=2.9.12",
     "splink>=4.0.16",
 ]

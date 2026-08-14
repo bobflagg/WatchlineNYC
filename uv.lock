@@ -2777,11 +2777,15 @@ dependencies = [
     { name = "langsmith", extra = ["claude-agent-sdk"] },
     { name = "markdown-it-py" },
     { name = "neo4j" },
-    { name = "psycopg2-binary" },
     { name = "python-dotenv" },
-    { name = "splink" },
     { name = "streamlit" },
     { name = "streamlit-agraph" },
+]
+
+[package.optional-dependencies]
+ingest = [
+    { name = "psycopg2-binary" },
+    { name = "splink" },
 ]
 
 [package.dev-dependencies]
@@ -2802,12 +2806,13 @@ requires-dist = [
     { name = "langsmith", extras = ["claude-agent-sdk"], specifier = ">=0.3.4" },
     { name = "markdown-it-py", specifier = ">=4.2.0" },
     { name = "neo4j", specifier = ">=6.2.0" },
-    { name = "psycopg2-binary", specifier = ">=2.9.12" },
+    { name = "psycopg2-binary", marker = "extra == 'ingest'", specifier = ">=2.9.12" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "splink", specifier = ">=4.0.16" },
+    { name = "splink", marker = "extra == 'ingest'", specifier = ">=4.0.16" },
     { name = "streamlit", specifier = ">=1.61.0" },
     { name = "streamlit-agraph", specifier = ">=0.0.45" },
 ]
+provides-extras = ["ingest"]
 
 [package.metadata.requires-dev]
 dev = [
