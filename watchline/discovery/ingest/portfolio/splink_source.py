@@ -226,3 +226,21 @@ def link(df: pd.DataFrame, *, threshold: float = 0.95, seed: int = 42):
     """Convenience: fit + cluster at one threshold. Returns ``(clusters_df, linker)``."""
     linker, preds = fit(df, seed=seed)
     return cluster(linker, preds, threshold), linker
+
+
+def build_portfolios(df: pd.DataFrame, clusters: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate Splink clusters into resolved-entity portfolios — the entity ->
+    portfolio stage. At the name+address level the entity *is* the portfolio: its
+    building set is the union of its member records' ``bbls`` (this is what recovers
+    Croman's / Rashad's WoW-split buildings into one portfolio). One row per entity:
+    ``entity_id, name, n_records, n_bbls, bbls``."""
+    m = clusters[["unique_id", "cluster_id"]].merge(
+        df[["unique_id", "name_full", "bbls", "n_bbls"]], on="unique_id")
+    rows = []
+    for cid, g in m.groupby("cluster_id"):
+        bbls = sorted({b for lst in g["bbls"] for b in (lst or [])})
+        name = g.sort_values("n_bbls", ascending=False)["name_full"].iloc[0]
+        rows.append({"entity_id": cid, "name": name, "n_records": len(g),
+                     "n_bbls": len(bbls), "bbls": bbls})
+    return (pd.DataFrame(rows).sort_values("n_bbls", ascending=False)
+              .reset_index(drop=True))
