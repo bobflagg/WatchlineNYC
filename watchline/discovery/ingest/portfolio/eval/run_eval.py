@@ -23,12 +23,13 @@ def main():
     df = pd.concat([ss.extract(conn, TARGET_WHERE),
                     ss.extract(conn, NBR_WHERE),
                     ss.extract(conn, "random() < 0.012")], ignore_index=True)
+    degs = ss.address_degrees(conn)          # full-population aggregator degrees
     conn.close()
     df = df[df.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
     gold = scorer.load_gold(GOLD)
-    print(f"records: {len(df)}   gold labels: {len(gold)}")
+    print(f"records: {len(df)}   gold labels: {len(gold)}   addr-degree rows: {len(degs)}")
 
-    linker, preds = ss.fit(df)
+    linker, preds = ss.fit(df, addr_degrees=degs)
     table = scorer.sweep(linker, preds, gold, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98))
     print("\n" + table.to_string(index=False))
 

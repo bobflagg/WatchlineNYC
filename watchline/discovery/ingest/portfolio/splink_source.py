@@ -92,8 +92,9 @@ GROUP BY contact_kind, name_full, first_name, last_name, name_normalized,
 """
 
 # A (house, street) shared by more than this many distinct landlords is treated as
-# an aggregator/registered-agent address and its address evidence is dropped.
-AGGREGATOR_DEGREE = 5
+# an aggregator/registered-agent address and its address evidence is dropped. Tuned
+# for full-population degrees (WoW's MAX_ADDR_DEGREE is 50 over its node set).
+AGGREGATOR_DEGREE = 25
 
 # Columns Splink compares (scalars only; bbls/assoc_corps ride along as payload).
 COMPARISON_COLS = ["unique_id", "contact_kind", "name_full", "first_name", "last_name",
@@ -112,11 +113,43 @@ def extract(conn, where: str = "TRUE") -> pd.DataFrame:
     return pd.read_sql(sql, conn)   # no params -> LIKE '%' in `where` stays literal
 
 
-def fit(df: pd.DataFrame, *, seed: int = 42):
+# Distinct landlords per (house, normalized street) across the WHOLE owner-contact
+# population — the aggregator signal. Computed unfiltered (no slice), so masking is
+# production-correct rather than depending on what happens to be in a sample. The
+# street-suffix regex MUST match biz_street_norm in EXTRACT_SQL so the join lines up.
+ADDR_DEGREE_SQL = r"""
+SELECT h AS biz_house, s AS biz_street_norm, count(DISTINCT who) AS addr_degree
+FROM (
+  SELECT DISTINCT
+    upper(btrim(c.firstname)) || '|' || upper(btrim(c.lastname))          AS who,
+    NULLIF(upper(btrim(c.businesshousenumber)),'')                        AS h,
+    regexp_replace(NULLIF(upper(btrim(c.businessstreetname)),''),
+      '\s+(STREET|ST|AVENUE|AVE|PLACE|PL|BOULEVARD|BLVD|ROAD|RD|LANE|LN|DRIVE|DR|COURT|CT|PARKWAY|PKWY|TERRACE|TER)$',
+      '')                                                                 AS s
+  FROM hpd_contacts c
+  WHERE c.type = ANY('{HeadOfficer,IndividualOwner,CorporateOwner,JointOwner}')
+    AND (c.firstname IS NOT NULL OR c.lastname IS NOT NULL)
+    AND (c.businesshousenumber IS NOT NULL OR c.businessstreetname IS NOT NULL)
+) t
+WHERE h IS NOT NULL AND s IS NOT NULL
+GROUP BY h, s
+"""
+
+
+def address_degrees(conn) -> pd.DataFrame:
+    """Full-population (house, biz_street_norm) -> distinct-landlord count. Pass to
+    ``fit(addr_degrees=...)`` so the aggregator mask uses real degrees, not sample."""
+    return pd.read_sql(ADDR_DEGREE_SQL, conn)
+
+
+def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
+        aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
     """Build + train the Splink model and return ``(linker, predictions)``.
 
     Predictions are made at a permissive threshold, so the caller can cluster at
     any higher threshold (e.g. to sweep against a gold set) without re-predicting.
+    Pass ``addr_degrees`` (from :func:`address_degrees`) to mask on real full-
+    population degrees; otherwise degree is computed within ``df`` (sample-only).
     """
     import splink.comparison_library as cl
     from splink import DuckDBAPI, Linker, SettingsCreator, block_on
@@ -128,9 +161,15 @@ def fit(df: pd.DataFrame, *, seed: int = 42):
     # shared by many *distinct* landlords is a registered-agent / office building, not
     # a private office. Drop its address evidence so those records can only link on
     # name — same-name pairs still merge, different-name neighbours no longer do.
-    addr_deg = d.groupby(["biz_house", "biz_street_norm"])["name_normalized"].transform("nunique")
-    d.loc[addr_deg > AGGREGATOR_DEGREE,
+    if addr_degrees is not None:
+        d = d.merge(addr_degrees, on=["biz_house", "biz_street_norm"], how="left")
+        d["_deg"] = d["addr_degree"].fillna(0)
+        d = d.drop(columns=["addr_degree"])
+    else:
+        d["_deg"] = d.groupby(["biz_house", "biz_street_norm"])["name_normalized"].transform("nunique")
+    d.loc[d["_deg"] > aggregator_degree,
           ["biz_house", "biz_street", "biz_street_norm", "biz_zip", "biz_apt_num"]] = None
+    d = d.drop(columns=["_deg"])
 
     settings = SettingsCreator(
         link_type="dedupe_only",
