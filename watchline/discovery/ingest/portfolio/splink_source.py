@@ -164,6 +164,30 @@ def corp_degrees(conn) -> pd.DataFrame:
     return pd.read_sql(CORP_DEGREE_SQL, conn)
 
 
+# Distinct landlord identities per (last name, first initial) — name rarity. A rare
+# name (Croman/Castellano/Kadden ~5-11) across offices is almost surely one person;
+# a common one (Smith 25, Chen 232) might be several, so the corp-bridge — a shared
+# third-party manager — must NOT merge them.
+NAME_FREQ_SQL = r"""
+SELECT last AS last_name, init AS first_initial, count(*) AS identities
+FROM (
+  SELECT DISTINCT upper(btrim(lastname)) AS last, left(upper(btrim(firstname)),1) AS init,
+                  upper(btrim(firstname)) AS f, upper(btrim(businesshousenumber)) AS h,
+                  upper(btrim(businessstreetname)) AS s
+  FROM hpd_contacts
+  WHERE lastname IS NOT NULL AND firstname IS NOT NULL
+    AND type = ANY('{HeadOfficer,IndividualOwner,CorporateOwner,JointOwner}')
+) t
+GROUP BY last, init
+"""
+
+
+def name_freq(conn) -> pd.DataFrame:
+    """Full-population (last name, first initial) -> distinct-identity count, to gate
+    the feedback merge to rare names."""
+    return pd.read_sql(NAME_FREQ_SQL, conn)
+
+
 def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
         aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
     """Build + train the Splink model and return ``(linker, predictions)``.
@@ -280,19 +304,30 @@ def corp_owners_for(conn, bbls) -> pd.DataFrame:
 
 
 def feedback_merge(df: pd.DataFrame, clusters: pd.DataFrame, corp_df: pd.DataFrame,
-                   corp_deg: pd.DataFrame | None = None, corp_cap: int = 25) -> pd.DataFrame:
+                   corp_deg: pd.DataFrame | None = None, corp_cap: int = 25,
+                   name_freq: pd.DataFrame | None = None, name_cap: int = 15) -> pd.DataFrame:
     """One feedback-loop pass: merge pass-1 entities that are name-compatible
     (same last name + first initial) AND share a corporate co-owner across their
     buildings. This bridges the cross-office splits name+address alone can't
-    (Croman's 740 Broadway <-> 424 W 51, via Centennial Properties). Corps shared by
-    more than ``corp_cap`` distinct landlords (registered agents / big managers) are
-    excluded — they're weak bridges, the corp analog of the aggregator address cap.
+    (Croman's 740 Broadway <-> 424 W 51, via Centennial Properties). Two guards:
+
+      * corp_cap — corps shared by more than this many distinct landlords
+        (registered agents / big managers) are excluded (aggregator-corp cap).
+      * name_cap — only names with at most this many distinct identities are
+        bridged. A shared corp is often just a third-party MANAGER; for a rare name
+        (Croman ~8) the pair is still surely one person, but for a common one
+        (Smith 25, Chen 232) it isn't — so common names are never corp-bridged.
+
     Returns the clusters frame with a re-mapped ``cluster_id``."""
     from collections import defaultdict
 
     if corp_deg is not None:
         keep = set(corp_deg.loc[corp_deg["degree"] <= corp_cap, "corp"])
         corp_df = corp_df[corp_df["corp"].isin(keep)]
+    rare = None
+    if name_freq is not None:
+        rare = set(map(tuple, name_freq.loc[name_freq["identities"] <= name_cap,
+                                            ["last_name", "first_initial"]].to_numpy()))
     corp_by_bbl = corp_df.groupby("bbl")["corp"].apply(set).to_dict()
     m = clusters[["unique_id", "cluster_id", "last_name", "first_initial"]].merge(
         df[["unique_id", "bbls"]], on="unique_id")
@@ -318,7 +353,9 @@ def feedback_merge(df: pd.DataFrame, clusters: pd.DataFrame, corp_df: pd.DataFra
     for cid, e in ent.items():
         if e["last"] and e["corps"]:
             groups[(e["last"], e["init"])].append(cid)
-    for ids in groups.values():
+    for key, ids in groups.items():
+        if rare is not None and key not in rare:
+            continue                         # common name — never corp-bridge
         for i in range(len(ids)):
             for j in range(i + 1, len(ids)):
                 if ent[ids[i]]["corps"] & ent[ids[j]]["corps"]:

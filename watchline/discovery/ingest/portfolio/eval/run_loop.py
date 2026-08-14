@@ -20,9 +20,13 @@ GOLD = Path(scorer.__file__).parent / "gold_set.csv"
 
 
 def main():
+    # Common surnames added so the gate has common-name bridge candidates to suppress.
+    COMMON = ("upper(btrim(c.lastname)) = ANY("
+              "ARRAY['SMITH','CHEN','LEE','COHEN','GONZALEZ','WONG','KIM','PATEL','NGUYEN'])")
     conn = pg_conn()
     df = pd.concat([ss.extract(conn, TARGET_WHERE),
                     ss.extract(conn, NBR_WHERE),
+                    ss.extract(conn, COMMON),
                     ss.extract(conn, "random() < 0.012")], ignore_index=True)
     degs = ss.address_degrees(conn)
     df = df[df.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
@@ -35,12 +39,26 @@ def main():
     all_bbls = {b for lst in df["bbls"] for b in (lst or [])}
     corp = ss.corp_owners_for(conn, all_bbls)
     corp_deg = ss.corp_degrees(conn)          # cap aggregator corps (registered agents)
+    nf = ss.name_freq(conn)                    # name rarity, to gate the corp-bridge
     conn.close()
-    pass2 = ss.feedback_merge(df, pass1, corp, corp_deg=corp_deg)
+
+    pass2 = ss.feedback_merge(df, pass1, corp, corp_deg=corp_deg, name_freq=nf)
+    ungated = ss.feedback_merge(df, pass1, corp, corp_deg=corp_deg)   # no name gate
+
+    # How many common-name blocks the gate stops the loop from bridging. Cluster
+    # frames already carry last_name/first_initial, so group directly.
+    base = pass1.groupby(["last_name", "first_initial"])["cluster_id"].nunique()
+    def collapsed(cl):
+        n = cl.groupby(["last_name", "first_initial"])["cluster_id"].nunique()
+        return {k for k in n.index if n[k] < base.get(k, n[k])}
+    freq = dict(zip(zip(nf.last_name, nf.first_initial), nf.identities))
+    suppressed = {k for k in collapsed(ungated) - collapsed(pass2) if freq.get(k, 0) > 15}
 
     m1, _, _ = scorer.score(pass1, gold)
     m2, fp2, fn2 = scorer.score(pass2, gold)
-    print(f"records {len(df)}   gold {len(gold)}   corp rows {len(corp)}\n")
+    print(f"records {len(df)}   gold {len(gold)}   corp rows {len(corp)}")
+    print(f"common-name bridges suppressed by the gate: {len(suppressed)} "
+          f"(e.g. {sorted(suppressed)[:4]})\n")
     print(f"{'':<10}{'precision':>10}{'recall':>8}{'f1':>7}{'tp':>5}{'fp':>4}{'fn':>5}")
     for lbl, m in [("pass 1", m1), ("pass 2", m2)]:
         print(f"{lbl:<10}{m['precision']:>10}{m['recall']:>8}{m['f1']:>7}{m['tp']:>5}{m['fp']:>4}{m['fn']:>5}")
