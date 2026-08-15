@@ -8,15 +8,20 @@ WoW `landlords_with_connections` table.
 What this pipeline creates:
     Actor nodes (one per WoW landlord node), each carrying a `bbls` list.
     CONNECTED_BY_NAME / CONNECTED_BY_ADDRESS edges (weighted) between Actors.
+    CONNECTED_BY_SPLINK edges (weighted) between Actors the Splink resolution puts
+        under one owner — Mechanism B, the `splink` step (see splink_bridge.py).
     Portfolio nodes (one per detected cluster), rebuilt every run.
     (Actor)-[:MEMBER_OF]->(Portfolio)
     (Building)-[:IN_PORTFOLIO]->(Portfolio)
     (Actor)-[:APPARENT_CONTROL {heuristic:true, ...}]->(Building)   # flagged heuristic
- 
+
 Clustering is OURS (GDS WCC + recursive Louvain, see algorithms.py); we reuse
-WoW's pairwise linkage but do our own grouping, so clusters differ from
-`wow_portfolios` by design. Portfolio detection is INFERENCE, not fact: nothing
-here asserts legal or beneficial ownership. Never emit OWNS / CONTROLS / :Owner.
+WoW's pairwise linkage — plus the Splink same-owner links, which de-fragment operators
+WoW's name/address matching split (Croman's typo'd offices -> one portfolio) — but do
+our own grouping, so clusters differ from `wow_portfolios` by design. Because the Splink
+links only ADD edges, WCC components only merge, never split: an existing WoW portfolio
+(e.g. an agent-linked shell operation) is preserved. Portfolio detection is INFERENCE,
+not fact: nothing here asserts legal or beneficial ownership. Never emit OWNS / CONTROLS.
  
 Schema: the discovery graph type (../../schema/graph_type.cypher) declares every
 node/relationship type and key used here. `--step schema` applies it. Because
@@ -57,11 +62,12 @@ Prerequisites:
     - Buildings + Actors (registrations) + Events already loaded before reconcile.
     - Reads WoW (`wow`, port 5434), NOT `deedwatch`.
  
-Usage:
+Usage (the `splink` step and a full run need the `ingest` extra: `uv run --extra ingest`):
     uv run python -m watchline.discovery.ingest.portfolio.pipeline --step schema   # once, first
     uv run python -m watchline.discovery.ingest.portfolio.pipeline --step edges
+    uv run --extra ingest python -m ...portfolio.pipeline --step splink            # before reconcile
     uv run python -m watchline.discovery.ingest.portfolio.pipeline --step reconcile
-    uv run python -m watchline.discovery.ingest.portfolio.pipeline                 # all, in order
+    uv run --extra ingest python -m ...portfolio.pipeline                          # all, in order
 """
  
 import argparse
@@ -96,6 +102,7 @@ EDGE_BATCH_SIZE = 5000
 PORTFOLIO_PROGRESS_EVERY = 1000
  
 METHOD = "GDS WCC+Louvain"
+SPLINK_METHOD = "splink-fellegi-sunter"   # provenance on CONNECTED_BY_SPLINK edges
  
 # --- Tuning levers (see CLAUDE.md "Portfolios & apparent control") ----------
 # Weight name-based links above address-based links: shared name is stronger
@@ -128,19 +135,20 @@ def _actor_id(nodeid) -> str:
 def _cypher_statements(path: Path):
     """
     Split a .cypher file into individual ';'-terminated statements, skipping
-    any chunk that's comments/whitespace only -- e.g. a trailing comment
-    block, or an entire statement left commented out for later (see
-    indexes.cypher's composite-index example). Cypher accepts inline '//'
-    comments anywhere in a statement (graph_type.cypher's single ALTER block
-    already relies on this working), so the yielded text still includes its
-    comments -- only the "is there anything to execute at all" check strips
-    them first.
+    empty chunks (blank lines, or a statement left fully commented out for later
+    -- see indexes.cypher's composite-index example).
+
+    Strips ``//`` line comments BEFORE splitting on ';': a comment may itself
+    contain a ';' (e.g. indexes.cypher's "...in the background; it just isn't
+    used"), and splitting the raw text would turn the comment's tail into a
+    spurious, unparseable statement. graph_type.cypher is applied whole-file by
+    step_schema (not through this splitter), so its inline comments are untouched.
     """
-    for chunk in path.read_text().split(";"):
-        meaningful = "\n".join(
-            line for line in chunk.splitlines() if not line.strip().startswith("//")
-        ).strip()
-        if meaningful:
+    text = "\n".join(
+        line.split("//", 1)[0] for line in path.read_text().splitlines()
+    )
+    for chunk in text.split(";"):
+        if chunk.strip():
             yield chunk.strip()
  
  
@@ -317,6 +325,13 @@ _EDGE_CYPHER = {
     SET r.weight = CASE WHEN r.weight IS NULL OR e.weight > r.weight
                         THEN e.weight ELSE r.weight END
     """,
+    "SPLINK": """
+    UNWIND $batch AS e
+    MATCH (a:Actor {actor_id: e.src})
+    MATCH (b:Actor {actor_id: e.dst})
+    MERGE (a)-[r:CONNECTED_BY_SPLINK]-(b)
+    SET r.weight = e.weight, r.method = e.method
+    """,
 }
  
  
@@ -344,6 +359,51 @@ def step_edges(driver) -> None:
         conn.close()
  
  
+# ---------------------------------------------------------------------------
+# Step 1b: Splink same-owner edges (Mechanism B)
+# ---------------------------------------------------------------------------
+
+# CONNECTED_BY_SPLINK is fully derived from a stochastic resolution, so drop and
+# rebuild it every run (the name/address links are deterministic and just MERGE).
+_SPLINK_CLEANUP = ("MATCH ()-[r:CONNECTED_BY_SPLINK]->() "
+                   "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS")
+
+
+def load_splink_edges(session, conn) -> int:
+    """Resolve owners with Splink and MERGE CONNECTED_BY_SPLINK between the Actor nodes
+    that resolve to one owner (Mechanism B, see splink_bridge). De-fragments WoW's
+    name/address clusters — Croman's typo'd offices collapse into one portfolio — without
+    touching what WoW already links (edges only add, so components only merge). Requires
+    the `ingest` extra (splink); imported lazily so schema/edges/reconcile do not."""
+    from . import splink_bridge
+
+    print("  Resolving owners with Splink (full-population linkage; ~1 min) ...")
+    edges = splink_bridge.splink_edges(conn)
+    session.run(_SPLINK_CLEANUP)
+
+    cypher = _EDGE_CYPHER["SPLINK"]
+    total, batch = 0, []
+    for src, dst, weight in edges.itertuples(index=False):
+        batch.append({"src": _actor_id(int(src)), "dst": _actor_id(int(dst)),
+                      "weight": float(weight), "method": SPLINK_METHOD})
+        if len(batch) == EDGE_BATCH_SIZE:
+            session.run(cypher, batch=batch); total += len(batch); batch = []
+    if batch:
+        session.run(cypher, batch=batch); total += len(batch)
+    return total
+
+
+def step_splink(driver) -> None:
+    print("Step 1b -- CONNECTED_BY_SPLINK edges from the Splink owner resolution ...")
+    conn = pg_conn()
+    try:
+        with driver.session(database=NEO4J_DATABASE) as session:
+            n = load_splink_edges(session, conn)
+            print(f"  {n:,} CONNECTED_BY_SPLINK edges written.")
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Step 2: Reconcile — GDS clustering + Portfolio materialization
 # ---------------------------------------------------------------------------
@@ -432,6 +492,7 @@ def step_reconcile(driver) -> None:
 def run_all(driver) -> None:
     step_schema(driver)      # idempotent; also run standalone first on empty DB
     step_edges(driver)
+    step_splink(driver)      # CONNECTED_BY_SPLINK before reconcile projects it
     step_reconcile(driver)
     print("")
     print("Portfolio reconcile complete.")
@@ -441,7 +502,7 @@ def main():
     parser = argparse.ArgumentParser(description="Watchline discovery KG portfolio reconcile")
     parser.add_argument(
         "--step",
-        choices=["schema", "edges", "reconcile"],
+        choices=["schema", "edges", "splink", "reconcile"],
         help="Run a single step (omit to run all steps in order)",
     )
     args = parser.parse_args()
@@ -454,6 +515,8 @@ def main():
             step_schema(driver)
         elif args.step == "edges":
             step_edges(driver)
+        elif args.step == "splink":
+            step_splink(driver)
         elif args.step == "reconcile":
             step_reconcile(driver)
     finally:

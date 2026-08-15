@@ -151,6 +151,15 @@ ALTER CURRENT GRAPH TYPE SET {
 
   (:Landlord)-[:CONNECTED_BY_ADDRESS => { weight :: FLOAT NOT NULL }]->(:Landlord),
 
+  // Probabilistic same-owner link from the Splink resolution (portfolio/splink_bridge.py),
+  // written by portfolio/pipeline.py's `splink` step between two :Landlord nodes that
+  // resolve to one owner. A precision-first de-fragmentation signal fed to WCC+Louvain
+  // alongside the name/address links; `method` records the resolver for provenance.
+  (:Landlord)-[:CONNECTED_BY_SPLINK => {
+     weight :: FLOAT NOT NULL,
+     method :: STRING NOT NULL
+  }]->(:Landlord),
+
   (:Landlord)-[:MEMBER_OF =>]->(:Portfolio),
 
   (:Building)-[:IN_PORTFOLIO =>]->(:Portfolio),

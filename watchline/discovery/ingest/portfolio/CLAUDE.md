@@ -26,11 +26,30 @@ first resolution (never fuse two different people) with recall lifted by the loo
    that share a corporate co-owner across their buildings — the signal name+address
    can't reach. `feedback_merge()`.
 
-Where it sits vs. the existing code: `pipeline.py` + `algorithms.py` are the *old*
-WoW-consuming portfolio build (reads WoW's `landlords_with_connections`, GDS
-WCC+Louvain, writes KG `Portfolio` nodes). The Splink path is the intended
-replacement/source; it is **not yet wired into `pipeline.py` or materialized to the
-KG** (see "Not done").
+Where it sits vs. the existing code — **Mechanism B, the decided integration.**
+`pipeline.py` + `algorithms.py` are WoW's portfolio build (read WoW's
+`landlords_with_connections`, GDS WCC+Louvain, write KG `Portfolio` nodes). Splink does
+**NOT replace** it — a deliberate decision. WoW and Splink answer *different* questions:
+
+- **WoW = accountability nexus** — buildings run through one office / agent / shell
+  network (address-glued). Catches the shell-LLC game — e.g. 1472 Rosedale Ave is a
+  10-building Grizi/Piha operation linked *only* by the shared business address. Recall-biased.
+- **Splink = resolved owner identity** — the same natural person as owner-of-record.
+  Precision-first; de-fragments one owner's typo'd offices (Croman).
+
+They are opposite error directions: WoW *under*-merges Croman (offices split by an
+address typo); Splink can't see the Rosedale agent-nexus at all (it excludes agents and
+refuses address-glue — the very fixes that gave it precision). A wholesale replace would
+**regress the accountability mission**. So Splink's role is a **de-dup edge**:
+`splink_bridge.py` emits `CONNECTED_BY_SPLINK` between the WoW landlord nodes that resolve
+to one owner, and the existing WCC+Louvain consumes it alongside name/address. **Edges
+only ADD → components only MERGE, never split**: WoW's nexus portfolios (Rosedale) are
+safe by construction, while the fragments it split (Croman 6→1) collapse. Granularity is
+deliberately recall-biased — a rare-named person on the ownership docs of several
+partnerships (Kadden across 7) becomes one portfolio, a person-nexus WoW's clustering
+missed. Validated on the wow DB: 16,693 edges, 99.9% node coverage, 0 cross-surname
+edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
+"replace WoW's construction / materialize a separate Portfolio set" idea.)
 
 ## Module map (`watchline/discovery/ingest/portfolio/`)
 
@@ -68,6 +87,17 @@ KG** (see "Not done").
     gold sweep, feedback loop, a diff-surname **precision guard** the gold can't give,
     and a `portfolios.parquet` export. Deterministic training slice.
 - **`compare_kg.py`** — resolved portfolios vs the current KG (fragmentation diff).
+- **`splink_bridge.py`** — **Mechanism B.** `splink_edges(conn)` runs the full-population
+  resolution and returns `CONNECTED_BY_SPLINK` edges `[src, dst, weight]` over WoW
+  `landlords_with_connections` nodeids — mapped *exactly* by an explode-join on
+  `(owner name, bbl)` (same key on both sides, from the same HPD contact; 99.9% coverage,
+  0 cross-surname edges). One clique per resolved entity (star above `STAR_ABOVE`);
+  `SPLINK_WEIGHT=10` so it dominates name(1.5)/address(1.0) under Louvain. Neo4j-free.
+- **`pipeline.py` / `algorithms.py`** — WoW's KG portfolio build. Now wired for B:
+  `pipeline.py` has a `--step splink` (`load_splink_edges`, drop+rebuild each run) and
+  `algorithms.py`'s `project_graph` includes `CONNECTED_BY_SPLINK`. `graph_type.cypher`
+  declares the edge. Run order: **schema → splink → reconcile** (splink before reconcile
+  projects it).
 
 ## How to run
 
@@ -78,6 +108,20 @@ uv run --extra ingest python -m watchline.discovery.ingest.portfolio.eval.run_lo
 uv run --extra ingest python -m watchline.discovery.ingest.portfolio.compare_kg
 uv run --extra ingest python -m watchline.discovery.ingest.portfolio.eval.build_gold
 ```
+
+**Mechanism B into the live KG** (writes the discovery graph — `PGDATABASE=wow`, Neo4j+GDS,
+run as a **write/schema-capable** user, not the read-only `watchline`/reader role):
+
+```bash
+uv run python -m watchline.discovery.ingest.portfolio.pipeline --step schema     # declares CONNECTED_BY_SPLINK
+uv run --extra ingest python -m watchline.discovery.ingest.portfolio.pipeline --step splink
+uv run python -m watchline.discovery.ingest.portfolio.pipeline --step reconcile
+```
+
+`--step schema` must run first: declaring `CONNECTED_BY_SPLINK` in the graph type creates
+its relationship-type token (confirmed via `db.relationshipTypes()`), so the `splink` step
+doesn't need the `CREATE NEW RELATIONSHIP TYPE` privilege. Skipping schema → the first
+`MERGE` of the new type fails with `Neo.ClientError.Security.Forbidden`.
 
 ## Data sources
 
@@ -210,11 +254,18 @@ sync with the CSV, so regenerating is safe.
   `run_full` guard already watches it at population scale). NOTE: the common-name veto
   trades a small recall cost — a common-named operator with buildings at several
   addresses is NOT consolidated unless rare; consistent with the loop's `name_cap`.
-- **Materialize resolved portfolios to the KG** (`Portfolio` nodes) so the app's
-  "hidden operators" view uses the de-fragmented resolution. Writes to the live graph.
-  `run_full` already exports `portfolios.parquet` — the hand-off surface.
-- **Wire `SplinkSource` as the source adapter into `pipeline.py`** (replace the
-  `landlords_with_connections` read); currently runs standalone on slices.
+- **Mechanism B — WIRED, awaiting its first live run.** `splink_bridge.py` + the
+  `pipeline.py` `splink` step + the `algorithms.py` projection are in place and validated
+  read-only against the wow DB. Not yet run end-to-end (needs `PGDATABASE=wow`, a Neo4j
+  with GDS, and it **writes to the live discovery KG** — rebuilds all portfolios). On that
+  run, verify: **Croman 6→1**, Rosedale stays a 10-building portfolio (guaranteed —
+  edges only add), and **watch Louvain** on any merged component > `MAX_SIZE=300` bbls
+  (the weight-10 clique should hold the Splink group together, but only a live GDS run
+  confirms it). See "How to run".
+- **Materialize resolved portfolios to the KG — SUPERSEDED by B.** The old plan (write a
+  separate Splink-derived `Portfolio` set / replace `landlords_with_connections`) would
+  have lost WoW's agent/shell nexus (1472 Rosedale). B keeps WoW's portfolios and only
+  de-fragments them, so this is no longer the path.
 - **Address standardization** (Geosupport sidecar / libpostal) — modest recall payoff.
 - **Grow the gold set** further; the feedback loop is largely subsumed by TF at full
   scale (pass 2 ≈ pass 1) — reconsider whether it earns its complexity.
@@ -230,3 +281,16 @@ sync with the CSV, so regenerating is safe.
 - `registrationid` is **not unique** in `hpd_registrations` (multi-building complexes
   repeat it). Always dedup to `(registrationid, bbl)`.
 - `.DS_Store` / `__pycache__` are untracked here; stage files explicitly.
+- **New relationship type needs the schema step first.** Introducing a new edge type
+  (like `CONNECTED_BY_SPLINK`) means its first `MERGE` must create the type token, which
+  needs `CREATE NEW RELATIONSHIP TYPE ON DATABASE discovery` — a privilege the read-only
+  role lacks. Applying the graph type (`--step schema`, whole-file `ALTER CURRENT GRAPH
+  TYPE SET`) declares the type AND creates the token, so run schema (as a privileged user)
+  before the data step. `graph_type.cypher` is applied whole-file, so its inline `//`
+  comments (semicolons included) are safe.
+- **`_cypher_statements` splits `.cypher` on `;` — `//` comments are stripped FIRST.** A
+  semicolon *inside* a comment (indexes.cypher once had "...in the background; it just
+  isn't used") would otherwise orphan the tail as a bogus statement and blow up `--step
+  schema`. Fixed by stripping `//`-to-EOL per line before the split; keep `;` out of
+  comment lines anyway. (Only the indexes half uses this splitter; the graph type is
+  whole-file.)

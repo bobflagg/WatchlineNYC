@@ -87,6 +87,12 @@ def project_graph(gds: GraphDataScience):
         {
             "CONNECTED_BY_NAME": {"orientation": "UNDIRECTED", "properties": "weight"},
             "CONNECTED_BY_ADDRESS": {"orientation": "UNDIRECTED", "properties": "weight"},
+            # Splink same-owner links (Mechanism B): merges the fragments name/address
+            # matching split. WCC only needs connectivity; the high weight (see
+            # splink_bridge.SPLINK_WEIGHT) keeps a resolved owner's nodes together if
+            # Louvain later splits an oversized component. Must run the `splink` step
+            # before `reconcile` so instances of this type exist to project.
+            "CONNECTED_BY_SPLINK": {"orientation": "UNDIRECTED", "properties": "weight"},
         },
     )
     return G
