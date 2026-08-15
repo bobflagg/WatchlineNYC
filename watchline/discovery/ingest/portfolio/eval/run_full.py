@@ -72,11 +72,11 @@ def main():
     print("\nthreshold sweep (gold subset, scored on FULL-population clusters):")
     print(f"{'thr':>6}{'prec':>7}{'recall':>8}{'f1':>7}{'tp':>5}{'fp':>4}{'fn':>5}")
     for t in (0.90, 0.95, 0.98):
-        cl_t = ss.cluster_gated(preds, full, threshold=t)
+        cl_t = ss.cluster_gated(preds, full, threshold=t, name_freq=nf)
         m, _, _ = scorer.score(cl_t, gold)
         print(f"{t:>6}{m['precision']:>7}{m['recall']:>8}{m['f1']:>7}{m['tp']:>5}{m['fp']:>4}{m['fn']:>5}")
 
-    pass1 = ss.cluster_gated(preds, full, threshold=THRESHOLD)
+    pass1 = ss.cluster_gated(preds, full, threshold=THRESHOLD, name_freq=nf)
     print(f"\nclustered @ {THRESHOLD}   [{time.time()-t0:.1f}s]", flush=True)
 
     # Population-scale precision guard — the 87-record gold can't see this. Every
@@ -84,13 +84,19 @@ def main():
     # a different-person fusion (JOEL BRAVER + JACOB GUTMAN at one office). Name-
     # anchored blocking should keep this at 0; a non-zero count means the precision
     # hole is back (someone re-added an address-only blocking rule?).
-    gp1 = pass1.groupby("cluster_id")
+    freq = {(r.last_name, r.first_initial): r.identities for r in nf.itertuples()}
+    pg = pass1.assign(
+        _akey=[ss._addr_key(h, s) for h, s in zip(pass1.biz_house, pass1.biz_street_norm)],
+        _rar=[freq.get((ln, fi), 0) for ln, fi in zip(pass1.last_name, pass1.first_initial)])
+    gp1 = pg.groupby("cluster_id")
     diff_surname = int((gp1["last_name"].nunique() > 1).sum())
     diff_first = int((gp1["first_name"].nunique() > 1).sum())
+    # common name (> name_cap identities) spanning >1 normalized address = the leak
+    common_leak = int(((gp1["_akey"].nunique() > 1) & (gp1["_rar"].max() > 15)).sum())
     sz = gp1.size()
-    print(f"precision guard: {diff_surname:,} clusters with >1 surname "
-          f"(target 0), {diff_first:,} with >1 first name, of {len(sz):,} clusters "
-          f"({int((sz > 1).sum()):,} multi-record)")
+    print(f"precision guard: {diff_surname:,} clusters with >1 surname (target 0), "
+          f"{common_leak:,} common-name cross-address (target 0), {diff_first:,} with "
+          f">1 first name, of {len(sz):,} clusters ({int((sz > 1).sum()):,} multi-record)")
 
     # Feedback loop over the full population: corp co-owners on ALL buildings.
     corp = ss.corp_owners_for(conn, None)

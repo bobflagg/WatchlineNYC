@@ -33,14 +33,15 @@ def main():
     df = df[df.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
     gold = scorer.load_gold(GOLD)
 
+    nf = ss.name_freq(conn)                    # name rarity: gates the corp-bridge AND
+                                               # the base linkage common-name veto
     linker, preds = ss.fit(df, addr_degrees=degs)
-    pass1 = ss.cluster_gated(preds, df, threshold=0.9)
+    pass1 = ss.cluster_gated(preds, df, threshold=0.9, name_freq=nf)
 
     # Cross-office feature: corporate co-owners on the entities' buildings.
     all_bbls = {b for lst in df["bbls"] for b in (lst or [])}
     corp = ss.corp_owners_for(conn, all_bbls)
     corp_deg = ss.corp_degrees(conn)          # cap aggregator corps (registered agents)
-    nf = ss.name_freq(conn)                    # name rarity, to gate the corp-bridge
     conn.close()
 
     pass2 = ss.feedback_merge(df, pass1, corp, corp_deg=corp_deg, name_freq=nf)

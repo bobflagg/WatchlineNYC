@@ -43,10 +43,12 @@ KG** (see "Not done").
   - `fit(df, addr_degrees=None, ...)` → `(linker, preds)`; `link(df)` = convenience.
     Internals factored into `_mask_aggregators` / `_settings` / `_train_linker` so
     every fit path masks and blocks identically.
-  - `cluster_gated(preds, nodes, threshold)` → clusters WITH the first-name veto
-    (drops `gamma_first_name==0` edges — genuine first-name disagreement — before
-    connected-components). **The clusterer to use**; `cluster(linker, preds, thr)` is
-    the ungated Splink path, kept only for comparison.
+  - `cluster_gated(preds, nodes, threshold, name_freq=None, name_cap=15)` → clusters
+    with TWO precision vetoes before connected-components: (a) first-name — drop
+    `gamma_first_name==0` edges (genuine first-name disagreement); (b) common-name
+    (when `name_freq` passed) — drop edges where the name is common (> `name_cap`
+    identities) AND the normalized addresses differ (`_addr_key`). **The clusterer to
+    use**; `cluster(linker, preds, thr)` is the ungated Splink path, kept for comparison.
   - `fit_predict_full(train_df, full_df, addr_degrees=None, ...)` → train on a dense
     slice, predict over the full population (dodges the low-λ trap; `save_model_to_json`
     → reload onto a full-pop Linker). This is the full-run entry point.
@@ -105,9 +107,13 @@ uv run --extra ingest python -m watchline.discovery.ingest.portfolio.eval.build_
   same-office / different-first-name leak — JACOB vs JOSEF GUTMAN now split (2
   clusters), STEVE/STEVEN & ZACH/ZACHARY kept. At full scale it split ~1,200
   different-person blobs (diff-first-name clusters 3,028 → 1,837). See "Tuning".
-- One residual precision leak, **not yet fixed**: hyper-common full names repeated
-  across unrelated addresses (MOHAMMAD ISLAM, YU LI) that term-frequency under-
-  penalizes — not yet in the gold (needs deed/corp evidence to adjudicate).
+- **Common-name veto** (`cluster_gated(name_freq=...)`): fixed the last known leak —
+  an exact common name repeated at a *different* address (two unrelated JIN CHENs)
+  merging on name alone. Investigation showed the "leak" was mostly benign: of ~4,300
+  common-name clusters only **252 spanned truly-distinct addresses** (the rest were
+  same-address formatting artifacts the model *correctly* merged). The veto drops those
+  252 (guard = 0) while preserving artifacts and all 6,508 rare-name cross-office
+  merges. See "Tuning".
 - `compare_kg`: Splink puts Croman's buildings in 1 portfolio vs **4 in the KG**;
   Rashad's in 1 vs **5**.
 
@@ -153,6 +159,18 @@ sync with the CSV, so regenerating is safe.
   EFSTATHIOS/EFSTAHIOS typo) and null-first-name pairs. Slice P 0.991 → 0.996 at no
   recall cost; full-pop diff-first-name clusters 3,028 → 1,837. Trade-off: true
   nicknames that aren't near-matches (ABE/ABRAHAM) won't bridge — precision-first.
+- **Common-name veto (`cluster_gated(name_freq=...)`).** An exact common full name at a
+  *different* address (two unrelated JIN CHENs) merges on name alone — TF under-
+  penalizes the coincidence. Drop an edge when the name is common (> `name_cap`=15
+  distinct identities, from `name_freq`) AND the normalized addresses differ
+  (`_addr_key` = digits-house + suffix-normalized street). Key subtlety: use the exact
+  address KEY, not Splink's `gamma_biz_house`, which is lenient by design (Levenshtein
+  ≤2, to catch Croman's "4"/"424" typo) and so treats "9411"/"9415" as a near-match.
+  The rarity gate protects rare cross-office merges (Croman ~8 ≪ cap); the address key
+  preserves same-address formatting variants (140-06 == 14006). Robust across cap
+  15–60 (leak names like CHEN sit at ~230). Same name-rarity philosophy as the loop's
+  `name_cap`, applied to the base linkage — coherent stance: common names merge only at
+  one address; rare names merge across addresses (TF + the corp-bridge loop).
 - **Do NOT fold zip into a composite address key.** The raw business zip is noisy
   (one office filed under several zips); a composite `house+street+zip` split
   operators' own addresses and broke merging (recall → 0). Compare components; keep
@@ -183,12 +201,15 @@ sync with the CSV, so regenerating is safe.
 - **Full-population run — DONE** (`eval/run_full.py`): 145k identities → 123k
   portfolios, precision-guard clean (0 diff-surname clusters), Croman/Rashad
   consolidate. This clears validation-gate #1/#2 in `EXTRACTION.md`.
-- **Hyper-common cross-address names** (MOHAMMAD ISLAM, YU LI): the last known
-  precision leak — an exact common full name repeated at unrelated addresses that TF
-  under-penalizes. Adjudicate a few with deed/corp evidence (are they one operator?),
-  add to the gold, then decide on a fix (e.g. a name-rarity floor on same-name/
-  different-address merges). The same-surname/different-first-name leak (GUTMAN) is
-  already fixed by `cluster_gated`.
+- **Precision leaks — all known ones now fixed** by `cluster_gated` (different-surname
+  office-mates via name-anchoring, GUTMAN via the first-name veto, common-name cross-
+  address via the common-name veto). Only genuinely-indistinguishable residuals remain
+  (two different people with the SAME common name at the SAME exact address — no signal
+  separates them; rare). Optional follow-up: adjudicate a few common-name cases with
+  deed evidence and add them to the gold, so the slice harness tests the veto too (the
+  `run_full` guard already watches it at population scale). NOTE: the common-name veto
+  trades a small recall cost — a common-named operator with buildings at several
+  addresses is NOT consolidated unless rare; consistent with the loop's `name_cap`.
 - **Materialize resolved portfolios to the KG** (`Portfolio` nodes) so the app's
   "hidden operators" view uses the de-fragmented resolution. Writes to the live graph.
   `run_full` already exports `portfolios.parquet` — the hand-off surface.

@@ -336,18 +336,39 @@ def cluster(linker, preds, threshold: float = 0.95) -> pd.DataFrame:
     return c.as_pandas_dataframe()
 
 
-def cluster_gated(preds, nodes, threshold: float = 0.95, *,
-                  gamma_col: str = "gamma_first_name") -> pd.DataFrame:
-    """Cluster with a FIRST-NAME COMPATIBILITY VETO, then connected-components.
+def _addr_key(house, street_norm) -> str:
+    """A normalized address token for the common-name veto: digits-only house +
+    suffix-normalized street. Folds formatting variants (``140-06`` == ``14006``,
+    ``56 BAY 34TH`` == ``56 BAY34``) but keeps genuinely different buildings apart."""
+    import re
+    h = re.sub(r"\D", "", house) if isinstance(house, str) else ""
+    s = street_norm if isinstance(street_norm, str) else ""
+    return h + "|" + s
 
-    Splink's pairwise score lets a strong exact-address match overpower a first-name
-    disagreement, so two same-surname records at one office with *different* first
-    names (JACOB vs JOSEF GUTMAN — different people) merge. We drop any candidate edge
-    whose first names genuinely disagree — Splink's own ``gamma_first_name == 0`` level
-    (both names present, Jaro-Winkler below the lowest threshold). Typo/variant/prefix
-    pairs sit at gamma ≥ 1 (STEVE/STEVEN, ZACH/ZACHARY, EFSTATHIOS/EFSTAHIOS) and a
-    null first name is its own level, so both still merge. Trade-off: genuine nicknames
-    that aren't near-matches (ABE/ABRAHAM) won't bridge — acceptable, precision-first.
+
+def cluster_gated(preds, nodes, threshold: float = 0.95, *,
+                  gamma_col: str = "gamma_first_name",
+                  name_freq: pd.DataFrame | None = None,
+                  name_cap: int = 15) -> pd.DataFrame:
+    """Cluster with two precision vetoes, then connected-components.
+
+    **First-name veto** (always on). Splink's pairwise score lets a strong exact-address
+    match overpower a first-name disagreement, so two same-surname records at one office
+    with *different* first names (JACOB vs JOSEF GUTMAN — different people) merge. Drop
+    any edge whose first names genuinely disagree — Splink's own ``gamma_first_name == 0``
+    level (both present, Jaro-Winkler below the lowest threshold). Typo/variant/prefix
+    pairs sit at gamma ≥ 1 (STEVE/STEVEN, ZACH/ZACHARY, EFSTATHIOS/EFSTAHIOS) and a null
+    first name is its own level, so both still merge. Trade-off: genuine nicknames that
+    aren't near-matches (ABE/ABRAHAM) won't bridge — acceptable, precision-first.
+
+    **Common-name veto** (on when ``name_freq`` is passed). An exact common full name
+    repeated at a *different* address (two unrelated JIN CHENs) merges on name alone —
+    the coincidence term-frequency under-penalizes. Drop an edge when the name is common
+    (``> name_cap`` distinct identities for its (last_name, first_initial), from
+    :func:`name_freq`) AND the two normalized addresses differ (:func:`_addr_key`). Rare
+    names stay below the cap, so cross-office merges (Croman ~8) are untouched; same-
+    address formatting variants share an address key, so those correct merges survive.
+    This mirrors the loop's name-rarity gate, applied to the base linkage.
 
     ``nodes`` is the record frame (or a unique_id iterable) so every node — including
     singletons Splink would emit — gets a ``cluster_id``. Returns the node columns
@@ -362,6 +383,20 @@ def cluster_gated(preds, nodes, threshold: float = 0.95, *,
     ids = (node_df["unique_id"] if node_df is not None else pd.Series(list(nodes))).tolist()
 
     edges = p[(p["match_probability"] >= threshold) & (p[gamma_col] != 0)]
+
+    if name_freq is not None:
+        if node_df is None:
+            raise ValueError("common-name veto needs `nodes` as a record frame")
+        rar = {(r.last_name, r.first_initial): r.identities for r in name_freq.itertuples()}
+        node_rar = {u: rar.get((ln, fi), 0) for u, ln, fi
+                    in zip(node_df["unique_id"], node_df["last_name"], node_df["first_initial"])}
+        akey = {u: _addr_key(h, s) for u, h, s
+                in zip(node_df["unique_id"], node_df["biz_house"], node_df["biz_street_norm"])}
+        # keep an edge unless the name is common AND the addresses genuinely differ
+        keep = [(node_rar.get(a, 0) <= name_cap) or (akey.get(a) == akey.get(b))
+                for a, b in zip(edges["unique_id_l"], edges["unique_id_r"])]
+        edges = edges[pd.Series(keep, index=edges.index).values]
+
     parent = {u: u for u in ids}
 
     def find(x):

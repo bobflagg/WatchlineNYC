@@ -25,17 +25,18 @@ def main():
                     ss.extract(conn, OFFICE_WHERE),
                     ss.extract(conn, "random() < 0.012")], ignore_index=True)
     degs = ss.address_degrees(conn)          # full-population aggregator degrees
+    nf = ss.name_freq(conn)                   # name rarity for the common-name veto
     conn.close()
     df = df[df.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
     gold = scorer.load_gold(GOLD)
     print(f"records: {len(df)}   gold labels: {len(gold)}   addr-degree rows: {len(degs)}")
 
     linker, preds = ss.fit(df, addr_degrees=degs)
-    table = scorer.sweep(preds, df, gold, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98))
+    table = scorer.sweep(preds, df, gold, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98), name_freq=nf)
     print("\n" + table.to_string(index=False))
 
     best_t = float(table.loc[table.f1.idxmax(), "threshold"])
-    clusters = ss.cluster_gated(preds, df, best_t)
+    clusters = ss.cluster_gated(preds, df, best_t, name_freq=nf)
     m, fmerge, missed = scorer.score(clusters, gold)
     print(f"\nbest F1 @ threshold {best_t}:  {m}")
 
