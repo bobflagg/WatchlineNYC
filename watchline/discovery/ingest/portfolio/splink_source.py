@@ -188,42 +188,43 @@ def name_freq(conn) -> pd.DataFrame:
     return pd.read_sql(NAME_FREQ_SQL, conn)
 
 
-def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
-        aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
-    """Build + train the Splink model and return ``(linker, predictions)``.
+# Address columns blanked when an address is an aggregator (see _mask_aggregators).
+_ADDR_COLS = ["biz_house", "biz_street", "biz_street_norm", "biz_zip", "biz_apt_num"]
 
-    Predictions are made at a permissive threshold, so the caller can cluster at
-    any higher threshold (e.g. to sweep against a gold set) without re-predicting.
-    Pass ``addr_degrees`` (from :func:`address_degrees`) to mask on real full-
-    population degrees; otherwise degree is computed within ``df`` (sample-only).
-    """
-    import splink.comparison_library as cl
-    from splink import DuckDBAPI, Linker, SettingsCreator, block_on
 
+def _mask_aggregators(df: pd.DataFrame, addr_degrees: pd.DataFrame | None,
+                      aggregator_degree: int) -> pd.DataFrame:
+    """Blank the address evidence of aggregator/registered-agent addresses.
+
+    An address shared by many *distinct* landlords is an office building, not a
+    private office; dropping its address columns leaves those records able to link
+    on name only — same-name pairs still merge, different-name neighbours no longer
+    do. ``addr_degrees`` (from :func:`address_degrees`) gives real full-population
+    degrees; without it, degree is computed within ``df`` (sample-only)."""
     d = df.copy()
-    cols = COMPARISON_COLS
-
-    # Aggregator down-weight (WoW's MAX_ADDR_DEGREE, applied as masking): an address
-    # shared by many *distinct* landlords is a registered-agent / office building, not
-    # a private office. Drop its address evidence so those records can only link on
-    # name — same-name pairs still merge, different-name neighbours no longer do.
     if addr_degrees is not None:
         d = d.merge(addr_degrees, on=["biz_house", "biz_street_norm"], how="left")
         d["_deg"] = d["addr_degree"].fillna(0)
         d = d.drop(columns=["addr_degree"])
     else:
         d["_deg"] = d.groupby(["biz_house", "biz_street_norm"])["name_normalized"].transform("nunique")
-    d.loc[d["_deg"] > aggregator_degree,
-          ["biz_house", "biz_street", "biz_street_norm", "biz_zip", "biz_apt_num"]] = None
-    d = d.drop(columns=["_deg"])
+    d.loc[d["_deg"] > aggregator_degree, _ADDR_COLS] = None
+    return d.drop(columns=["_deg"])
 
-    settings = SettingsCreator(
+
+def _settings():
+    """The Splink model settings — comparisons + blocking. Shared by every fit path
+    so the slice-trained model transfers cleanly onto the full population."""
+    import splink.comparison_library as cl
+    from splink import SettingsCreator, block_on
+
+    return SettingsCreator(
         link_type="dedupe_only",
         comparisons=[
             # Term-frequency on names: a rare "CROMAN"/"RASHAD" match counts far more
-            # than a common one — the lever WoW's rules lack. TF is computed over `df`,
-            # so pass a representative population (mostly the random sample), not the
-            # target-heavy slice, or every target name looks "common".
+            # than a common one — the lever WoW's rules lack. TF is computed over the
+            # predicted population, so predict on the full set (or a representative
+            # sample), not a target-heavy slice, or every target name looks "common".
             cl.JaroWinklerAtThresholds("last_name", [0.92, 0.85]).configure(term_frequency_adjustments=True),
             cl.JaroWinklerAtThresholds("first_name", [0.92, 0.80]).configure(term_frequency_adjustments=True),
             # Component address (house Levenshtein for "4"/"424", street fuzzy for
@@ -236,18 +237,35 @@ def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
             cl.JaroWinklerAtThresholds("biz_street_norm", [0.92, 0.85]),
             cl.ExactMatch("biz_zip").configure(term_frequency_adjustments=True),
         ],
-        # Safe blocking set from the sizing pass — never `biz_zip` alone (208M pairs).
-        # First-initial gate: different-first-name namesakes at one address (ANDREA vs
-        # FILIPPO, DIVYA vs JAMAL) are never even scored; STEVE/STEVEN, ZACH/ZACHARY
-        # share an initial and still merge.
+        # NAME-ANCHORED blocking — one rule: same last name + first initial. Landlord
+        # resolution keys on the person, so a surname match is required to even *score*
+        # a pair. The first-initial gate additionally stops different-first-name
+        # namesakes at one address (ANDREA vs FILIPPO, DIVYA vs JAMAL); STEVE/STEVEN,
+        # ZACH/ZACHARY share an initial and still merge.
+        #
+        # An address-only rule (block_on biz_house, biz_street_norm, first_initial) was
+        # here too, but the full-population run proved it a precision hole: it scores
+        # DIFFERENT-surname office-mates (JOEL BRAVER + JACOB GUTMAN at one address, same
+        # initial), and a strong shared-address match overpowers the surname mismatch —
+        # 2,044 clusters fused different people at population scale. Removing it zeroed
+        # those out at ZERO cost to recall (Croman/Rashad/Valiotis consolidate via the
+        # name rule + term-frequency; the 87-record gold P/R was unchanged). The eval's
+        # rare-surname/masked-address gold could not see this failure mode. Trade-off:
+        # surname-*typo* pairs are no longer candidates (the fuzzy last_name levels go
+        # dead for blocking) — recover later with a typo-safe block if it proves to
+        # matter, NOT by restoring the address-only rule. Never `biz_zip` alone (208M).
         blocking_rules_to_generate_predictions=[
             block_on("last_name", "first_initial"),
-            block_on("biz_house", "biz_street_norm", "first_initial"),
         ],
         retain_intermediate_calculation_columns=True,
     )
 
-    linker = Linker(d[cols], settings, db_api=DuckDBAPI())
+
+def _train_linker(d: pd.DataFrame, seed: int):
+    """Construct a Linker over already-masked ``d`` and run the training passes."""
+    from splink import DuckDBAPI, Linker, block_on
+
+    linker = Linker(d[COMPARISON_COLS], _settings(), db_api=DuckDBAPI())
     # Same name + same address is ~certainly a match — a good anchor for training.
     linker.training.estimate_probability_two_random_records_match(
         [block_on("first_name", "last_name", "biz_house", "biz_street_norm")], recall=0.7)
@@ -256,16 +274,112 @@ def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
     # block on the address to learn the name weights.
     linker.training.estimate_parameters_using_expectation_maximisation(block_on("first_name", "last_name"))
     linker.training.estimate_parameters_using_expectation_maximisation(block_on("biz_house", "biz_street_norm"))
+    return linker
 
+
+def fit(df: pd.DataFrame, *, addr_degrees: pd.DataFrame | None = None,
+        aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
+    """Build + train the Splink model and return ``(linker, predictions)``.
+
+    Predictions are made at a permissive threshold, so the caller can cluster at
+    any higher threshold (e.g. to sweep against a gold set) without re-predicting.
+    Pass ``addr_degrees`` (from :func:`address_degrees`) to mask on real full-
+    population degrees; otherwise degree is computed within ``df`` (sample-only).
+    """
+    d = _mask_aggregators(df, addr_degrees, aggregator_degree)
+    linker = _train_linker(d, seed)
     preds = linker.inference.predict(threshold_match_probability=0.5)
     return linker, preds
 
 
+def fit_predict_full(train_df: pd.DataFrame, full_df: pd.DataFrame, *,
+                     addr_degrees: pd.DataFrame | None = None,
+                     aggregator_degree: int = AGGREGATOR_DEGREE, seed: int = 42):
+    """Train on a dense slice, then predict over the full population.
+
+    On a huge, mostly-unique population Splink's estimated "probability two random
+    records match" (λ) collapses toward zero and the model *under-merges even
+    identical records* (the low-λ trap). The fix is to learn m/u/λ on a dense
+    representative slice (~2-3k records, where λ is well-conditioned) and transfer
+    the trained model onto the full set for prediction — term-frequency adjustments
+    still recompute over the full population, so name rarity is population-correct.
+
+    Both frames are masked identically. Returns ``(linker_full, predictions)``;
+    cluster/​build_portfolios/​feedback_merge consume these exactly as in the eval
+    path. ``full_df`` should already be deduped on ``unique_id`` (identities), so a
+    record in both the slice and the full set is not double-counted at predict.
+    """
+    import os
+    import tempfile
+
+    from splink import DuckDBAPI, Linker
+
+    dtrain = _mask_aggregators(train_df, addr_degrees, aggregator_degree)
+    train_linker = _train_linker(dtrain, seed)
+
+    dfull = _mask_aggregators(full_df, addr_degrees, aggregator_degree)
+    with tempfile.TemporaryDirectory() as td:
+        model_path = os.path.join(td, "model.json")
+        train_linker.misc.save_model_to_json(model_path)
+        # Load the trained m/u/λ onto a linker bound to the full population.
+        linker_full = Linker(dfull[COMPARISON_COLS], model_path, db_api=DuckDBAPI())
+        preds = linker_full.inference.predict(threshold_match_probability=0.5)
+    return linker_full, preds
+
+
 def cluster(linker, preds, threshold: float = 0.95) -> pd.DataFrame:
-    """Cluster predictions into entities at ``threshold``; adds ``cluster_id``."""
+    """Cluster predictions into entities at ``threshold`` via Splink's own connected-
+    components (ungated); adds ``cluster_id``. Prefer :func:`cluster_gated` — it adds
+    the first-name veto below and needs no linker handle."""
     c = linker.clustering.cluster_pairwise_predictions_at_threshold(
         preds, threshold_match_probability=threshold)
     return c.as_pandas_dataframe()
+
+
+def cluster_gated(preds, nodes, threshold: float = 0.95, *,
+                  gamma_col: str = "gamma_first_name") -> pd.DataFrame:
+    """Cluster with a FIRST-NAME COMPATIBILITY VETO, then connected-components.
+
+    Splink's pairwise score lets a strong exact-address match overpower a first-name
+    disagreement, so two same-surname records at one office with *different* first
+    names (JACOB vs JOSEF GUTMAN — different people) merge. We drop any candidate edge
+    whose first names genuinely disagree — Splink's own ``gamma_first_name == 0`` level
+    (both names present, Jaro-Winkler below the lowest threshold). Typo/variant/prefix
+    pairs sit at gamma ≥ 1 (STEVE/STEVEN, ZACH/ZACHARY, EFSTATHIOS/EFSTAHIOS) and a
+    null first name is its own level, so both still merge. Trade-off: genuine nicknames
+    that aren't near-matches (ABE/ABRAHAM) won't bridge — acceptable, precision-first.
+
+    ``nodes`` is the record frame (or a unique_id iterable) so every node — including
+    singletons Splink would emit — gets a ``cluster_id``. Returns the node columns
+    (the :data:`COMPARISON_COLS` present) plus ``cluster_id`` — a drop-in for
+    :func:`cluster`'s output for scoring / :func:`build_portfolios` / :func:`feedback_merge`.
+    """
+    p = preds.as_pandas_dataframe() if hasattr(preds, "as_pandas_dataframe") else preds
+    if gamma_col not in p.columns:
+        raise ValueError(f"{gamma_col!r} not in predictions — fit() sets "
+                         "retain_intermediate_calculation_columns=True so it is present")
+    node_df = nodes if hasattr(nodes, "columns") else None
+    ids = (node_df["unique_id"] if node_df is not None else pd.Series(list(nodes))).tolist()
+
+    edges = p[(p["match_probability"] >= threshold) & (p[gamma_col] != 0)]
+    parent = {u: u for u in ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]; x = parent[x]
+        return x
+
+    for a, b in zip(edges["unique_id_l"], edges["unique_id_r"]):
+        if a in parent and b in parent:
+            parent[find(a)] = find(b)
+
+    cmap = {u: find(u) for u in ids}
+    if node_df is not None:
+        out = node_df[[c for c in COMPARISON_COLS if c in node_df.columns]].copy()
+    else:
+        out = pd.DataFrame({"unique_id": ids})
+    out["cluster_id"] = out["unique_id"].map(cmap)
+    return out.reset_index(drop=True)
 
 
 def link(df: pd.DataFrame, *, threshold: float = 0.95, seed: int = 42):
@@ -292,15 +406,19 @@ def build_portfolios(df: pd.DataFrame, clusters: pd.DataFrame) -> pd.DataFrame:
               .reset_index(drop=True))
 
 
-def corp_owners_for(conn, bbls) -> pd.DataFrame:
-    """Corporate co-owner names on a set of buildings — the cross-office bridge.
-    Returns (bbl, corp). E.g. CENTENNIAL PROPERTIES NY spans all of Croman's
-    offices, so his 740 Broadway and 424 W 51 entities share it."""
-    q = ("SELECT DISTINCT btrim(r.bbl) AS bbl, upper(btrim(c.corporationname)) AS corp "
-         "FROM hpd_contacts c JOIN hpd_registrations r ON r.registrationid = c.registrationid "
-         "WHERE c.corporationname IS NOT NULL AND length(btrim(c.corporationname)) > 3 "
-         "AND btrim(r.bbl) = ANY(%(bbls)s)")
-    return pd.read_sql(q, conn, params={"bbls": list(bbls)})
+def corp_owners_for(conn, bbls=None) -> pd.DataFrame:
+    """Corporate co-owner names on buildings — the cross-office bridge. Returns
+    (bbl, corp). E.g. CENTENNIAL PROPERTIES NY spans all of Croman's offices, so his
+    740 Broadway and 424 W 51 entities share it. Pass ``bbls`` to scope to a set of
+    buildings (an eval slice); pass ``None`` for every building (the full run — far
+    cheaper than shipping a 170k-element array as a query parameter)."""
+    base = ("SELECT DISTINCT btrim(r.bbl) AS bbl, upper(btrim(c.corporationname)) AS corp "
+            "FROM hpd_contacts c JOIN hpd_registrations r ON r.registrationid = c.registrationid "
+            "WHERE c.corporationname IS NOT NULL AND length(btrim(c.corporationname)) > 3")
+    if bbls is None:
+        return pd.read_sql(base + " AND r.bbl IS NOT NULL", conn)
+    return pd.read_sql(base + " AND btrim(r.bbl) = ANY(%(bbls)s)", conn,
+                       params={"bbls": list(bbls)})
 
 
 def feedback_merge(df: pd.DataFrame, clusters: pd.DataFrame, corp_df: pd.DataFrame,

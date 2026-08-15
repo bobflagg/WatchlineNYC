@@ -54,14 +54,15 @@ def score(clusters_df: pd.DataFrame, gold_df: pd.DataFrame):
     return metrics, false_merges, missed
 
 
-def sweep(linker, preds, gold_df, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98)) -> pd.DataFrame:
-    """Cluster at each threshold and score against the gold set. Returns a table
-    (one row per threshold) so the F1-maximizing operating point is visible."""
+def sweep(preds, nodes, gold_df, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98)) -> pd.DataFrame:
+    """Cluster (first-name-gated) at each threshold and score against the gold set.
+    Returns a table (one row per threshold) so the F1-maximizing operating point is
+    visible. ``nodes`` is the record frame (supplies the singleton universe)."""
     from watchline.discovery.ingest.portfolio import splink_source as ss
 
     rows = []
     for t in thresholds:
-        clusters = ss.cluster(linker, preds, threshold=t)
+        clusters = ss.cluster_gated(preds, nodes, threshold=t)
         m, _, _ = score(clusters, gold_df)
         rows.append({"threshold": t, **{k: m[k] for k in
                      ("precision", "recall", "f1", "tp", "fp", "fn")}})

@@ -14,7 +14,7 @@ import pandas as pd
 from watchline.shared.connections import pg_conn
 from watchline.discovery.ingest.portfolio import splink_source as ss
 from watchline.discovery.ingest.portfolio.eval import scorer
-from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE
+from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE, OFFICE_WHERE
 
 GOLD = Path(scorer.__file__).parent / "gold_set.csv"
 
@@ -26,6 +26,7 @@ def main():
     conn = pg_conn()
     df = pd.concat([ss.extract(conn, TARGET_WHERE),
                     ss.extract(conn, NBR_WHERE),
+                    ss.extract(conn, OFFICE_WHERE),
                     ss.extract(conn, COMMON),
                     ss.extract(conn, "random() < 0.012")], ignore_index=True)
     degs = ss.address_degrees(conn)
@@ -33,7 +34,7 @@ def main():
     gold = scorer.load_gold(GOLD)
 
     linker, preds = ss.fit(df, addr_degrees=degs)
-    pass1 = ss.cluster(linker, preds, threshold=0.9)
+    pass1 = ss.cluster_gated(preds, df, threshold=0.9)
 
     # Cross-office feature: corporate co-owners on the entities' buildings.
     all_bbls = {b for lst in df["bbls"] for b in (lst or [])}

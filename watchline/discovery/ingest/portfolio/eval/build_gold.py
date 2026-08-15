@@ -14,6 +14,18 @@ The hard cases it encodes:
   * different-first-name Castellanos (namesakes)          -> distinct     [must-NOT-merge]
   * aggregator-address neighbours                         -> distinct     [must-NOT-merge]
   * Scott Castellano's two offices / Kadden's offices     -> one entity   [DEBATABLE — flip if you disagree]
+  * SHARED-OFFICE co-mates at one small address           -> distinct     [must-NOT-merge]
+      Different landlords who file from the same non-aggregator office (223 & 18
+      Spencer St, Williamsburg — ~19 and ~7 distinct surnames each). This is the
+      population failure mode the rare-surname/masked-address gold above could NOT
+      see: the old address-block fused same-initial office-mates (JOEL BRAVER +
+      JOEL LEIFER; JACOB GUTMAN + JOSEF GUTMAN). Name-anchored linkage must keep
+      them apart. GUTMAN JACOB vs JOSEF is a same-surname/different-person case —
+      the common-surname discrimination axis, with evidence (two distinct people).
+
+NOT yet in the gold (needs deed/ACRIS evidence to adjudicate, don't guess): hyper-
+common full names repeated across unrelated addresses (MOHAMMAD ISLAM, YU LI) that
+term-frequency under-penalizes. See CLAUDE.md "Not done".
 """
 from __future__ import annotations
 
@@ -36,6 +48,17 @@ NBR_WHERE = """(
 )"""
 
 TARGET_NAMES = {"CROMAN", "RASHAD", "CASTELLANO", "KADDEN"}
+
+# Shared-office co-mates: genuinely different landlords filing from one small
+# (non-aggregator) office. Curated to one identity per distinct person (no typo-twins
+# like GUTTMAN), so every within-set pair is a clean must-NOT-merge. GUTMAN keeps
+# both JACOB and JOSEF — same surname, different people (the common-surname axis).
+OFFICE_WHERE = """(
+     (btrim(c.businesshousenumber)='223' AND upper(btrim(c.businessstreetname)) LIKE 'SPENCER%'
+        AND upper(btrim(c.lastname)) = ANY(ARRAY['BRAVER','FREUND','GREENFIELD','GROSS','LEBOWITZ','LEIFER','GUTMAN']))
+  OR (btrim(c.businesshousenumber)='18'  AND upper(btrim(c.businessstreetname)) LIKE 'SPENCER%'
+        AND upper(btrim(c.lastname)) = ANY(ARRAY['JACOBOWITZ','KOHN','LANDAU','LEVY','SPITZER','KUBITSHUK']))
+)"""
 
 
 def office_key(ln: str, house: str, street: str) -> str:
@@ -63,6 +86,13 @@ def office_key(ln: str, house: str, street: str) -> str:
 def adjudicate(r) -> tuple[str, str]:
     ln = (r.last_name or "").strip()
     fn = (r.first_name or "").strip()
+    house = (r.biz_house or "").strip()
+    street = (r.biz_street or "")
+    # Shared-office co-mates (disjoint address space from the targets): each distinct
+    # person is a distinct entity, so all within-office pairs are must-NOT-merge.
+    if house in ("223", "18") and street.startswith("SPENCER"):
+        key = f"{house}_{ln}_{fn}".lower().replace(" ", "_")
+        return f"e_office_{key}", f"office-mate @ {house} spencer (must-NOT-merge)"
     ok = office_key(ln, r.biz_house, r.biz_street)
     # CROMAN / KADDEN: collapse first-name variants (STEVE/STEVEN, ZACH/ZACHARY) —
     # one person, offices separate. RASHAD / CASTELLANO: keep first names distinct.
@@ -90,14 +120,16 @@ def main() -> None:
     conn = pg_conn()
     df_t = ss.extract(conn, TARGET_WHERE)
     df_n = ss.extract(conn, NBR_WHERE)
+    df_o = ss.extract(conn, OFFICE_WHERE)
     conn.close()
 
     df_t = df_t[df_t.contact_kind == "person"]
+    df_o = df_o[df_o.contact_kind == "person"].drop_duplicates("unique_id")
     # Decoys = neighbours whose last name isn't a target; cap to keep the set small.
     decoys = df_n[(df_n.contact_kind == "person") & (~df_n.last_name.isin(TARGET_NAMES))]
     decoys = decoys.drop_duplicates("unique_id").head(MAX_DECOYS)
 
-    df = (pd.concat([df_t, decoys], ignore_index=True)
+    df = (pd.concat([df_t, decoys, df_o], ignore_index=True)
             .drop_duplicates("unique_id").reset_index(drop=True))
 
     labeled = []

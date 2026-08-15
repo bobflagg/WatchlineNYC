@@ -10,7 +10,7 @@ import pandas as pd
 from watchline.shared.connections import pg_conn
 from watchline.discovery.ingest.portfolio import splink_source as ss
 from watchline.discovery.ingest.portfolio.eval import scorer
-from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE
+from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE, OFFICE_WHERE
 
 GOLD = Path(scorer.__file__).parent / "gold_set.csv"
 
@@ -22,6 +22,7 @@ def main():
     # the model. ~2k gives a stable prior while still carrying real name-rarity for TF.
     df = pd.concat([ss.extract(conn, TARGET_WHERE),
                     ss.extract(conn, NBR_WHERE),
+                    ss.extract(conn, OFFICE_WHERE),
                     ss.extract(conn, "random() < 0.012")], ignore_index=True)
     degs = ss.address_degrees(conn)          # full-population aggregator degrees
     conn.close()
@@ -30,11 +31,11 @@ def main():
     print(f"records: {len(df)}   gold labels: {len(gold)}   addr-degree rows: {len(degs)}")
 
     linker, preds = ss.fit(df, addr_degrees=degs)
-    table = scorer.sweep(linker, preds, gold, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98))
+    table = scorer.sweep(preds, df, gold, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98))
     print("\n" + table.to_string(index=False))
 
     best_t = float(table.loc[table.f1.idxmax(), "threshold"])
-    clusters = ss.cluster(linker, preds, best_t)
+    clusters = ss.cluster_gated(preds, df, best_t)
     m, fmerge, missed = scorer.score(clusters, gold)
     print(f"\nbest F1 @ threshold {best_t}:  {m}")
 
