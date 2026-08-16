@@ -93,6 +93,10 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   `(owner name, bbl)` (same key on both sides, from the same HPD contact; 99.9% coverage,
   0 cross-surname edges). One clique per resolved entity (star above `STAR_ABOVE`);
   `SPLINK_WEIGHT=10` so it dominates name(1.5)/address(1.0) under Louvain. Neo4j-free.
+- **`verify_splink.py`** — post-reconcile guard for B (read-only KG checks). HARD
+  invariants (exit 1): splink edges present, 0 cross-surname edges, 0 splink pairs split
+  across portfolios (**Louvain-scatter**). REVIEW: target consolidation + anchor, size
+  distribution + largest portfolios (blow-up / connector eyeball). Run after reconcile.
 - **`pipeline.py` / `algorithms.py`** — WoW's KG portfolio build. Now wired for B:
   `pipeline.py` has a `--step splink` (`load_splink_edges`, drop+rebuild each run) and
   `algorithms.py`'s `project_graph` includes `CONNECTED_BY_SPLINK`. `graph_type.cypher`
@@ -254,14 +258,18 @@ sync with the CSV, so regenerating is safe.
   `run_full` guard already watches it at population scale). NOTE: the common-name veto
   trades a small recall cost — a common-named operator with buildings at several
   addresses is NOT consolidated unless rare; consistent with the loop's `name_cap`.
-- **Mechanism B — WIRED, awaiting its first live run.** `splink_bridge.py` + the
-  `pipeline.py` `splink` step + the `algorithms.py` projection are in place and validated
-  read-only against the wow DB. Not yet run end-to-end (needs `PGDATABASE=wow`, a Neo4j
-  with GDS, and it **writes to the live discovery KG** — rebuilds all portfolios). On that
-  run, verify: **Croman 6→1**, Rosedale stays a 10-building portfolio (guaranteed —
-  edges only add), and **watch Louvain** on any merged component > `MAX_SIZE=300` bbls
-  (the weight-10 clique should hold the Splink group together, but only a live GDS run
-  confirms it). See "How to run".
+- **Mechanism B — RAN LIVE; one open issue (Louvain-scatter).** First live run
+  (run_id `20260815T…`) worked: 16,707 `CONNECTED_BY_SPLINK` edges, Croman 12 nodes → 1
+  portfolio (128 bbls, anchor correctly STEVEN CROMAN), 0 cross-surname edges. BUT
+  `verify_splink.py` caught **90 splink pairs split across portfolios**: for large
+  operators whose merged WCC component exceeded `MAX_SIZE=300`, Louvain's split scattered
+  a few of the owner's nodes into neighbouring ≤300 sub-portfolios — the weight-10 clique
+  didn't fully survive Louvain. Spread over ~55 operators; recall-only (no wrong fusion),
+  modest, but a real partial-consolidation miss. **Fix candidates** (undecided): raise
+  `SPLINK_WEIGHT` well above 10 (quick, test with `verify_splink`); OR collapse each
+  splink clique to a single super-node before WCC/Louvain so it can't be split (cleanest,
+  changes the projection); OR a post-Louvain repair pass. Small components (Croman 128 <
+  300) never hit Louvain, so they're unaffected.
 - **Materialize resolved portfolios to the KG — SUPERSEDED by B.** The old plan (write a
   separate Splink-derived `Portfolio` set / replace `landlords_with_connections`) would
   have lost WoW's agent/shell nexus (1472 Rosedale). B keeps WoW's portfolios and only
