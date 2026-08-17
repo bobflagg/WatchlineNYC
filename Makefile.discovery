@@ -1,0 +1,154 @@
+# =============================================================================
+# Makefile.discovery — discovery KG ingestion pipeline (justfixwow + Splink)
+#
+# Included by the top-level Makefile. All targets are prefixed `discovery-`.
+# Recipes use TABS (GNU Make 3.81 on macOS has no .RECIPEPREFIX).
+#
+# Target database: JustFix's `justfixwow` dump on :5434 (PG* in .env). The dump
+# ships raw HPD + PLUTO (public schema) and a `wow` schema (wow_landlords,
+# wow_portfolios, wow_bldgs), but NOT `landlords_with_connections` — so the
+# `discovery-landlords` step builds it in-pipeline from wow_landlords (WoW's own
+# pg_trgm self-join), keeping the whole KG derived from the official dump.
+#
+# Dependency order (enforced by discovery-ingest-all):
+#   discovery-schema -> discovery-landlords -> discovery-buildings
+#     -> discovery-rentstab -> discovery-pluto-dof -> discovery-hpd-registrations
+#     -> discovery-events -> discovery-portfolio (edges -> splink -> reconcile)
+#
+# All targets are idempotent and safe to re-run.
+# =============================================================================
+
+DC_MOD        = watchline.discovery.ingest
+# `--extra ingest` so the Splink-backed steps (portfolio `splink`) resolve; it is
+# harmless for the steps that don't need it. Override DC_PY to change the runner.
+DC_PY        ?= uv run --extra ingest python
+DC_PORTFOLIO  = $(DC_PY) -m $(DC_MOD).portfolio.pipeline
+
+.NOTPARALLEL:
+
+.PHONY: discovery-check discovery-bootstrap discovery-schema discovery-landlords \
+        discovery-buildings discovery-rentstab discovery-pluto-dof \
+        discovery-actors discovery-registrations discovery-hpd-registrations \
+        discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
+        discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
+        discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
+        discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile \
+        discovery-portfolio-verify discovery-portfolio discovery-ingest-all
+
+
+# ---- Setup / verification ----------------------------------------------------
+
+discovery-check: ## [dc] Verify connections (expect Postgres justfixwow:5434 w/ wow_landlords; Neo4j reachable)
+	@$(DC_PY) -c '\
+import os; from dotenv import load_dotenv; load_dotenv(); \
+import psycopg2; \
+c = psycopg2.connect(host=os.environ["PGHOST"], port=os.environ["PGPORT"], \
+    dbname=os.environ["PGDATABASE"], user=os.environ["PGUSER"], password=os.environ["PGPASSWORD"]); \
+cur = c.cursor(); cur.execute("SELECT current_database(), inet_server_port()"); \
+db = cur.fetchone(); print("  Postgres:", db); \
+print("  WARNING: expected database \"justfixwow\"") if db[0] != "justfixwow" else None; \
+cur.execute("SELECT to_regclass(%s), to_regclass(%s)", ("wow_landlords", "landlords_with_connections")); \
+wl, lwc = cur.fetchone(); \
+print("  wow_landlords:              ", "present" if wl else "MISSING — cannot build landlords_with_connections"); \
+print("  landlords_with_connections:", "present" if lwc else "not built yet — run discovery-landlords"); \
+c.close(); \
+from neo4j import GraphDatabase; \
+d = GraphDatabase.driver(os.environ["NEO4J_URI"], auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"])); \
+d.verify_connectivity(); \
+print("  Neo4j:   connected to", os.environ["NEO4J_URI"], "db", os.environ.get("NEO4J_DISCOVERY_DATABASE", "discovery")); \
+d.close()'
+
+discovery-bootstrap: discovery-check discovery-schema ## [dc] Verify connections then apply the graph type (run FIRST on an empty DB)
+
+
+# ---- Schema ------------------------------------------------------------------
+
+discovery-schema: ## [dc] Apply the discovery graph type + indexes (run ONCE on an empty DB before loading)
+	$(DC_PORTFOLIO) --step schema
+
+
+# ---- Postgres prep: landlords_with_connections -------------------------------
+
+discovery-landlords: ## [dc] Build wow.landlords_with_connections from wow_landlords (WoW pg_trgm self-join)
+	$(DC_PY) -m $(DC_MOD).landlords.pipeline
+
+
+# ---- Layer 1: buildings + actors ---------------------------------------------
+
+discovery-buildings: ## [dc] Build Building nodes from full PLUTO substrate (~858K lots)
+	$(DC_PY) -m $(DC_MOD).buildings.pipeline
+
+discovery-rentstab: ## [dc] Enrich Building nodes with DHCR rent stabilization unit counts (ADR-014)
+	$(DC_PY) -m $(DC_MOD).rentstab.pipeline
+
+discovery-pluto-dof: ## [dc] Enrich Building nodes with DOF ownername/ownertype/assessed value/zoning
+	$(DC_PY) -m $(DC_MOD).pluto_dof.pipeline
+
+discovery-actors: ## [dc] Build Actor nodes from landlords_with_connections
+	$(DC_PY) -m $(DC_MOD).hpd_registrations.pipeline --step actors
+
+discovery-registrations: ## [dc] Build (Actor)-[:REGISTERED_FOR]->(Building) edges
+	$(DC_PY) -m $(DC_MOD).hpd_registrations.pipeline --step registrations
+
+discovery-hpd-registrations: ## [dc] Actors + REGISTERED_FOR edges (full hpd_registrations pipeline)
+	$(DC_PY) -m $(DC_MOD).hpd_registrations.pipeline
+
+
+# ---- Layer 2: events --------------------------------------------------------
+
+discovery-hpd-violations: ## [dc] HPD violations -> Event(Violation, HPD)
+	$(DC_PY) -m $(DC_MOD).hpd_violations.pipeline
+
+discovery-dob-violations: ## [dc] DOB violations -> Event(Violation, DOB)
+	$(DC_PY) -m $(DC_MOD).dob_violations.pipeline
+
+discovery-ecb-violations: ## [dc] ECB judgments -> Event(Judgment, ECB)
+	$(DC_PY) -m $(DC_MOD).ecb_violations.pipeline
+
+discovery-hpd-litigations: ## [dc] HPD litigations -> Event(CourtFiling, HPD-Litigations)
+	$(DC_PY) -m $(DC_MOD).hpd_litigations.pipeline
+
+discovery-hpd-complaints: ## [dc] HPD tenant complaints -> Event(Complaint, HPD)
+	$(DC_PY) -m $(DC_MOD).hpd_complaints.pipeline
+
+discovery-hpd-vacateorders: ## [dc] HPD vacate orders -> Event(VacateOrder, HPD)
+	$(DC_PY) -m $(DC_MOD).hpd_vacateorders.pipeline
+
+discovery-marshal-evictions: ## [dc] Marshal evictions -> Event(Eviction, Marshal)
+	$(DC_PY) -m $(DC_MOD).marshal_evictions.pipeline
+
+discovery-acris-deeds: ## [dc] ACRIS deeds -> Event(DeedTransfer) + grantor/grantee Actor:PARTY_TO
+	$(DC_PY) -m $(DC_MOD).acris_deeds.pipeline
+
+discovery-acris-mortgages: discovery-acris-deeds ## [dc] ACRIS mortgages/assignments/satisfactions -> Event + PARTY_TO + REFERENCES chain
+	$(DC_PY) -m $(DC_MOD).acris_mortgages.pipeline
+
+discovery-events: discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
+                  discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
+                  discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages ## [dc] All event datasets
+
+
+# ---- Layer 3: portfolio (edges -> splink -> reconcile) -----------------------
+
+discovery-portfolio-edges: ## [dc] Actor connection edges (CONNECTED_BY_NAME/ADDRESS)
+	$(DC_PORTFOLIO) --step edges
+
+discovery-portfolio-splink: ## [dc] CONNECTED_BY_SPLINK same-owner edges (Mechanism B; needs the ingest extra)
+	$(DC_PORTFOLIO) --step splink
+
+discovery-portfolio-reconcile: ## [dc] GDS clustering -> Portfolio + MEMBER_OF/IN_PORTFOLIO/APPARENT_CONTROL
+	$(DC_PORTFOLIO) --step reconcile
+
+discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile ## [dc] Full portfolio layer (edges + splink + reconcile)
+
+discovery-portfolio-verify: ## [dc] Read-only Mechanism B guard (run after reconcile; flags the known Louvain-scatter)
+	$(DC_PY) -m $(DC_MOD).portfolio.verify_splink
+
+
+# ---- Full pipeline -----------------------------------------------------------
+
+discovery-ingest-all: discovery-bootstrap discovery-landlords discovery-buildings discovery-rentstab \
+                      discovery-pluto-dof discovery-hpd-registrations \
+                      discovery-events discovery-portfolio ## [dc] Full ordered discovery ingestion
+	@echo ""
+	@echo "Discovery ingestion complete. Optional next: make discovery-portfolio-verify"

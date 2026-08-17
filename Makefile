@@ -17,13 +17,17 @@ DUMP_DIR    ?= dumps
 # the relative build contexts (.., ../sidecar) resolve.
 COMPOSE_DIR := deploy
 
+# Discovery KG ingestion pipeline (justfixwow + Splink). Adds `discovery-*` targets;
+# see `make help`. Run `make discovery-ingest-all` for the full ordered build.
+include Makefile.discovery
+
 .DEFAULT_GOAL := help
 
 .PHONY: help ui-start ui-stop ui-restart ui-status ui-logs dump deploy-build deploy-up deploy-down deploy-logs deploy-local
 
 help: ## List the available targets
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
-		awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
+		awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-26s\033[0m %s\n", $$1, $$2}'
 
 ui-start: ## Start the Streamlit UI in the background (override PORT=…, WATCHLINE_MODEL=…)
 	@if pgrep -f "streamlit run $(APP)" >/dev/null 2>&1; then \
