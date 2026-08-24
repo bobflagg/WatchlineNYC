@@ -506,7 +506,9 @@ def feedback_merge(df: pd.DataFrame, clusters: pd.DataFrame, corp_df: pd.DataFra
 
     ent = {}
     for cid, g in m.groupby("cluster_id"):
-        bbls = {b for lst in g["bbls"] for b in (lst or [])}
+        # `lst if lst is not None` (not `lst or`) — DuckDB returns bbls as numpy arrays,
+        # whose truth value is ambiguous; Postgres returns plain lists.
+        bbls = {b for lst in g["bbls"] for b in (lst if lst is not None else [])}
         corps = set().union(*(corp_by_bbl.get(b, set()) for b in bbls)) if bbls else set()
         last = g["last_name"].mode()
         init = g["first_initial"].mode()

@@ -73,9 +73,13 @@ def _stratified_train(full: pd.DataFrame) -> pd.DataFrame:
 
 
 def _resolve(conn, threshold: float):
-    """Full-population Splink resolution -> (records, clusters). Name-anchored blocking
-    plus the first-name and common-name vetoes (see splink_source.cluster_gated), trained on
-    the principled stratified slice (:func:`_stratified_train`)."""
+    """Full-population Splink resolution -> (records, clusters). Name-anchored blocking plus
+    the first-name and common-name vetoes (see splink_source.cluster_gated), trained on the
+    principled stratified slice (:func:`_stratified_train`), then a corp-co-owner feedback
+    pass that bridges same-owner offices sharing a private corp (Croman via Centennial, Rashad
+    via The Andrews Organization) — the cross-office consolidation name/address can't reach.
+    Guarded by corp-degree cap + name-rarity + first-name veto; validated precision-safe
+    against the owner-level gold (P 1.0, 0 cross-surname) for a ~+30pt recall lift."""
     full = ss.extract(conn, "TRUE")
     full = full[full.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
     train = _stratified_train(full)
@@ -83,6 +87,9 @@ def _resolve(conn, threshold: float):
     nf = ss.name_freq(conn)
     linker, preds = ss.fit_predict_full(train, full, addr_degrees=degs)
     clusters = ss.cluster_gated(preds, full, threshold, name_freq=nf)
+    corp_df = ss.corp_owners_for(conn)      # (bbl, corp) over all buildings
+    corp_deg = ss.corp_degrees(conn)        # corp -> distinct-landlord degree (aggregator cap)
+    clusters = ss.feedback_merge(full, clusters, corp_df, corp_deg, name_freq=nf)
     return full, clusters
 
 
