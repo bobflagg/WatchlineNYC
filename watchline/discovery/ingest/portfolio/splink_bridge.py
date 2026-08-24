@@ -32,9 +32,13 @@ import pandas as pd
 
 from watchline.discovery.ingest.portfolio import splink_source as ss
 
-# Splink edges outweigh name (~1.5) / address (~1.0) links, so when a merged component
-# exceeds MAX_SIZE and Louvain splits it, a resolved owner's nodes stay together.
-SPLINK_WEIGHT = 10.0
+# Splink edges dominate name (~1.5) / address (~1.0) links so that when a merged component
+# exceeds MAX_SIZE and Louvain splits it, a resolved owner's nodes stay together. Raised
+# 10 -> 100 to fix Louvain-scatter: at weight 10 the splink edge lost to a member-heavy
+# address nexus and a few owners scattered across sub-portfolios (recall-only, no wrong
+# fusion); at 100 the clique survives the split whenever the result still fits under MAX_SIZE
+# (a genuinely size-forced split -- merged size > MAX_SIZE -- can still scatter one pair).
+SPLINK_WEIGHT = 100.0
 
 # Above this many nodes an entity is wired as a star (hub -> members) instead of a full
 # clique, to bound edge count; the vetoes keep real entities well under this.
