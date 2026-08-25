@@ -369,28 +369,40 @@ _SPLINK_CLEANUP = ("MATCH ()-[r:CONNECTED_BY_SPLINK]->() "
                    "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS")
 
 
-def load_splink_edges(session, conn) -> int:
-    """Resolve owners with Splink and MERGE CONNECTED_BY_SPLINK between the Actor nodes
-    that resolve to one owner (Mechanism B, see splink_bridge). De-fragments WoW's
-    name/address clusters — Croman's typo'd offices collapse into one portfolio — without
-    touching what WoW already links (edges only add, so components only merge). Requires
-    the `ingest` extra (splink); imported lazily so schema/edges/reconcile do not."""
-    from . import splink_bridge
-
-    print("  Resolving owners with Splink (full-population linkage; ~1 min) ...")
-    edges = splink_bridge.splink_edges(conn)
-    session.run(_SPLINK_CLEANUP)
-
+def _load_edge_frame(session, edges, method: str) -> int:
+    """MERGE one [src, dst, weight] frame as CONNECTED_BY_SPLINK, stamping `method`."""
     cypher = _EDGE_CYPHER["SPLINK"]
     total, batch = 0, []
     for src, dst, weight in edges.itertuples(index=False):
         batch.append({"src": _actor_id(int(src)), "dst": _actor_id(int(dst)),
-                      "weight": float(weight), "method": SPLINK_METHOD})
+                      "weight": float(weight), "method": method})
         if len(batch) == EDGE_BATCH_SIZE:
             session.run(cypher, batch=batch); total += len(batch); batch = []
     if batch:
         session.run(cypher, batch=batch); total += len(batch)
     return total
+
+
+def load_splink_edges(session, conn) -> int:
+    """Resolve owners with Splink and MERGE CONNECTED_BY_SPLINK between the Actor nodes
+    that resolve to one owner (Mechanism B, see splink_bridge). De-fragments WoW's
+    name/address clusters — Croman's typo'd offices collapse into one portfolio — without
+    touching what WoW already links (edges only add, so components only merge). Then adds
+    a handful of human-verified `curated_owners` cliques for the residual the model can't
+    reach (same rare name, no shared corp/address — e.g. Croman's ROCKSOLID remnant),
+    stamped with a distinct `method` for provenance. Requires the `ingest` extra (splink);
+    imported lazily so schema/edges/reconcile do not."""
+    from . import splink_bridge, curated_owners
+
+    print("  Resolving owners with Splink (full-population linkage; ~1 min) ...")
+    model_edges = splink_bridge.splink_edges(conn)
+    curated = curated_owners.curated_edges(conn)
+    session.run(_SPLINK_CLEANUP)
+
+    n_model = _load_edge_frame(session, model_edges, SPLINK_METHOD)
+    n_curated = _load_edge_frame(session, curated, curated_owners.CURATED_METHOD)
+    print(f"    {n_model:,} model + {n_curated:,} curated CONNECTED_BY_SPLINK edges")
+    return n_model + n_curated
 
 
 def step_splink(driver) -> None:

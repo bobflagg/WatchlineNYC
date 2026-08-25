@@ -37,6 +37,14 @@ BLOWUP_REVIEW_CEILING = 500
 # not worth a global weight change — <= this many scattered pairs is a WARN; more is a FAIL.
 SCATTER_WARN_MAX = 2
 
+# Provenance stamped on human-curated override edges (curated_owners.CURATED_METHOD;
+# mirrored here so verify stays dependency-light — no splink/pandas import). Curated
+# merges are hand-verified and deliberately include known >MAX_SIZE operators (Kadden,
+# 496 bbls) that Louvain MUST size-split, so a curated pair landing in two portfolios is
+# expected-by-design, not a silently-undone model merge — excluded from the hard scatter
+# gate and reported as review info instead.
+CURATED_METHOD = "curated-same-owner"
+
 Q_EDGES_PRESENT = "MATCH ()-[r:CONNECTED_BY_SPLINK]->() RETURN count(r) AS n"
 
 # Surname = last whitespace token of the landlord name (persons are "FIRST LAST").
@@ -47,9 +55,20 @@ WHERE elementId(a) < elementId(b)
 RETURN count(*) AS n, collect(DISTINCT a.name + ' <> ' + b.name)[0..8] AS examples
 """
 
+# Model-edge scatter is the hard gate (curated edges excluded — see CURATED_METHOD).
 Q_LOUVAIN_SCATTER = """
-MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-(b:Landlord)
-WHERE elementId(a) < elementId(b)
+MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') <> $curated_method
+MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
+WHERE pa <> pb
+RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
+"""
+
+# Curated pairs split across portfolios — expected when a curated operator exceeds
+# MAX_SIZE (Louvain must cut it); reported for visibility, never a failure.
+Q_CURATED_SCATTER = """
+MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $curated_method
 MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
 WHERE pa <> pb
 RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
@@ -111,17 +130,23 @@ def main() -> int:
             for ex in r["examples"]:
                 print(f"         {ex}")
 
-        r = one(Q_LOUVAIN_SCATTER)
+        r = one(Q_LOUVAIN_SCATTER, curated_method=CURATED_METHOD)
         n = r["n"]
         status = "PASS" if n == 0 else ("WARN" if n <= SCATTER_WARN_MAX else "FAIL")
         if status == "FAIL":
             failures.append(f"{n} splink-linked pairs landed in different portfolios (Louvain scatter)")
         elif status == "WARN":
             warnings_.append(f"{n} splink-linked pair(s) split across portfolios (Louvain scatter; recall-only, tolerated)")
-        print(f"[{status}] splink pairs split across portfolios: {n}  "
+        print(f"[{status}] model splink pairs split across portfolios: {n}  "
               f"(want 0; recall-only, WARN if <= {SCATTER_WARN_MAX})")
         if n:
             print(f"         e.g. {r['examples']}")
+
+        cs = one(Q_CURATED_SCATTER, curated_method=CURATED_METHOD)
+        print(f"[info] curated pairs split across portfolios: {cs['n']}  "
+              f"(expected for curated operators > MAX_SIZE, e.g. Kadden; not a failure)")
+        if cs["n"]:
+            print(f"         e.g. {cs['examples']}")
 
         print("\n=== REVIEW (judgement — recall-biased design) ===")
 

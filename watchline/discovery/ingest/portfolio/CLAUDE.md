@@ -93,9 +93,29 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   `(owner name, bbl)` (same key on both sides, from the same HPD contact; 99.9% coverage,
   0 cross-surname edges). One clique per resolved entity (star above `STAR_ABOVE`);
   `SPLINK_WEIGHT=10` so it dominates name(1.5)/address(1.0) under Louvain. Neo4j-free.
+- **`curated_owners.py`** — **human-in-the-loop override.** A small hand-verified table
+  (`CURATED_OWNERS`) of "these landlord nodes are the same real owner," for the residual
+  the resolver *cannot* reach: fragments sharing only a rare exact name with **no shared
+  corp/address** (e.g. Croman's 9-bbl ROCKSOLID remnant vs his 126-bbl CENTENNIAL main —
+  0 shared buildings, tied only by the name). `curated_edges(conn)` emits a weight-100
+  `CONNECTED_BY_SPLINK` clique per owner (`method=CURATED_METHOD`, distinct provenance);
+  `load_splink_edges` loads it right after the model edges. Precision is the CURATOR's
+  responsibility — add a row only with cited evidence. Seeds: Croman, Divya Rashad,
+  Kadden. NOTE: a curated operator > `MAX_SIZE` (Kadden, 496) still size-splits under
+  Louvain — the clique unifies its identity + minimizes the split, it can't make it one
+  portfolio (that needs an owner-identity layer above portfolios).
+- **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
+  Read-only: ranks landlord names that span ≥2 portfolios in the live KG by *stranded*
+  buildings (total − largest fragment), annotated with a name-rarity proxy
+  (`name_freq`) and a `curable`/`large` flag (≤`MAX_SIZE` collapses fully; >`MAX_SIZE`
+  only minimizes). Prints ready-to-paste `CuratedOwner` stubs. **Decides nothing** — a
+  rare shared name can be two different people; every row is a human-review prompt. Run
+  after reconcile (`make discovery-portfolio-propose`).
 - **`verify_splink.py`** — post-reconcile guard for B (read-only KG checks). HARD
-  invariants (exit 1): splink edges present, 0 cross-surname edges, 0 splink pairs split
-  across portfolios (**Louvain-scatter**). REVIEW: target consolidation + anchor, size
+  invariants (exit 1): splink edges present, 0 cross-surname edges, 0 **model** splink
+  pairs split across portfolios (**Louvain-scatter**). Curated-method edges are excluded
+  from the scatter gate (a curated >`MAX_SIZE` operator splitting is expected-by-design)
+  and reported as an `[info]` line instead. REVIEW: target consolidation + anchor, size
   distribution + largest portfolios (blow-up / connector eyeball). Run after reconcile.
 - **`pipeline.py` / `algorithms.py`** — WoW's KG portfolio build. Now wired for B:
   `pipeline.py` has a `--step splink` (`load_splink_edges`, drop+rebuild each run) and

@@ -33,7 +33,7 @@ DC_PORTFOLIO  = $(DC_PY) -m $(DC_MOD).portfolio.pipeline
         discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
         discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
         discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile \
-        discovery-portfolio-verify discovery-portfolio discovery-ingest-all
+        discovery-portfolio-verify discovery-portfolio-propose discovery-portfolio discovery-ingest-all
 
 
 # ---- Setup / verification ----------------------------------------------------
@@ -143,6 +143,9 @@ discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discov
 
 discovery-portfolio-verify: ## [dc] Read-only Mechanism B guard (run after reconcile; flags the known Louvain-scatter)
 	$(DC_PY) -m $(DC_MOD).portfolio.verify_splink
+
+discovery-portfolio-propose: ## [dc] Rank rare exact-name operators split across portfolios, to seed curated_owners (read-only; run after reconcile)
+	$(DC_PY) -m $(DC_MOD).portfolio.propose_merges
 
 
 # ---- Full pipeline -----------------------------------------------------------
