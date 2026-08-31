@@ -27,6 +27,10 @@ from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 # Canary operators: known real single-operators that WoW fragmented; B should consolidate.
 TARGETS = ["CROMAN", "RASHAD"]
+# OwnerGroup canary: the curated marquee operators MUST each resolve to exactly one
+# :OwnerGroup (the curated overrides force-merge them). >1 = a regression in the ownership
+# layer; a soft WARN, not a hard fail, and skipped entirely if the layer isn't materialized.
+OWNER_TARGETS = ["CROMAN", "DIVYA RASHAD", "KADDEN"]
 # Portfolios bigger than this are listed for manual review (not an auto-fail: a real
 # large operator legitimately exceeds it — a human decides operator vs. merge-blob).
 BLOWUP_REVIEW_CEILING = 500
@@ -90,6 +94,17 @@ WITH p ORDER BY p.building_count DESC LIMIT 1
 MATCH (anchor:Landlord)-[:APPARENT_CONTROL]->(:Building)-[:IN_PORTFOLIO]->(p)
 RETURN DISTINCT anchor.name AS anchor, count(*) AS buildings
 ORDER BY buildings DESC
+"""
+
+# OwnerGroup canary (ownership layer). Is it materialized, and does each marquee operator
+# resolve to a single :OwnerGroup?
+Q_OWNER_LAYER = "MATCH (og:OwnerGroup) RETURN count(og) AS n"
+Q_OWNER_TARGET = """
+MATCH (l:Landlord) WHERE l.name CONTAINS $name
+OPTIONAL MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
+RETURN count(DISTINCT l) AS nodes, count(DISTINCT og) AS groups,
+       collect(DISTINCT og.building_count) AS bcounts,
+       collect(DISTINCT og.name)[0..3] AS anchors
 """
 
 Q_SIZE_DIST = """
@@ -161,6 +176,26 @@ def main() -> int:
             for a in rows(Q_TARGET_ANCHOR, name=name):
                 hit = "OK" if name in (a["anchor"] or "").upper() else "!! anchor is NOT the operator"
                 print(f"     APPARENT_CONTROL anchor: {a['anchor']} ({a['buildings']} buildings)  [{hit}]")
+
+        # OwnerGroup canary — the curated marquee operators must each be one :OwnerGroup.
+        n_owner = one(Q_OWNER_LAYER)["n"]
+        if n_owner == 0:
+            print("\nOwnerGroup layer not materialized (run --step ownergroup); canary skipped.")
+        else:
+            print(f"\nOwnerGroup canary ({n_owner:,} owner groups):")
+            for name in OWNER_TARGETS:
+                t = one(Q_OWNER_TARGET, name=name)
+                g, anchors = t["groups"], [a for a in (t["anchors"] or []) if a]
+                anchor_ok = any(name in (a or "").upper() for a in anchors)
+                if g == 1 and anchor_ok:
+                    tag = "OK"
+                elif g == 1:
+                    tag = "!! single group but anchor is not the operator"
+                else:
+                    tag = "<- expected 1 owner group (curated); ownership-layer regression"
+                    warnings_.append(f"{name} resolves to {g} OwnerGroups (curated target expects 1)")
+                print(f"  {name}: {t['nodes']} nodes -> {g} owner group(s), buildings "
+                      f"{sorted(t['bcounts'] or [], reverse=True)}, anchor {anchors}  [{tag}]")
 
         d = one(Q_SIZE_DIST, ceiling=BLOWUP_REVIEW_CEILING)
         print(f"\nportfolios {d['portfolios']:,}   max {d['max_bldgs']} bbls   "
