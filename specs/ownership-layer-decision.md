@@ -64,6 +64,25 @@ Matching the **registered LLC (`pluto_latest.ownername`)** directly:
 
 Larger and cleaner than the deed signal's current unique contribution.
 
+### M4 — Manager-vs-nexus divergence (validates the *management* layer)
+
+Direct managing-agent grouping (`managed_by.py`, 67k buildings → 28k managers) joined to the
+current `IN_PORTFOLIO` nexus, over 66,987 buildings with both:
+
+- **Fragmentation (nexus misses management):** of managers with ≥5 buildings, **50% are split
+  across >1 portfolio** — the biggest catastrophically (FIRSTSERVICE 550 buildings → **240**
+  portfolios; NEW BEDFORD 210 → 149). The nexus captures a manager whole only when its owners
+  happen to list the manager's office (Orsid's 231→1 was the *lucky* half); it can't answer
+  "what does FirstService manage."
+- **Conflation (nexus over-merges):** of portfolios with ≥2 managed buildings, **65% mix ≥2
+  different managers** — the worst gluing **101 managers into one portfolio** via an aggregator
+  address.
+
+So the address-nexus is an unreliable proxy for management in *both* directions (misses 50%,
+conflates 65%). This is the quantitative case for a **direct `MANAGED_BY` layer** rather than
+reading management off the portfolio — the same muddled object doing two jobs badly, which the
+ownership/management split fixes: `MANAGED_BY` cures fragmentation, `:OwnerGroup` cures conflation.
+
 ## Decision
 
 Two conclusions, kept separate:
@@ -99,6 +118,15 @@ nominee/placeholder blobs. Wired into `pipeline.load_splink_edges` after the mod
 edges → info). Live run: 1,709 owner entities, 2,270 edges over 3,282 nodes.
 
 Run `--step splink` + `--step reconcile` to materialize the ~489 new owner merges.
+
+## Management layer delivered
+
+`watchline/discovery/ingest/portfolio/managed_by.py` — direct Agent-role extract + light
+`norm_manager()` (brand key; folds ORSID variants, drops `NONE`/placeholder agents) + group-by →
+`(:Building)-[:MANAGED_BY]->(:Manager)`. No Splink/WCC/Louvain. `:Manager`/`MANAGED_BY` declared in
+`graph_type.cypher`; wired as `pipeline --step managed` (and `run_all`), `make
+discovery-portfolio-managed`. Re-apply `--step schema` first. Live: 67k buildings → 28k managers.
+M4 above is the census that justifies it.
 
 ## Open questions for the `:OwnerGroup` build (step 3+)
 

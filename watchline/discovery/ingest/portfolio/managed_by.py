@@ -47,18 +47,30 @@ GROUP ENTERPRISES ENTERPRISE HOLDINGS HOLDING PARTNERS PARTNERSHIP APARTMENT APA
 THE OF AND AT
 """.split())
 
+# Placeholder / non-answer agent strings that must NOT become a "manager". Matched on the
+# de-punctuated, de-spaced form so "N/A", "N A" and "NA" all collapse to the same token.
+_PLACEHOLDER = frozenset("""
+NONE NA NULL NIL UNKNOWN UNAVAIL UNAVAILABLE TBD TBA NOTAPPLICABLE SELF SAME SAMEASOWNER
+OWNER OWNERAGENT NOAGENT MANAGINGAGENT AGENT XX XXX TEST
+""".split())
+
 
 def norm_manager(name) -> str | None:
     """Canonical manager key: uppercase, strip punctuation, drop generic/geo/form tokens,
-    keep the distinctive brand tokens. Falls back to the full collapsed name when stripping
-    would leave nothing (a name made only of generic words)."""
+    keep the distinctive brand tokens. Returns None for placeholder/non-answer strings
+    ("NONE", "N/A", "SAME AS OWNER"), and falls back to the full collapsed name when
+    stripping would otherwise leave nothing."""
     if not isinstance(name, str) or not name.strip():
+        return None
+    if re.sub(r"[^A-Z0-9]", "", name.upper()) in _PLACEHOLDER:   # whole string is a placeholder
         return None
     s = re.sub(r"[^A-Z0-9 ]", " ", name.upper())          # drop punctuation (& , . ' -)
     toks = [t for t in s.split() if t and t not in _GENERIC]
     key = " ".join(toks)
     if len(key) < 3:                                       # only generics left -> keep full name
         key = re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]", " ", name.upper())).strip()
+    if re.sub(r"[^A-Z0-9]", "", key) in _PLACEHOLDER:      # reduced to a placeholder (e.g. "NONE LLC")
+        return None
     return key or None
 
 

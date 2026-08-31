@@ -37,6 +37,14 @@ def test_null_and_blank_are_none():
     assert norm_manager("   ") is None
 
 
+def test_placeholder_agent_strings_are_dropped():
+    for junk in ("NONE", "none", "N/A", "N A", "NA", "UNKNOWN", "SAME AS OWNER",
+                 "MANAGING AGENT", "NONE LLC"):
+        assert norm_manager(junk) is None, junk
+    # a real brand that merely CONTAINS a placeholder-ish token still resolves
+    assert norm_manager("SAMSON MANAGEMENT") == "SAMSON"
+
+
 def test_known_limitation_concatenation_not_split():
     # Documented residual: a concatenated variant is NOT merged with the spaced brand
     # (left un-merged rather than risk over-splitting). ORSIDNY stays its own key.
