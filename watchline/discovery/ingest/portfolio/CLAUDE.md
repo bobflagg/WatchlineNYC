@@ -104,6 +104,25 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   Kadden. NOTE: a curated operator > `MAX_SIZE` (Kadden, 496) still size-splits under
   Louvain — the clique unifies its identity + minimizes the split, it can't make it one
   portfolio (that needs an owner-identity layer above portfolios).
+- **`llc_edges.py`** — **the same-registered-LLC edge** (deterministic ownership signal). WoW
+  links landlords by *head officer* (person), never by the property's DOF owner-of-record, so two
+  buildings owned by the same entity (BEACH 99TH LLC) split across portfolios when their head
+  officers differ. Reads `pluto_latest.ownername`; for every entity owning ≥2 buildings emits a
+  weight-100 `CONNECTED_BY_SPLINK` clique (`method="registered-llc"`) between those buildings'
+  landlord nodes. Same legal name = same owner (precision-1); word-boundary entity markers +
+  HDFC/institutional/placeholder exclusions + degree cap guard it. Loaded by `load_splink_edges`
+  after model+curated. Measured impact: **489 cross-portfolio owner merges, 1,336 buildings** — the
+  cheap step-2 signal in the ownership-layer plan (see `specs/ownership-layer-decision.md`).
+- **`managed_by.py`** — **the MANAGEMENT layer** (sketch/extractor), deliberately NOT the
+  ownership pipeline. Management is self-disclosed (HPD records a managing `Agent`), so this is
+  a direct extract → light-normalize → group-by: no Splink/WCC/Louvain. `norm_manager()` strips
+  corporate-form/geo/descriptor suffixes to a brand key (folds ORSID NY / ORSID REALTY CORP →
+  ORSID, consolidates AKAM typos); `extract_managed_by()` → `[bbl, manager_id, manager_name,
+  manager_addr]`; `load_managed_by()` writes `(:Building)-[:MANAGED_BY]->(:Manager)` (declare
+  those in `graph_type.cypher` first — currently unwired). Live: 67k buildings → 28k managers,
+  clean hub-and-spokes (Orsid 230, Andrews/Rashad 242, Choice/Castellano 228). Companion check:
+  0 identity components exceed MAX_SIZE, so Louvain is vestigial for the owner layer. See
+  `specs/ownership-layer-decision.md`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
   Read-only: ranks landlord names that span ≥2 portfolios in the live KG by *stranded*
   buildings (total − largest fragment), annotated with a name-rarity proxy

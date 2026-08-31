@@ -37,13 +37,15 @@ BLOWUP_REVIEW_CEILING = 500
 # not worth a global weight change — <= this many scattered pairs is a WARN; more is a FAIL.
 SCATTER_WARN_MAX = 2
 
-# Provenance stamped on human-curated override edges (curated_owners.CURATED_METHOD;
-# mirrored here so verify stays dependency-light — no splink/pandas import). Curated
-# merges are hand-verified and deliberately include known >MAX_SIZE operators (Kadden,
-# 496 bbls) that Louvain MUST size-split, so a curated pair landing in two portfolios is
-# expected-by-design, not a silently-undone model merge — excluded from the hard scatter
-# gate and reported as review info instead.
-CURATED_METHOD = "curated-same-owner"
+# The hard Louvain-scatter gate applies ONLY to model (Fellegi-Sunter) edges. The other
+# CONNECTED_BY_SPLINK methods — curated same-owner overrides and deterministic registered-LLC
+# links — are asserted/deterministic and deliberately include groups that Louvain MUST
+# size-split (a curated >MAX_SIZE operator, or a large single-entity LLC), so a pair of theirs
+# landing in two portfolios is expected-by-design, not a silently-undone model merge. Those
+# are reported as review info instead of failing the gate. (Method strings mirror
+# splink_bridge.SPLINK_METHOD / curated_owners.CURATED_METHOD / llc_edges.LLC_METHOD; kept as
+# literals so verify stays dependency-light — no splink/pandas import.)
+MODEL_METHOD = "splink-fellegi-sunter"
 
 Q_EDGES_PRESENT = "MATCH ()-[r:CONNECTED_BY_SPLINK]->() RETURN count(r) AS n"
 
@@ -55,20 +57,21 @@ WHERE elementId(a) < elementId(b)
 RETURN count(*) AS n, collect(DISTINCT a.name + ' <> ' + b.name)[0..8] AS examples
 """
 
-# Model-edge scatter is the hard gate (curated edges excluded — see CURATED_METHOD).
+# Model-edge scatter is the hard gate (only Fellegi-Sunter edges — see MODEL_METHOD).
 Q_LOUVAIN_SCATTER = """
 MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
-WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') <> $curated_method
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $model_method
 MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
 WHERE pa <> pb
 RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
 """
 
-# Curated pairs split across portfolios — expected when a curated operator exceeds
-# MAX_SIZE (Louvain must cut it); reported for visibility, never a failure.
-Q_CURATED_SCATTER = """
+# Asserted/deterministic (curated + registered-LLC) pairs split across portfolios — expected
+# when such a group exceeds MAX_SIZE and Louvain must cut it; reported for visibility, never
+# a failure.
+Q_ASSERTED_SCATTER = """
 MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
-WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $curated_method
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') <> $model_method
 MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
 WHERE pa <> pb
 RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
@@ -130,7 +133,7 @@ def main() -> int:
             for ex in r["examples"]:
                 print(f"         {ex}")
 
-        r = one(Q_LOUVAIN_SCATTER, curated_method=CURATED_METHOD)
+        r = one(Q_LOUVAIN_SCATTER, model_method=MODEL_METHOD)
         n = r["n"]
         status = "PASS" if n == 0 else ("WARN" if n <= SCATTER_WARN_MAX else "FAIL")
         if status == "FAIL":
@@ -142,9 +145,9 @@ def main() -> int:
         if n:
             print(f"         e.g. {r['examples']}")
 
-        cs = one(Q_CURATED_SCATTER, curated_method=CURATED_METHOD)
-        print(f"[info] curated pairs split across portfolios: {cs['n']}  "
-              f"(expected for curated operators > MAX_SIZE, e.g. Kadden; not a failure)")
+        cs = one(Q_ASSERTED_SCATTER, model_method=MODEL_METHOD)
+        print(f"[info] curated/LLC pairs split across portfolios: {cs['n']}  "
+              f"(expected when an asserted group > MAX_SIZE; not a failure)")
         if cs["n"]:
             print(f"         e.g. {cs['examples']}")
 

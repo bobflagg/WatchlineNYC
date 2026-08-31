@@ -392,17 +392,20 @@ def load_splink_edges(session, conn) -> int:
     reach (same rare name, no shared corp/address — e.g. Croman's ROCKSOLID remnant),
     stamped with a distinct `method` for provenance. Requires the `ingest` extra (splink);
     imported lazily so schema/edges/reconcile do not."""
-    from . import splink_bridge, curated_owners
+    from . import splink_bridge, curated_owners, llc_edges
 
     print("  Resolving owners with Splink (full-population linkage; ~1 min) ...")
     model_edges = splink_bridge.splink_edges(conn)
     curated = curated_owners.curated_edges(conn)
+    llc = llc_edges.llc_edges(conn)                 # deterministic same-registered-owner links
     session.run(_SPLINK_CLEANUP)
 
     n_model = _load_edge_frame(session, model_edges, SPLINK_METHOD)
     n_curated = _load_edge_frame(session, curated, curated_owners.CURATED_METHOD)
-    print(f"    {n_model:,} model + {n_curated:,} curated CONNECTED_BY_SPLINK edges")
-    return n_model + n_curated
+    n_llc = _load_edge_frame(session, llc, llc_edges.LLC_METHOD)
+    print(f"    {n_model:,} model + {n_curated:,} curated + {n_llc:,} registered-LLC "
+          f"CONNECTED_BY_SPLINK edges")
+    return n_model + n_curated + n_llc
 
 
 def step_splink(driver) -> None:
