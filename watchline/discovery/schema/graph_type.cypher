@@ -110,6 +110,18 @@ ALTER CURRENT GRAPH TYPE SET {
      residential_units :: INTEGER
   }),
 
+  // Management layer (portfolio/managed_by.py) — the DISCLOSED managing agent, normalized
+  // to a brand key. Deliberately SEPARATE from the ownership/portfolio layers: a self-
+  // reported operator grouping (HPD Agent role), NEVER an ownership claim. Built directly
+  // (extract -> normalize -> group-by), not via WCC/Louvain. Written by the `managed` step.
+  (:Manager => :WatchlineNode {
+     manager_id     :: STRING IS KEY,
+     name           :: STRING,
+     method         :: STRING NOT NULL,
+     building_count :: INTEGER,
+     generated_at   :: ZONED DATETIME
+  }),
+
   // ---- Relationship element types ------------------------------------------
 
   (:Building)-[:HAS_EVENT =>]->(:Event),
@@ -172,6 +184,11 @@ ALTER CURRENT GRAPH TYPE SET {
      method       :: STRING NOT NULL,
      run_id       :: STRING NOT NULL,
      generated_at :: ZONED DATETIME
-  }]->(:Building)
+  }]->(:Building),
+
+  // Building -> its disclosed managing agent (portfolio/managed_by.py `managed` step).
+  // A direct extract from the HPD Agent role, NOT an inference; the management nexus,
+  // kept separate from the ownership/portfolio edges above.
+  (:Building)-[:MANAGED_BY =>]->(:Manager)
 
 }

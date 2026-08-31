@@ -118,8 +118,9 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   a direct extract → light-normalize → group-by: no Splink/WCC/Louvain. `norm_manager()` strips
   corporate-form/geo/descriptor suffixes to a brand key (folds ORSID NY / ORSID REALTY CORP →
   ORSID, consolidates AKAM typos); `extract_managed_by()` → `[bbl, manager_id, manager_name,
-  manager_addr]`; `load_managed_by()` writes `(:Building)-[:MANAGED_BY]->(:Manager)` (declare
-  those in `graph_type.cypher` first — currently unwired). Live: 67k buildings → 28k managers,
+  manager_addr]`; `load_managed_by()` writes `(:Building)-[:MANAGED_BY]->(:Manager)`. Wired as
+  `pipeline --step managed` (and in `run_all`); `:Manager`/`MANAGED_BY` are declared in
+  `graph_type.cypher`, so run `--step schema` first. Live: 67k buildings → 28k managers,
   clean hub-and-spokes (Orsid 230, Andrews/Rashad 242, Choice/Castellano 228). Companion check:
   0 identity components exceed MAX_SIZE, so Louvain is vestigial for the owner layer. See
   `specs/ownership-layer-decision.md`.

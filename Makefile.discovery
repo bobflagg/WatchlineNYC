@@ -33,7 +33,7 @@ DC_PORTFOLIO  = $(DC_PY) -m $(DC_MOD).portfolio.pipeline
         discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
         discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
         discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile \
-        discovery-portfolio-verify discovery-portfolio-propose discovery-portfolio discovery-ingest-all
+        discovery-portfolio-verify discovery-portfolio-propose discovery-portfolio-managed discovery-portfolio discovery-ingest-all
 
 
 # ---- Setup / verification ----------------------------------------------------
@@ -139,7 +139,10 @@ discovery-portfolio-splink: ## [dc] CONNECTED_BY_SPLINK same-owner edges (Mechan
 discovery-portfolio-reconcile: ## [dc] GDS clustering -> Portfolio + MEMBER_OF/IN_PORTFOLIO/APPARENT_CONTROL
 	$(DC_PORTFOLIO) --step reconcile
 
-discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile ## [dc] Full portfolio layer (edges + splink + reconcile)
+discovery-portfolio-managed: ## [dc] Management layer: (:Building)-[:MANAGED_BY]->(:Manager) from the HPD agent role (needs the ingest extra; run --step schema first)
+	$(DC_PORTFOLIO) --step managed
+
+discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile discovery-portfolio-managed ## [dc] Full portfolio layer (edges + splink + reconcile + managed)
 
 discovery-portfolio-verify: ## [dc] Read-only Mechanism B guard (run after reconcile; flags the known Louvain-scatter)
 	$(DC_PY) -m $(DC_MOD).portfolio.verify_splink

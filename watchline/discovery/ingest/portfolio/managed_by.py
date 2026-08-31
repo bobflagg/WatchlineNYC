@@ -112,7 +112,7 @@ _CLEANUP = [
 _LOAD = """
 UNWIND $batch AS row
 MERGE (m:Manager:WatchlineNode {manager_id: row.manager_id})
-  ON CREATE SET m.name = row.manager_name, m.method = $method
+  ON CREATE SET m.name = row.manager_name, m.method = $method, m.generated_at = datetime()
 MATCH (b:Building {bbl: row.bbl})
 MERGE (b)-[:MANAGED_BY]->(m)
 """

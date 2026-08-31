@@ -504,11 +504,29 @@ def step_reconcile(driver) -> None:
 # Orchestration
 # ---------------------------------------------------------------------------
  
+def step_managed(driver) -> None:
+    """Build the MANAGEMENT layer: (:Building)-[:MANAGED_BY]->(:Manager) from the disclosed
+    HPD managing-agent role (portfolio/managed_by.py). Independent of the ownership/portfolio
+    layers — a direct extract + light normalize + group-by, no Splink/WCC/Louvain. Needs the
+    `ingest` extra (pandas); imported lazily so schema/edges/reconcile do not. Requires
+    :Manager/MANAGED_BY to be declared first (run --step schema)."""
+    from . import managed_by
+
+    print("Step 3 -- MANAGED_BY: disclosed managing agent -> :Manager (management layer) ...")
+    conn = pg_conn()
+    try:
+        n = managed_by.load_managed_by(driver, conn, database=NEO4J_DATABASE)
+        print(f"  {n:,} MANAGED_BY edges written.")
+    finally:
+        conn.close()
+
+
 def run_all(driver) -> None:
     step_schema(driver)      # idempotent; also run standalone first on empty DB
     step_edges(driver)
     step_splink(driver)      # CONNECTED_BY_SPLINK before reconcile projects it
     step_reconcile(driver)
+    step_managed(driver)     # management layer — independent of the portfolio reconcile
     print("")
     print("Portfolio reconcile complete.")
  
@@ -517,7 +535,7 @@ def main():
     parser = argparse.ArgumentParser(description="Watchline discovery KG portfolio reconcile")
     parser.add_argument(
         "--step",
-        choices=["schema", "edges", "splink", "reconcile"],
+        choices=["schema", "edges", "splink", "reconcile", "managed"],
         help="Run a single step (omit to run all steps in order)",
     )
     args = parser.parse_args()
@@ -534,6 +552,8 @@ def main():
             step_splink(driver)
         elif args.step == "reconcile":
             step_reconcile(driver)
+        elif args.step == "managed":
+            step_managed(driver)
     finally:
         driver.close()
  
