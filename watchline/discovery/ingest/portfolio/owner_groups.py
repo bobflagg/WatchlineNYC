@@ -2,37 +2,33 @@
 
 The owner-IDENTITY partition — who is the *apparent same owner* across differently-named LLCs,
 distinct from the address-nexus `Portfolio` (which conflates a manager's many owners) and the
-`MANAGED_BY` management layer. Built from the SAME identity signals that feed CONNECTED_BY_SPLINK,
-unioned:
+`MANAGED_BY` management layer.
 
-  * ``splink_bridge.node_clusters`` — Fellegi-Sunter model + corp-co-owner feedback (the resolver),
-  * ``curated_owners.curated_edges`` — hand-verified same-owner overrides (Croman's ROCKSOLID remnant),
-  * ``llc_edges.llc_edges``          — same registered DOF entity (deterministic).
+The OwnerGroup partition **is** the connected components of the `CONNECTED_BY_SPLINK` edges that
+``--step splink`` already materialized (model Fellegi-Sunter + curated overrides + registered-LLC).
+So this step just reads those edges and runs a plain union-find over them — it does NOT re-run the
+~1-min Splink resolution the splink step already did. That makes it a fast, **Neo4j-only** pass
+(no Postgres, no Splink/pandas dependency). It therefore REQUIRES ``--step splink`` to have run
+first; with no splink edges present it refuses rather than writing an empty layer.
 
-NO name/address glue -> no management-nexus conflation. The identity-component check confirmed
-0 of ~6,300 owner components exceed MAX_SIZE=300, so this needs no Louvain: it is a plain
-union-find over the identity edges (singletons excluded — a lone landlord *is* its own owner).
-
-This is INFERRED ownership, never a legal determination (Type II) — the same caveat class as
-`Portfolio`/`APPARENT_CONTROL`. Neo4j-free grouping; ``load_owner_groups`` does the KG write.
-Declare :OwnerGroup / IN_OWNER_GROUP in the graph type before loading.
+No name/address glue -> no management-nexus conflation. The identity-component check confirmed
+0 of ~6,300 owner components exceed MAX_SIZE=300, so this needs no Louvain. Singletons are absent
+by construction (a landlord with no splink edge is its own owner). This is INFERRED ownership,
+never a legal determination (Type II). Declare :OwnerGroup / IN_OWNER_GROUP before loading.
 """
 from __future__ import annotations
 
 from collections import defaultdict
 
-import pandas as pd
-
-from watchline.discovery.ingest.portfolio import splink_bridge, curated_owners, llc_edges
-
-# Provenance on the derived OwnerGroup nodes / IN_OWNER_GROUP edges.
+# Provenance on the derived OwnerGroup nodes / IN_OWNER_GROUP edges (the signals feeding
+# CONNECTED_BY_SPLINK: Fellegi-Sunter model + corp feedback + curated overrides + registered-LLC).
 OWNER_GROUP_METHOD = "splink-identity+curated+llc"
 
 
 def _union_groups(pairs, *, min_size: int = 2) -> dict[int, str]:
     """Union-find over ``pairs`` (iterable of (a, b) nodeids to merge). Returns
     ``{nodeid: 'OG-<root>'}`` for nodes whose component has >= ``min_size`` members. Root is the
-    MIN nodeid in the component, so ids are deterministic given the same clustering."""
+    MIN nodeid in the component, so ids are deterministic given the same edge set."""
     parent: dict[int, int] = {}
 
     def find(x: int) -> int:
@@ -65,20 +61,21 @@ def _union_groups(pairs, *, min_size: int = 2) -> dict[int, str]:
     return out
 
 
-def owner_groups(conn, *, min_size: int = 2) -> pd.DataFrame:
-    """``[nodeid, owner_group_id]`` — multi-node owner-identity groups (node_clusters unioned with
-    the curated and registered-LLC merges). Singletons are omitted: a landlord with no same-owner
-    peer is its own owner and needs no group node."""
-    nc = splink_bridge.node_clusters(conn)                     # [nodeid, cluster_id]
-    pairs: list[tuple[int, int]] = []
-    for _, grp in nc.groupby("cluster_id"):
-        ids = grp["nodeid"].astype(int).tolist()
-        pairs.extend((ids[0], x) for x in ids[1:])            # star per resolved cluster
-    for edges in (curated_owners.curated_edges(conn), llc_edges.llc_edges(conn)):
-        pairs.extend((int(s), int(d)) for s, d, *_ in edges.itertuples(index=False))
+# Every CONNECTED_BY_SPLINK edge (model + curated + registered-LLC) as an unordered nodeid pair.
+_EDGES = """
+MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE a.nodeid < b.nodeid
+RETURN a.nodeid AS a, b.nodeid AS b
+"""
 
-    groups = _union_groups(pairs, min_size=min_size)
-    return pd.DataFrame(sorted(groups.items()), columns=["nodeid", "owner_group_id"])
+
+def owner_groups(driver, *, database: str) -> list[dict]:
+    """``[{nodeid, owner_group_id}]`` — multi-node owner-identity groups = connected components of
+    the materialized CONNECTED_BY_SPLINK edges. Empty if the splink step has not run."""
+    with driver.session(database=database) as s:
+        pairs = [(r["a"], r["b"]) for r in s.run(_EDGES)]
+    groups = _union_groups(pairs, min_size=2)
+    return [{"nodeid": nid, "owner_group_id": gid} for nid, gid in sorted(groups.items())]
 
 
 # --- KG write (declare :OwnerGroup / IN_OWNER_GROUP in the graph type before running) ----------
@@ -114,11 +111,14 @@ WITH og, head(collect(l.name)) AS anchor SET og.name = anchor
 """
 
 
-def load_owner_groups(driver, conn, *, database: str, batch_size: int = 5000) -> int:
-    """Rebuild the ownership layer: drop existing :OwnerGroup/IN_OWNER_GROUP, then write fresh
-    from :func:`owner_groups`, and set member_count / building_count / anchor name."""
-    df = owner_groups(conn)
-    rows = df.to_dict("records")
+def load_owner_groups(driver, *, database: str, batch_size: int = 5000) -> int:
+    """Rebuild the ownership layer from the materialized CONNECTED_BY_SPLINK edges: drop existing
+    :OwnerGroup/IN_OWNER_GROUP, then write fresh and set member_count / building_count / anchor
+    name. Refuses if no splink edges are present (run --step splink first)."""
+    rows = owner_groups(driver, database=database)
+    if not rows:
+        raise RuntimeError(
+            "no CONNECTED_BY_SPLINK edges found — run `--step splink` before `--step ownergroup`")
     with driver.session(database=database) as s:
         for stmt in _CLEANUP:
             s.run(stmt)
@@ -129,14 +129,15 @@ def load_owner_groups(driver, conn, *, database: str, batch_size: int = 5000) ->
     return len(rows)
 
 
-if __name__ == "__main__":  # read-only summary (PGDATABASE must point at wow)
-    import warnings; warnings.filterwarnings("ignore")
-    import logging; logging.getLogger("splink").setLevel(logging.ERROR)
-    from watchline.shared.connections import pg_conn
-    conn = pg_conn()
-    df = owner_groups(conn)
-    conn.close()
-    sizes = df.groupby("owner_group_id").size()
-    print(f"multi-node owner groups: {len(sizes):,}  covering {len(df):,} landlord nodes")
-    print(f"  members per group: median {int(sizes.median())}, max {int(sizes.max())}")
-    print(f"  largest groups (landlord nodes): {sorted(sizes.tolist(), reverse=True)[:10]}")
+if __name__ == "__main__":  # read-only summary
+    from collections import Counter
+    from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE
+    driver = neo4j_driver()
+    rows = owner_groups(driver, database=NEO4J_DISCOVERY_DATABASE)
+    driver.close()
+    sizes = Counter(r["owner_group_id"] for r in rows)
+    top = sorted(sizes.values(), reverse=True)
+    print(f"multi-node owner groups: {len(sizes):,}  covering {len(rows):,} landlord nodes")
+    if top:
+        print(f"  members per group: median {sorted(sizes.values())[len(sizes)//2]}, max {top[0]}")
+        print(f"  largest groups (landlord nodes): {top[:10]}")

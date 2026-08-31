@@ -523,18 +523,15 @@ def step_managed(driver) -> None:
 
 def step_ownergroup(driver) -> None:
     """Build the OWNERSHIP layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) — the owner-identity
-    partition (portfolio/owner_groups.py) from node_clusters + curated + registered-LLC merges.
-    Distinct from the address-nexus Portfolio; identity signals only, no Louvain. Needs the
-    `ingest` extra; requires :OwnerGroup/IN_OWNER_GROUP declared (run --step schema first)."""
+    partition (portfolio/owner_groups.py) = the connected components of the CONNECTED_BY_SPLINK
+    edges the `splink` step already wrote (model + curated + registered-LLC). A fast Neo4j-only
+    pass — no Postgres, no re-run of the resolution. Requires --step splink (edges) and --step
+    schema (:OwnerGroup/IN_OWNER_GROUP declared) to have run first."""
     from . import owner_groups
 
-    print("Step 3b -- IN_OWNER_GROUP: owner-identity resolution -> :OwnerGroup (ownership layer) ...")
-    conn = pg_conn()
-    try:
-        n = owner_groups.load_owner_groups(driver, conn, database=NEO4J_DATABASE)
-        print(f"  {n:,} IN_OWNER_GROUP edges written (multi-member owner groups).")
-    finally:
-        conn.close()
+    print("Step 3b -- IN_OWNER_GROUP: owner-identity components -> :OwnerGroup (ownership layer) ...")
+    n = owner_groups.load_owner_groups(driver, database=NEO4J_DATABASE)
+    print(f"  {n:,} IN_OWNER_GROUP edges written (multi-member owner groups).")
 
 
 def run_all(driver) -> None:

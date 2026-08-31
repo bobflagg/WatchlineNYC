@@ -143,7 +143,7 @@ discovery-portfolio-reconcile: ## [dc] GDS clustering -> Portfolio + MEMBER_OF/I
 discovery-portfolio-managed: ## [dc] Management layer: (:Building)-[:MANAGED_BY]->(:Manager) from the HPD agent role (needs the ingest extra; run --step schema first)
 	$(DC_PORTFOLIO) --step managed
 
-discovery-portfolio-ownergroup: ## [dc] Ownership layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) from splink identity + curated + LLC (needs the ingest extra; run --step schema first)
+discovery-portfolio-ownergroup: ## [dc] Ownership layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) = components of CONNECTED_BY_SPLINK (Neo4j-only; run --step splink + --step schema first)
 	$(DC_PORTFOLIO) --step ownergroup
 
 discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile discovery-portfolio-managed discovery-portfolio-ownergroup ## [dc] Full portfolio layer (edges + splink + reconcile + managed + ownergroup)

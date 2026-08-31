@@ -1,13 +1,9 @@
 """Hermetic tests for the OwnerGroup union-find grouping.
 
-Pure function; gated on the ingest extra (pandas import in the module). Skips cleanly
-without it. Run under ``uv run --extra ingest pytest``.
+Pure function, no dependencies — owner_groups is now a Neo4j-only step (it reads the
+materialized CONNECTED_BY_SPLINK edges), so this runs in the default hermetic tier.
 """
 from __future__ import annotations
-
-import pytest
-
-pytest.importorskip("pandas")
 
 from watchline.discovery.ingest.portfolio.owner_groups import _union_groups
 
