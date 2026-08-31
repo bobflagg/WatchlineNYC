@@ -521,12 +521,29 @@ def step_managed(driver) -> None:
         conn.close()
 
 
+def step_ownergroup(driver) -> None:
+    """Build the OWNERSHIP layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) — the owner-identity
+    partition (portfolio/owner_groups.py) from node_clusters + curated + registered-LLC merges.
+    Distinct from the address-nexus Portfolio; identity signals only, no Louvain. Needs the
+    `ingest` extra; requires :OwnerGroup/IN_OWNER_GROUP declared (run --step schema first)."""
+    from . import owner_groups
+
+    print("Step 3b -- IN_OWNER_GROUP: owner-identity resolution -> :OwnerGroup (ownership layer) ...")
+    conn = pg_conn()
+    try:
+        n = owner_groups.load_owner_groups(driver, conn, database=NEO4J_DATABASE)
+        print(f"  {n:,} IN_OWNER_GROUP edges written (multi-member owner groups).")
+    finally:
+        conn.close()
+
+
 def run_all(driver) -> None:
     step_schema(driver)      # idempotent; also run standalone first on empty DB
     step_edges(driver)
     step_splink(driver)      # CONNECTED_BY_SPLINK before reconcile projects it
     step_reconcile(driver)
     step_managed(driver)     # management layer — independent of the portfolio reconcile
+    step_ownergroup(driver)  # ownership layer — independent of the portfolio reconcile
     print("")
     print("Portfolio reconcile complete.")
  
@@ -535,7 +552,7 @@ def main():
     parser = argparse.ArgumentParser(description="Watchline discovery KG portfolio reconcile")
     parser.add_argument(
         "--step",
-        choices=["schema", "edges", "splink", "reconcile", "managed"],
+        choices=["schema", "edges", "splink", "reconcile", "managed", "ownergroup"],
         help="Run a single step (omit to run all steps in order)",
     )
     args = parser.parse_args()
@@ -554,6 +571,8 @@ def main():
             step_reconcile(driver)
         elif args.step == "managed":
             step_managed(driver)
+        elif args.step == "ownergroup":
+            step_ownergroup(driver)
     finally:
         driver.close()
  

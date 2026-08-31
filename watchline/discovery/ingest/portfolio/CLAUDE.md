@@ -124,6 +124,18 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   clean hub-and-spokes (Orsid 230, Andrews/Rashad 242, Choice/Castellano 228). Companion check:
   0 identity components exceed MAX_SIZE, so Louvain is vestigial for the owner layer. See
   `specs/ownership-layer-decision.md`.
+- **`owner_groups.py`** — **the OWNERSHIP layer** (`ownergroup` step). The owner-IDENTITY
+  partition — apparent same owner across differently-named LLCs — materialized as
+  `(:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup)`. Built by a plain **union-find** over the identity
+  signals that feed `CONNECTED_BY_SPLINK`: `splink_bridge.node_clusters` (model + corp feedback) ∪
+  `curated_owners.curated_edges` ∪ `llc_edges.llc_edges`. NO name/address glue → no management-nexus
+  conflation, and 0 components exceed MAX_SIZE → **no Louvain**. Only multi-member groups
+  materialized (a singleton is its own owner). INFERRED (Type II), never a legal ownership claim.
+  Wired as `pipeline --step ownergroup` / `make discovery-portfolio-ownergroup`; `:OwnerGroup`/
+  `IN_OWNER_GROUP` declared in `graph_type.cypher` (run `--step schema` first). Live: 6,690 owner
+  groups over 16k landlord nodes (median 2 members, max 36). NOTE: currently re-runs the ~1-min
+  resolution (node_clusters) that `--step splink` already ran; a shared-resolution optimization is
+  a follow-up. See `specs/ownership-layer-decision.md`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
   Read-only: ranks landlord names that span ≥2 portfolios in the live KG by *stranded*
   buildings (total − largest fragment), annotated with a name-rarity proxy

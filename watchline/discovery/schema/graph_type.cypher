@@ -122,6 +122,20 @@ ALTER CURRENT GRAPH TYPE SET {
      generated_at   :: ZONED DATETIME
   }),
 
+  // Ownership layer (portfolio/owner_groups.py) — the owner-IDENTITY partition: apparent same
+  // owner across differently-named LLCs, from the Splink resolution + corp feedback + curated +
+  // registered-LLC merges (identity signals only, no address glue -> no management-nexus
+  // conflation). INFERRED, never a legal ownership determination (Type II). Built by the
+  // `ownergroup` step; only multi-member groups are materialized (a singleton is its own owner).
+  (:OwnerGroup => :WatchlineNode {
+     owner_group_id :: STRING IS KEY,
+     name           :: STRING,
+     method         :: STRING NOT NULL,
+     member_count   :: INTEGER,
+     building_count :: INTEGER,
+     generated_at   :: ZONED DATETIME
+  }),
+
   // ---- Relationship element types ------------------------------------------
 
   (:Building)-[:HAS_EVENT =>]->(:Event),
@@ -189,6 +203,10 @@ ALTER CURRENT GRAPH TYPE SET {
   // Building -> its disclosed managing agent (portfolio/managed_by.py `managed` step).
   // A direct extract from the HPD Agent role, NOT an inference; the management nexus,
   // kept separate from the ownership/portfolio edges above.
-  (:Building)-[:MANAGED_BY =>]->(:Manager)
+  (:Building)-[:MANAGED_BY =>]->(:Manager),
+
+  // Landlord -> its apparent owner group (portfolio/owner_groups.py `ownergroup` step).
+  // The owner-identity membership; INFERRED, never a legal ownership claim.
+  (:Landlord)-[:IN_OWNER_GROUP =>]->(:OwnerGroup)
 
 }
