@@ -5,7 +5,8 @@ reconcile`. Read-only (MATCH/RETURN only). Two tiers:
 
   HARD invariants (exit 1 on failure — the "pure win" gates):
     1. CONNECTED_BY_SPLINK edges exist            -> the splink step actually ran
-    2. 0 edges link different surnames            -> emit precision holds on the live graph
+    2. 0 MODEL edges link different surnames       -> model emit precision holds (registered-LLC
+         edges link by owner ENTITY and legitimately span surnames -> reported as info, not failed)
     3. splink-linked pairs in different portfolios: WARN if <= SCATTER_WARN_MAX, else FAIL
          WCC can't split a splink clique, but Louvain on a component > MAX_SIZE could; a
          tiny count is recall-only (never a wrong fusion) and tolerated as a WARN, more is
@@ -53,12 +54,23 @@ MODEL_METHOD = "splink-fellegi-sunter"
 
 Q_EDGES_PRESENT = "MATCH ()-[r:CONNECTED_BY_SPLINK]->() RETURN count(r) AS n"
 
-# Surname = last whitespace token of the landlord name (persons are "FIRST LAST").
+# Surname = last whitespace token of the landlord name (persons are "FIRST LAST"). The hard
+# gate is MODEL edges only: name-anchored blocking means a model same-owner edge must share a
+# surname, so a cross-surname model edge is a real precision break. The registered-LLC edges
+# link by shared owner ENTITY (same DOF LLC), which legitimately spans surnames — co-officers of
+# one LLC, or a surname typo the model's blocking can't bridge (ABDO ALSAID <> ABDO ALSAIDI) —
+# so those are reported as info, not failed. (Curated edges are same-surname for the seeds.)
 Q_CROSS_SURNAME = """
-MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-(b:Landlord)
-WHERE elementId(a) < elementId(b)
+MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $model_method
   AND toUpper(split(a.name, ' ')[-1]) <> toUpper(split(b.name, ' ')[-1])
 RETURN count(*) AS n, collect(DISTINCT a.name + ' <> ' + b.name)[0..8] AS examples
+"""
+Q_CROSS_SURNAME_ENTITY = """
+MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') <> $model_method
+  AND toUpper(split(a.name, ' ')[-1]) <> toUpper(split(b.name, ' ')[-1])
+RETURN count(*) AS n, collect(DISTINCT a.name + ' <> ' + b.name)[0..6] AS examples
 """
 
 # Model-edge scatter is the hard gate (only Fellegi-Sunter edges — see MODEL_METHOD).
@@ -140,13 +152,19 @@ def main() -> int:
         failures += [] if ok else ["no CONNECTED_BY_SPLINK edges — did --step splink run before reconcile?"]
         print(f"[{'PASS' if ok else 'FAIL'}] CONNECTED_BY_SPLINK edges present: {n_edges:,}")
 
-        r = one(Q_CROSS_SURNAME)
+        r = one(Q_CROSS_SURNAME, model_method=MODEL_METHOD)
         ok = r["n"] == 0
-        failures += [] if ok else [f"{r['n']} CONNECTED_BY_SPLINK edges link different surnames"]
-        print(f"[{'PASS' if ok else 'FAIL'}] cross-surname edges: {r['n']}  (want 0)")
+        failures += [] if ok else [f"{r['n']} MODEL CONNECTED_BY_SPLINK edges link different surnames"]
+        print(f"[{'PASS' if ok else 'FAIL'}] model cross-surname edges: {r['n']}  (want 0)")
         if not ok:
             for ex in r["examples"]:
                 print(f"         {ex}")
+
+        es = one(Q_CROSS_SURNAME_ENTITY, model_method=MODEL_METHOD)
+        print(f"[info] entity (LLC/curated) cross-surname edges: {es['n']}  "
+              f"(registered-LLC links by shared owner entity, not name — spans surnames by design)")
+        if es["n"]:
+            print(f"         e.g. {es['examples']}")
 
         r = one(Q_LOUVAIN_SCATTER, model_method=MODEL_METHOD)
         n = r["n"]
