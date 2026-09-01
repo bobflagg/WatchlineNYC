@@ -147,6 +147,22 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   **0 operator exceptions** (owners≈degree for every one — incl. 156 W 56 St = Orsid), so the mask
   is precision-safe. Basis for the "measure Portfolio's residual" analysis (88% keep / 12% shed).
   `make discovery-portfolio-aggregator-audit`.
+- **`deed_edges.py`** — **`CONNECTED_BY_DEED`** (`deed` step): the ACRIS multi-parcel-deed
+  co-ownership edge — the **name-free veil-pierce**. Buildings on one deed share a grantee → same
+  owner regardless of LLC names, so it merges an owner's differently-named LLCs that Splink
+  (name-anchored) and the registered-LLC edge (exact name) both keep apart. Postgres:
+  `real_property_master` (doctype `%DEED%`, dedup on documentid) + `real_property_legals` (bbl) +
+  `real_property_parties` (grantee); scoped to recent deeds (≥2013 — 75% of multi-parcel deeds are
+  pre-2005/stale), 2–25 parcels (mega-deeds are bulk/institutional), non-institutional grantees.
+  One clique per deed over the co-conveyed buildings' landlord nodes (bbl→nodeid explode-join, same
+  as `llc_edges`). Feeds the **OWNERSHIP layer only** — `owner_groups` reads
+  `CONNECTED_BY_SPLINK|CONNECTED_BY_DEED`; NOT projected into the address-nexus Portfolio (deeds are
+  ownership evidence, not an operational nexus). Deterministic + name-free → excluded from the model
+  cross-surname/scatter hard gates (shows on the `[info]` lines). SPECIALIST + sparse by design
+  (~850 edges): most buildings are bought individually. Validated on PF-…739 — merged a 22-building
+  bundle across 17 LLC names + the `175 REALTY ASSOCIATES I/II/IV` numbered shells. Wired
+  `--step deed` (after splink, before ownergroup) / `make discovery-portfolio-deed`; `:CONNECTED_BY_DEED`
+  declared in `graph_type.cypher` (run `--step schema` first). See `specs/ownership-layer-decision.md`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
   Read-only: ranks landlord names that span ≥2 portfolios in the live KG by *stranded*
   buildings (total − largest fragment), annotated with a name-rarity proxy

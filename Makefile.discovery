@@ -32,7 +32,7 @@ DC_PORTFOLIO  = $(DC_PY) -m $(DC_MOD).portfolio.pipeline
         discovery-hpd-violations discovery-dob-violations discovery-ecb-violations \
         discovery-hpd-litigations discovery-hpd-complaints discovery-hpd-vacateorders \
         discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
-        discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile \
+        discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-deed discovery-portfolio-reconcile \
         discovery-portfolio-verify discovery-portfolio-propose discovery-portfolio-managed \
         discovery-portfolio-ownergroup discovery-portfolio-aggregator-audit \
         discovery-portfolio discovery-ingest-all
@@ -138,6 +138,9 @@ discovery-portfolio-edges: ## [dc] Actor connection edges (CONNECTED_BY_NAME/ADD
 discovery-portfolio-splink: ## [dc] CONNECTED_BY_SPLINK same-owner edges (Mechanism B; needs the ingest extra)
 	$(DC_PORTFOLIO) --step splink
 
+discovery-portfolio-deed: ## [dc] CONNECTED_BY_DEED ACRIS multi-parcel co-ownership edges (name-free veil-pierce -> OwnerGroup; needs the ingest extra + --step schema)
+	$(DC_PORTFOLIO) --step deed
+
 discovery-portfolio-reconcile: ## [dc] GDS clustering -> Portfolio + MEMBER_OF/IN_PORTFOLIO/APPARENT_CONTROL
 	$(DC_PORTFOLIO) --step reconcile
 
@@ -150,7 +153,7 @@ discovery-portfolio-ownergroup: ## [dc] Ownership layer: (:Landlord)-[:IN_OWNER_
 discovery-portfolio-aggregator-audit: ## [dc] Classify high-degree business addresses as aggregator (mask) vs operator (keep) via OwnerGroup; the precision-safe address-mask list (read-only; needs the ownergroup layer)
 	$(DC_PY) -m $(DC_MOD).portfolio.aggregator_audit
 
-discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile discovery-portfolio-managed discovery-portfolio-ownergroup ## [dc] Full portfolio layer (edges + splink + reconcile + managed + ownergroup)
+discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-deed discovery-portfolio-reconcile discovery-portfolio-managed discovery-portfolio-ownergroup ## [dc] Full portfolio layer (edges + splink + deed + reconcile + managed + ownergroup)
 
 discovery-portfolio-verify: ## [dc] Read-only Mechanism B guard (run after reconcile; flags the known Louvain-scatter)
 	$(DC_PY) -m $(DC_MOD).portfolio.verify_splink

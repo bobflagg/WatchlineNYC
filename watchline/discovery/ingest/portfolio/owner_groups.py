@@ -4,12 +4,14 @@ The owner-IDENTITY partition — who is the *apparent same owner* across differe
 distinct from the address-nexus `Portfolio` (which conflates a manager's many owners) and the
 `MANAGED_BY` management layer.
 
-The OwnerGroup partition **is** the connected components of the `CONNECTED_BY_SPLINK` edges that
-``--step splink`` already materialized (model Fellegi-Sunter + curated overrides + registered-LLC).
-So this step just reads those edges and runs a plain union-find over them — it does NOT re-run the
-~1-min Splink resolution the splink step already did. That makes it a fast, **Neo4j-only** pass
-(no Postgres, no Splink/pandas dependency). It therefore REQUIRES ``--step splink`` to have run
-first; with no splink edges present it refuses rather than writing an empty layer.
+The OwnerGroup partition **is** the connected components of the owner-identity edges that the
+earlier steps already materialized: ``CONNECTED_BY_SPLINK`` (model Fellegi-Sunter + curated
+overrides + registered-LLC, from ``--step splink``) and ``CONNECTED_BY_DEED`` (ACRIS multi-parcel
+co-ownership, from ``--step deed`` — the name-free veil-pierce that merges an owner's differently-
+named LLCs). So this step just reads those edges and runs a plain union-find over them — it does
+NOT re-run the ~1-min Splink resolution. That makes it a fast, **Neo4j-only** pass (no Postgres,
+no Splink/pandas dependency). It therefore REQUIRES ``--step splink`` to have run first (deed is
+optional); with no such edges present it refuses rather than writing an empty layer.
 
 No name/address glue -> no management-nexus conflation. The identity-component check confirmed
 0 of ~6,300 owner components exceed MAX_SIZE=300, so this needs no Louvain. Singletons are absent
@@ -68,11 +70,12 @@ def _union_groups(pairs, *, min_size: int = 2) -> dict[int, str]:
     return out
 
 
-# Every CONNECTED_BY_SPLINK edge (model + curated + registered-LLC) as an unordered nodeid pair.
+# Every owner-identity edge as an unordered nodeid pair: CONNECTED_BY_SPLINK (model + curated +
+# registered-LLC) and CONNECTED_BY_DEED (ACRIS multi-parcel co-ownership — the name-free veil-pierce).
 _EDGES = """
-MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-(b:Landlord)
+MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK|CONNECTED_BY_DEED]-(b:Landlord)
 WHERE a.nodeid < b.nodeid
-RETURN a.nodeid AS a, b.nodeid AS b
+RETURN DISTINCT a.nodeid AS a, b.nodeid AS b
 """
 
 

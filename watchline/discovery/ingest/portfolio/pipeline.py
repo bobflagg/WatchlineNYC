@@ -357,6 +357,13 @@ _EDGE_CYPHER = {
     MERGE (a)-[r:CONNECTED_BY_SPLINK]-(b)
     SET r.weight = e.weight, r.method = e.method
     """,
+    "DEED": """
+    UNWIND $batch AS e
+    MATCH (a:Actor {actor_id: e.src})
+    MATCH (b:Actor {actor_id: e.dst})
+    MERGE (a)-[r:CONNECTED_BY_DEED]-(b)
+    SET r.weight = e.weight, r.method = e.method
+    """,
 }
  
  
@@ -412,9 +419,9 @@ _SPLINK_CLEANUP = ("MATCH ()-[r:CONNECTED_BY_SPLINK]->() "
                    "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS")
 
 
-def _load_edge_frame(session, edges, method: str) -> int:
-    """MERGE one [src, dst, weight] frame as CONNECTED_BY_SPLINK, stamping `method`."""
-    cypher = _EDGE_CYPHER["SPLINK"]
+def _load_edge_frame(session, edges, method: str, kind: str = "SPLINK") -> int:
+    """MERGE one [src, dst, weight] frame as CONNECTED_BY_<kind> (SPLINK or DEED), stamping `method`."""
+    cypher = _EDGE_CYPHER[kind]
     total, batch = 0, []
     for src, dst, weight in edges.itertuples(index=False):
         batch.append({"src": _actor_id(int(src)), "dst": _actor_id(int(dst)),
@@ -458,6 +465,28 @@ def step_splink(driver) -> None:
         with driver.session(database=NEO4J_DATABASE) as session:
             n = load_splink_edges(session, conn)
             print(f"  {n:,} CONNECTED_BY_SPLINK edges written.")
+    finally:
+        conn.close()
+
+
+_DEED_CLEANUP = ("MATCH ()-[r:CONNECTED_BY_DEED]->() "
+                 "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS")
+
+
+def step_deed(driver) -> None:
+    """Build the ACRIS multi-parcel-deed co-ownership edge (portfolio/deed_edges.py) — the name-free
+    veil-pierce that feeds the OWNERSHIP layer. Drop-and-rebuild each run. Needs the `ingest` extra;
+    requires --step schema (CONNECTED_BY_DEED declared) and the ACRIS real_property_* tables."""
+    from . import deed_edges
+
+    print("Step 1c -- CONNECTED_BY_DEED edges from ACRIS multi-parcel deeds ...")
+    conn = pg_conn()
+    try:
+        edges = deed_edges.deed_edges(conn)
+        with driver.session(database=NEO4J_DATABASE) as session:
+            session.run(_DEED_CLEANUP)
+            n = _load_edge_frame(session, edges, deed_edges.DEED_METHOD, kind="DEED")
+        print(f"  {n:,} CONNECTED_BY_DEED edges written.")
     finally:
         conn.close()
 
@@ -581,9 +610,10 @@ def run_all(driver) -> None:
     step_schema(driver)      # idempotent; also run standalone first on empty DB
     step_edges(driver)
     step_splink(driver)      # CONNECTED_BY_SPLINK before reconcile projects it
+    step_deed(driver)        # CONNECTED_BY_DEED (ownership only) before ownergroup reads it
     step_reconcile(driver)
     step_managed(driver)     # management layer — independent of the portfolio reconcile
-    step_ownergroup(driver)  # ownership layer — independent of the portfolio reconcile
+    step_ownergroup(driver)  # ownership layer — reads CONNECTED_BY_SPLINK|CONNECTED_BY_DEED
     print("")
     print("Portfolio reconcile complete.")
  
@@ -592,7 +622,7 @@ def main():
     parser = argparse.ArgumentParser(description="Watchline discovery KG portfolio reconcile")
     parser.add_argument(
         "--step",
-        choices=["schema", "edges", "splink", "reconcile", "managed", "ownergroup"],
+        choices=["schema", "edges", "splink", "deed", "reconcile", "managed", "ownergroup"],
         help="Run a single step (omit to run all steps in order)",
     )
     args = parser.parse_args()
@@ -607,6 +637,8 @@ def main():
             step_edges(driver)
         elif args.step == "splink":
             step_splink(driver)
+        elif args.step == "deed":
+            step_deed(driver)
         elif args.step == "reconcile":
             step_reconcile(driver)
         elif args.step == "managed":

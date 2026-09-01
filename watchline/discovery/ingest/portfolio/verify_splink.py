@@ -177,8 +177,8 @@ def main() -> int:
                 print(f"         {ex}")
 
         es = one(Q_CROSS_SURNAME_ENTITY, model_method=MODEL_METHOD)
-        print(f"[info] entity (LLC/curated) cross-surname edges: {es['n']}  "
-              f"(registered-LLC links by shared owner entity, not name — spans surnames by design)")
+        print(f"[info] entity (LLC/deed/curated) cross-surname edges: {es['n']}  "
+              f"(registered-LLC / ACRIS-deed link by shared owner entity/transaction, not name)")
         if es["n"]:
             print(f"         e.g. {es['examples']}")
 
@@ -201,7 +201,7 @@ def main() -> int:
             print(f"         e.g. {sf['examples']}")
 
         cs = one(Q_ASSERTED_SCATTER, model_method=MODEL_METHOD)
-        print(f"[info] curated/LLC pairs split across portfolios: {cs['n']}  "
+        print(f"[info] curated/LLC/deed pairs split across portfolios: {cs['n']}  "
               f"(expected when an asserted group > MAX_SIZE; not a failure)")
         if cs["n"]:
             print(f"         e.g. {cs['examples']}")

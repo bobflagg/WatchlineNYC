@@ -186,6 +186,14 @@ ALTER CURRENT GRAPH TYPE SET {
      method :: STRING NOT NULL
   }]->(:Landlord),
 
+  // ACRIS multi-parcel-deed co-ownership (portfolio/deed_edges.py, `deed` step). Buildings on one
+  // deed share a grantee -> same owner, regardless of LLC names — the name-free veil-pierce. Feeds
+  // the OWNERSHIP layer only (owner_groups reads SPLINK|DEED), not the address-nexus Portfolio.
+  (:Landlord)-[:CONNECTED_BY_DEED => {
+     weight :: FLOAT NOT NULL,
+     method :: STRING NOT NULL
+  }]->(:Landlord),
+
   (:Landlord)-[:MEMBER_OF =>]->(:Portfolio),
 
   (:Building)-[:IN_PORTFOLIO =>]->(:Portfolio),
