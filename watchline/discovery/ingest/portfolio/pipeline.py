@@ -81,6 +81,9 @@ from psycopg2.extras import RealDictCursor
  
 from . import algorithms
 from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
+# Single source of truth for business-address normalization, shared with the OwnerGroup-aware
+# aggregator_audit so the mask and its verification key addresses identically.
+from watchline.discovery.ingest.portfolio.aggregator_audit import _norm as _norm_bizaddr
  
  
 # ---------------------------------------------------------------------------
@@ -109,10 +112,15 @@ SPLINK_METHOD = "splink-fellegi-sunter"   # provenance on CONNECTED_BY_SPLINK ed
 # evidence of common control than a shared business address.
 NAME_WEIGHT_MULTIPLIER = 1.5
 ADDRESS_WEIGHT_MULTIPLIER = 1.0
-# Exclude business addresses shared by more than this many landlords
-# (registered-agent services, large third-party managers, law offices) — the
-# fix for the A&E / "Margaret Brunn" over-clustering. Set to None to disable.
-MAX_ADDR_DEGREE = 50
+# Exclude business addresses shared by more than this many DISTINCT landlords
+# (registered-agent services, large third-party managers, law offices) — the fix for the A&E /
+# "Margaret Brunn" over-clustering, and for the Orsid-style management-nexus over-merge. Lowered
+# 50 -> 25 to match the Splink AGGREGATOR_DEGREE; and the count is now on the NORMALIZED address
+# (see _aggregator_addresses) so a megaoffice can't split across format variants and slip under
+# the threshold (Orsid's 156 W 56 St = 216 landlords did exactly that at 50/raw). The
+# OwnerGroup-aware aggregator_audit verifies this mask hits only true aggregators (0 operator
+# exceptions — a same-owner-many-LLCs office would be spared). Set to None to disable.
+MAX_ADDR_DEGREE = 25
  
  
  
@@ -191,19 +199,21 @@ def step_schema(driver) -> None:
 # ---------------------------------------------------------------------------
  
 def _aggregator_addresses(conn) -> set:
-    """Business addresses shared by more than MAX_ADDR_DEGREE landlords."""
+    """NORMALIZED business addresses shared by more than MAX_ADDR_DEGREE distinct landlords —
+    registered-agent / management megaoffices. Grouping on the normalized address (not the raw
+    string) is what makes the mask effective: raw-string grouping lets one office split across
+    format variants (', MANHATTAN NY' present/absent, whitespace) so each variant stays under the
+    threshold and evades masking. Returns the set of normalized aggregator addresses; _edge_batches
+    masks any landlord whose bizaddr normalizes into it."""
     if MAX_ADDR_DEGREE is None:
         return set()
+    from collections import Counter
     with conn.cursor() as cur:
-        cur.execute(
-            "SELECT bizaddr FROM landlords_with_connections "
-            "WHERE bizaddr IS NOT NULL "
-            "GROUP BY bizaddr HAVING count(*) > %s",
-            (MAX_ADDR_DEGREE,),
-        )
-        aggregators = {r[0] for r in cur}
+        cur.execute("SELECT bizaddr FROM landlords_with_connections WHERE bizaddr IS NOT NULL")
+        counts = Counter(_norm_bizaddr(r[0]) for r in cur)   # one lwc row == one distinct landlord
+    aggregators = {a for a, n in counts.items() if a and n > MAX_ADDR_DEGREE}
     print(f"  {len(aggregators):,} aggregator business addresses excluded "
-          f"(> {MAX_ADDR_DEGREE} landlords).")
+          f"(> {MAX_ADDR_DEGREE} landlords, normalized).")
     return aggregators
  
  
@@ -290,8 +300,8 @@ def _edge_batches(conn, aggregators: set) -> Iterator[tuple]:
                     yield ("NAME", name_batch)
                     name_batch = []
  
-            # Skip address edges anchored on an aggregator address.
-            if row["bizaddr"] not in aggregators:
+            # Skip address edges anchored on an aggregator address (normalized match).
+            if _norm_bizaddr(row["bizaddr"]) not in aggregators:
                 for m in (row["bizaddr_match_info"] or []):
                     addr_batch.append({
                         "src": src,
