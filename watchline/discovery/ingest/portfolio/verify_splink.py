@@ -36,10 +36,12 @@ OWNER_TARGETS = ["CROMAN", "DIVYA RASHAD", "KADDEN"]
 # large operator legitimately exceeds it — a human decides operator vs. merge-blob).
 BLOWUP_REVIEW_CEILING = 500
 
-# Louvain can strand a few nodes of a large operator when it splits an oversized (>MAX_SIZE)
-# component: the weight-10 splink edge usually survives, but occasionally a pair lands in two
-# sub-portfolios. This is recall-only (never a wrong fusion), so a tiny count is immaterial and
-# not worth a global weight change — <= this many scattered pairs is a WARN; more is a FAIL.
+# The Louvain-scatter hard gate is SIZE-AWARE. A model splink pair split across portfolios whose
+# owner (OwnerGroup) is <= MAX_SIZE genuinely should have stayed together — a real regression. But
+# an owner group LARGER than MAX_SIZE (e.g. ERIC MOORE, ~430 bldgs via LLC merges) MUST be split by
+# Louvain to honor the cap, so its scatter is size-forced and recall-only — reported as info, not
+# failed. Below the cap, <= SCATTER_WARN_MAX scattered pairs is a WARN; more is a FAIL.
+MAX_SIZE = 300           # mirror algorithms.MAX_SIZE (kept literal so verify stays dependency-light)
 SCATTER_WARN_MAX = 2
 
 # The hard Louvain-scatter gate applies ONLY to model (Fellegi-Sunter) edges. The other
@@ -73,12 +75,26 @@ WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') <> $model_method
 RETURN count(*) AS n, collect(DISTINCT a.name + ' <> ' + b.name)[0..6] AS examples
 """
 
-# Model-edge scatter is the hard gate (only Fellegi-Sunter edges — see MODEL_METHOD).
+# Model-edge scatter is the hard gate (only Fellegi-Sunter edges — see MODEL_METHOD), and only for
+# owners at/under MAX_SIZE (a bigger owner group is size-forced to split — reported separately).
 Q_LOUVAIN_SCATTER = """
 MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
 WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $model_method
 MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
 WHERE pa <> pb
+OPTIONAL MATCH (a)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
+WITH a, b, coalesce(og.building_count, 0) AS owner_bldgs
+WHERE owner_bldgs <= $max_size
+RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
+"""
+
+# Size-forced model scatter: the owner group exceeds MAX_SIZE, so Louvain must split it. Info only.
+Q_SIZEFORCED_SCATTER = """
+MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord)
+WHERE elementId(a) < elementId(b) AND coalesce(r.method, '') = $model_method
+MATCH (a)-[:MEMBER_OF]->(pa:Portfolio), (b)-[:MEMBER_OF]->(pb:Portfolio)
+WHERE pa <> pb
+MATCH (a)-[:IN_OWNER_GROUP]->(og:OwnerGroup) WHERE og.building_count > $max_size
 RETURN count(*) AS n, collect(DISTINCT a.name)[0..8] AS examples
 """
 
@@ -166,17 +182,23 @@ def main() -> int:
         if es["n"]:
             print(f"         e.g. {es['examples']}")
 
-        r = one(Q_LOUVAIN_SCATTER, model_method=MODEL_METHOD)
+        r = one(Q_LOUVAIN_SCATTER, model_method=MODEL_METHOD, max_size=MAX_SIZE)
         n = r["n"]
         status = "PASS" if n == 0 else ("WARN" if n <= SCATTER_WARN_MAX else "FAIL")
         if status == "FAIL":
-            failures.append(f"{n} splink-linked pairs landed in different portfolios (Louvain scatter)")
+            failures.append(f"{n} splink-linked pairs landed in different portfolios (Louvain scatter, owner <= MAX_SIZE)")
         elif status == "WARN":
             warnings_.append(f"{n} splink-linked pair(s) split across portfolios (Louvain scatter; recall-only, tolerated)")
-        print(f"[{status}] model splink pairs split across portfolios: {n}  "
+        print(f"[{status}] model splink pairs split across portfolios (owner <= {MAX_SIZE}): {n}  "
               f"(want 0; recall-only, WARN if <= {SCATTER_WARN_MAX})")
         if n:
             print(f"         e.g. {r['examples']}")
+
+        sf = one(Q_SIZEFORCED_SCATTER, model_method=MODEL_METHOD, max_size=MAX_SIZE)
+        print(f"[info] size-forced model scatter (owner group > {MAX_SIZE}, Louvain must split): {sf['n']}  "
+              f"(recall-only, not a failure)")
+        if sf["n"]:
+            print(f"         e.g. {sf['examples']}")
 
         cs = one(Q_ASSERTED_SCATTER, model_method=MODEL_METHOD)
         print(f"[info] curated/LLC pairs split across portfolios: {cs['n']}  "
