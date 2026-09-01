@@ -41,8 +41,16 @@ def test_null_bbls_do_not_crash():
 
 
 def test_deed_sql_carries_the_scope_filters():
-    sql = de._deed_sql(de.DEFAULT_MIN_DATE, de.MAX_PARCELS)
+    sql = de._deed_sql(de.MAX_PARCELS)
     assert "DEED" in sql                               # doctype scope
-    assert de.DEFAULT_MIN_DATE in sql                  # recent-only date filter
+    assert "DISTINCT ON (btrim(l.bbl))" in sql         # staleness guard: each building's LATEST deed
+    assert "CURRENT_DATE" in sql                       # ignore future-dated bad deeds
     assert f"<= {de.MAX_PARCELS}" in sql               # parcel cap (mega-deed exclusion)
     assert "partytype = 2" in sql and "HDFC" in sql    # institutional-grantee exclusion
+
+
+def test_hub_nodes_drops_serial_co_investors():
+    # node 1 is on 3 deeds, nodes 2/3/4 each on 1 -> with cap 2, only node 1 is a hub.
+    groups = {"D1": {1, 2}, "D2": {1, 3}, "D3": {1, 4}}
+    assert de._hub_nodes(groups, hub_cap=2) == {1}
+    assert de._hub_nodes(groups, hub_cap=3) == set()   # nobody exceeds the cap

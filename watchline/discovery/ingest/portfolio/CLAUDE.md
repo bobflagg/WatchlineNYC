@@ -152,15 +152,21 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   owner regardless of LLC names, so it merges an owner's differently-named LLCs that Splink
   (name-anchored) and the registered-LLC edge (exact name) both keep apart. Postgres:
   `real_property_master` (doctype `%DEED%`, dedup on documentid) + `real_property_legals` (bbl) +
-  `real_property_parties` (grantee); scoped to recent deeds (≥2013 — 75% of multi-parcel deeds are
-  pre-2005/stale), 2–25 parcels (mega-deeds are bulk/institutional), non-institutional grantees.
+  `real_property_parties` (grantee); 2–25 parcels (mega-deeds are bulk/institutional),
+  non-institutional grantees. **Staleness guard** (`_deed_sql`): groups buildings by their *latest*
+  deed (`DISTINCT ON (bbl) … ORDER BY date DESC`), so old-but-still-held co-ownership counts and
+  co-bought-then-resold-apart does not — strictly better than a date cutoff, which drops old-but-held
+  and keeps recent-but-sold. **Deed-hub cap** (`_hub_nodes`, `DEED_HUB_CAP=20`): a landlord on >20
+  distinct multi-parcel deeds is a serial co-investor whose transitive links would over-merge unrelated
+  parties (the deed analogue of the aggregator megaoffice) → dropped from the cliques (precision-safe).
   One clique per deed over the co-conveyed buildings' landlord nodes (bbl→nodeid explode-join, same
   as `llc_edges`). Feeds the **OWNERSHIP layer only** — `owner_groups` reads
   `CONNECTED_BY_SPLINK|CONNECTED_BY_DEED`; NOT projected into the address-nexus Portfolio (deeds are
   ownership evidence, not an operational nexus). Deterministic + name-free → excluded from the model
   cross-surname/scatter hard gates (shows on the `[info]` lines). SPECIALIST + sparse by design
-  (~850 edges): most buildings are bought individually. Validated on PF-…739 — merged a 22-building
-  bundle across 17 LLC names + the `175 REALTY ASSOCIATES I/II/IV` numbered shells. Wired
+  (~1,197 edges / 971 deeds / 2 hubs masked): most buildings are bought individually. Validated on
+  PF-…739 — merged a 22-building bundle across 17 LLC names + the `175 REALTY ASSOCIATES I/II/IV`
+  numbered shells. Wired
   `--step deed` (after splink, before ownergroup) / `make discovery-portfolio-deed`; `:CONNECTED_BY_DEED`
   declared in `graph_type.cypher` (run `--step schema` first). See `specs/ownership-layer-decision.md`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
