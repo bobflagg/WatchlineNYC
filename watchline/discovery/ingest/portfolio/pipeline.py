@@ -215,6 +215,18 @@ def _aggregator_addresses(conn) -> set:
     print(f"  {len(aggregators):,} aggregator business addresses excluded "
           f"(> {MAX_ADDR_DEGREE} landlords, normalized).")
     return aggregators
+
+
+def _aggregator_nodes(conn, aggregators: set) -> set:
+    """lwc nodeids whose NORMALIZED business address is an aggregator. Address edges are masked on
+    EITHER endpoint being one of these — a landlord at a private-looking address VARIANT (e.g.
+    "575 FIFTH AVENUE 9FK", degree 1) must not fuzzy-match back INTO the masked megaoffice and
+    re-bridge it. Masking only the aggregator SRC left exactly that hole (the 575 Fifth blob)."""
+    if not aggregators:
+        return set()
+    with conn.cursor() as cur:
+        cur.execute("SELECT nodeid, bizaddr FROM landlords_with_connections WHERE bizaddr IS NOT NULL")
+        return {r[0] for r in cur if _norm_bizaddr(r[1]) in aggregators}
  
  
 def _actor_batches(conn) -> Iterator[List[dict]]:
@@ -272,7 +284,7 @@ def load_actors(session, conn) -> int:
     return total
  
  
-def _edge_batches(conn, aggregators: set) -> Iterator[tuple]:
+def _edge_batches(conn, agg_nodes: set) -> Iterator[tuple]:
     """
     Yield ('NAME'|'ADDRESS', [ {src, dst, weight}, ... ]) batches parsed from
     the name_match_info / bizaddr_match_info JSON columns.
@@ -300,17 +312,20 @@ def _edge_batches(conn, aggregators: set) -> Iterator[tuple]:
                     yield ("NAME", name_batch)
                     name_batch = []
  
-            # Skip address edges anchored on an aggregator address (normalized match).
-            if _norm_bizaddr(row["bizaddr"]) not in aggregators:
-                for m in (row["bizaddr_match_info"] or []):
-                    addr_batch.append({
-                        "src": src,
-                        "dst": _actor_id(m["nodeid"]),
-                        "weight": float(m["weight"]) * ADDRESS_WEIGHT_MULTIPLIER,
-                    })
-                    if len(addr_batch) == EDGE_BATCH_SIZE:
-                        yield ("ADDRESS", addr_batch)
-                        addr_batch = []
+            # Skip an address edge if EITHER endpoint is an aggregator landlord — masking only the
+            # src let unmasked address variants re-bridge the megaoffice (see _aggregator_nodes).
+            src_is_agg = row["nodeid"] in agg_nodes
+            for m in (row["bizaddr_match_info"] or []):
+                if src_is_agg or m["nodeid"] in agg_nodes:
+                    continue
+                addr_batch.append({
+                    "src": src,
+                    "dst": _actor_id(m["nodeid"]),
+                    "weight": float(m["weight"]) * ADDRESS_WEIGHT_MULTIPLIER,
+                })
+                if len(addr_batch) == EDGE_BATCH_SIZE:
+                    yield ("ADDRESS", addr_batch)
+                    addr_batch = []
  
         if name_batch:
             yield ("NAME", name_batch)
@@ -359,8 +374,9 @@ def load_edges(session, conn) -> int:
     for stmt in _EDGE_CLEANUP:
         session.run(stmt)
     aggregators = _aggregator_addresses(conn)
+    agg_nodes = _aggregator_nodes(conn, aggregators)
     by_kind = {"NAME": 0, "ADDRESS": 0}
-    for kind, batch in _edge_batches(conn, aggregators):
+    for kind, batch in _edge_batches(conn, agg_nodes):
         session.run(_EDGE_CYPHER[kind], batch=batch)
         by_kind[kind] += len(batch)
         total = by_kind["NAME"] + by_kind["ADDRESS"]
