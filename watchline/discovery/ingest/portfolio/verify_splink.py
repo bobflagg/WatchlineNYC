@@ -15,6 +15,8 @@ reconcile`. Read-only (MATCH/RETURN only). Two tiers:
   REVIEW (printed + soft-flagged — recall-bias makes these judgement calls, not invariants):
     4. target operators consolidated (Croman/Rashad canaries) + their APPARENT_CONTROL anchor
     5. portfolio size distribution + the largest portfolios (mega-merge / connector eyeball)
+    6. layer divergence — the three counts where Portfolio / Manager / OwnerGroup disagree (each
+         is value a single layer can't give); WARN if any collapses to 0 (regression toward blur)
 
   uv run python -m watchline.discovery.ingest.portfolio.verify_splink
 
@@ -152,6 +154,30 @@ RETURN p.portfolio_id AS pid, p.building_count AS bldgs, members, surnames
 ORDER BY bldgs DESC LIMIT 12
 """
 
+# LAYER DIVERGENCE (three-axis non-alignment). The Portfolio / Manager / OwnerGroup layers earn
+# their place ONLY where they DISAGREE — each of these counts is the number of cases one layer
+# resolves that Portfolio alone cannot. They are expected to be well above zero (measured 2026-09:
+# 508 / 103 / 1,461). A count collapsing to zero while its layer is materialized means the layer
+# has aligned with Portfolio and stopped adding information — the "regression toward blur" WARN.
+Q_PF_MULTI_OWNER = """
+MATCH (l:Landlord)-[:MEMBER_OF]->(p:Portfolio)
+MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
+WITH p, count(DISTINCT og) AS ogs
+RETURN sum(CASE WHEN ogs > 1 THEN 1 ELSE 0 END) AS diverge, count(p) AS total, max(ogs) AS max_v
+"""
+Q_OWNER_MULTI_PF = """
+MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
+MATCH (l)-[:MEMBER_OF]->(p:Portfolio)
+WITH og, count(DISTINCT p) AS ps
+RETURN sum(CASE WHEN ps > 1 THEN 1 ELSE 0 END) AS diverge, count(og) AS total, max(ps) AS max_v
+"""
+Q_MANAGER_MULTI_PF = """
+MATCH (b:Building)-[:MANAGED_BY]->(m:Manager)
+MATCH (b)-[:IN_PORTFOLIO]->(p:Portfolio)
+WITH m, count(DISTINCT p) AS ps
+RETURN sum(CASE WHEN ps > 1 THEN 1 ELSE 0 END) AS diverge, count(m) AS total, max(ps) AS max_v
+"""
+
 
 def main() -> int:
     driver = neo4j_driver()
@@ -245,6 +271,28 @@ def main() -> int:
         print(f"  {'portfolio_id':<28}{'bldgs':>7}{'members':>9}{'surnames':>10}")
         for r in rows(Q_TOP_PORTFOLIOS):
             print(f"  {str(r['pid']):<28}{r['bldgs']:>7}{r['members']:>9}{r['surnames']:>10}")
+
+        # Three-axis non-alignment: what each layer resolves that Portfolio alone cannot. Expected
+        # well above zero; a collapse to zero (layer materialized) = it aligned with Portfolio (blur).
+        print("\n=== LAYER DIVERGENCE (three-axis non-alignment; the layers earn their place where they disagree) ===")
+        checks = [
+            ("Portfolios holding >1 OwnerGroup   (one nexus, many owners -> OwnerGroup splits it)",
+             Q_PF_MULTI_OWNER, "OwnerGroup", "ownergroup"),
+            ("OwnerGroups spanning >1 Portfolio  (one owner across nexuses -> deed/splink cross-link)",
+             Q_OWNER_MULTI_PF, "OwnerGroup", "ownergroup"),
+            ("Managers spanning >1 Portfolio     (management is an orthogonal axis)",
+             Q_MANAGER_MULTI_PF, "Manager", "managed"),
+        ]
+        for label, q, layer, step in checks:
+            d = one(q)
+            total, diverge, mx = d["total"] or 0, d["diverge"] or 0, d["max_v"] or 0
+            if total == 0:
+                print(f"[info] {label}\n         {layer} layer not materialized (run --step {step}); skipped.")
+                continue
+            print(f"[info] {label}\n         {diverge:,} of {total:,}  (max {mx})")
+            if diverge == 0:
+                warnings_.append(f"{layer} layer no longer diverges from Portfolio ({label.split('(')[0].strip()}) "
+                                 f"— it has collapsed into the nexus and stopped adding information")
 
     driver.close()
 
