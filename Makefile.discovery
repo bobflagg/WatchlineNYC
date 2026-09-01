@@ -34,7 +34,8 @@ DC_PORTFOLIO  = $(DC_PY) -m $(DC_MOD).portfolio.pipeline
         discovery-marshal-evictions discovery-acris-deeds discovery-acris-mortgages discovery-events \
         discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile \
         discovery-portfolio-verify discovery-portfolio-propose discovery-portfolio-managed \
-        discovery-portfolio-ownergroup discovery-portfolio discovery-ingest-all
+        discovery-portfolio-ownergroup discovery-portfolio-aggregator-audit \
+        discovery-portfolio discovery-ingest-all
 
 
 # ---- Setup / verification ----------------------------------------------------
@@ -145,6 +146,9 @@ discovery-portfolio-managed: ## [dc] Management layer: (:Building)-[:MANAGED_BY]
 
 discovery-portfolio-ownergroup: ## [dc] Ownership layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) = components of CONNECTED_BY_SPLINK (Neo4j-only; run --step splink + --step schema first)
 	$(DC_PORTFOLIO) --step ownergroup
+
+discovery-portfolio-aggregator-audit: ## [dc] Classify high-degree business addresses as aggregator (mask) vs operator (keep) via OwnerGroup; the precision-safe address-mask list (read-only; needs the ownergroup layer)
+	$(DC_PY) -m $(DC_MOD).portfolio.aggregator_audit
 
 discovery-portfolio: discovery-portfolio-edges discovery-portfolio-splink discovery-portfolio-reconcile discovery-portfolio-managed discovery-portfolio-ownergroup ## [dc] Full portfolio layer (edges + splink + reconcile + managed + ownergroup)
 

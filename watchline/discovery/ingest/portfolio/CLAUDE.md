@@ -136,6 +136,17 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   `:OwnerGroup`/`IN_OWNER_GROUP` declared in `graph_type.cypher` (run `--step schema` first). Load
   matches on `:Actor` (indexed KEY), not `:Landlord` (no index → per-row label scan). Live: 6,690
   owner groups over 16k landlord nodes. Canary in `verify_splink`. See `specs/ownership-layer-decision.md`.
+- **`aggregator_audit.py`** — read-only tool that produces the **precision-safe address-mask list**
+  for the address-nexus (Portfolio) flaw. A business address shared by many landlords (degree >25)
+  is either an AGGREGATOR (management/agent megaoffice, many *unrelated* owners → the Orsid-style
+  over-merge, should be masked from `CONNECTED_BY_ADDRESS`) or an OPERATOR (one owner's many LLCs
+  from their own office → must NOT be masked). Degree alone can't tell them apart; this uses the
+  **OwnerGroup layer** — counts how many distinct OWNERS the filers resolve to (distinct OwnerGroups
+  + each ungrouped filer). Filers collapsing to ≤2 owners = operator (keep); spanning many =
+  aggregator (mask). Needs `--step ownergroup`. Live: 73 high-degree addresses, all 73 aggregators,
+  **0 operator exceptions** (owners≈degree for every one — incl. 156 W 56 St = Orsid), so the mask
+  is precision-safe. Basis for the "measure Portfolio's residual" analysis (88% keep / 12% shed).
+  `make discovery-portfolio-aggregator-audit`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
   Read-only: ranks landlord names that span ≥2 portfolios in the live KG by *stranded*
   buildings (total − largest fragment), annotated with a name-rarity proxy
