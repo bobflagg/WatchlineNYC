@@ -345,7 +345,19 @@ _EDGE_CYPHER = {
 }
  
  
+# Drop name/address links before rebuilding. Formerly these were pure MERGE (deterministic +
+# additive, so a re-run was a no-op), but the aggregator mask now REMOVES address edges — without
+# this drop, edges masked in a new build would linger from a prior unmasked build (the Orsid blob
+# survived exactly this way). Dropping name too keeps the edge set an exact function of the code.
+_EDGE_CLEANUP = [
+    "MATCH ()-[r:CONNECTED_BY_ADDRESS]->() CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS",
+    "MATCH ()-[r:CONNECTED_BY_NAME]->() CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS",
+]
+
+
 def load_edges(session, conn) -> int:
+    for stmt in _EDGE_CLEANUP:
+        session.run(stmt)
     aggregators = _aggregator_addresses(conn)
     total = 0
     for kind, batch in _edge_batches(conn, aggregators):
