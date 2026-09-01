@@ -14,7 +14,14 @@ first; with no splink edges present it refuses rather than writing an empty laye
 No name/address glue -> no management-nexus conflation. The identity-component check confirmed
 0 of ~6,300 owner components exceed MAX_SIZE=300, so this needs no Louvain. Singletons are absent
 by construction (a landlord with no splink edge is its own owner). This is INFERRED ownership,
-never a legal determination (Type II). Declare :OwnerGroup / IN_OWNER_GROUP before loading.
+never a legal determination (Type II).
+
+A group can span multiple SURNAMES: the registered-LLC signal (entity resolution) merges the
+co-officers of one owner LLC, which is accepted as entity-level ownership ("same owner LLC", not
+"same person"). The anchor name reflects this — a multi-surname group whose buildings are
+dominated (>=60%) by one real LLC/corp takes that entity as its name (the person anchor would name
+only one of several co-officers); person-identity groups keep the top member's name. See the
+anchor passes below. Declare :OwnerGroup / IN_OWNER_GROUP before loading.
 """
 from __future__ import annotations
 
@@ -104,10 +111,36 @@ MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
 UNWIND l.bbls AS bbl
 WITH og, count(DISTINCT bbl) AS bc SET og.building_count = bc
 """
-_ANCHOR_NAME = """
+# Anchor name in two passes. (1) Default = the member with the most buildings — right for a
+# person-identity group (one person and their aliases/typos; the person is the recognizable
+# accountability label even when they own via a shell LLC). (2) Override with the group's
+# dominant DOF owner ENTITY ONLY for a MULTI-SURNAME group (the entity-linked case: co-officers
+# of one LLC merged by the registered-LLC signal), where the person anchor names just one of
+# several — and only when one real LLC/corp covers a strong majority (>=60%) of the group's
+# buildings. Placeholders ("UNAVAILABLE OWNER") and HDFC/institutional owners are never anchors.
+_ANCHOR_PERSON = """
 MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
 WITH og, l ORDER BY size(l.bbls) DESC
 WITH og, head(collect(l.name)) AS anchor SET og.name = anchor
+"""
+_ANCHOR_ENTITY = """
+MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
+WITH og, count(DISTINCT toUpper(split(l.name, ' ')[-1])) AS surnames
+WHERE surnames >= 2
+MATCH (l2:Landlord)-[:IN_OWNER_GROUP]->(og)
+UNWIND l2.bbls AS bbl
+MATCH (b:Building {bbl: bbl})
+WITH og, toUpper(trim(b.dof_ownername)) AS o, bbl
+WHERE o IS NOT NULL
+  AND o =~ '(?i).*\\\\b(LLC|L\\\\.L\\\\.C|CORP|INC|REALTY|ASSOCIATES|PROPERTIES|HOLDINGS?|PARTNERS|VENTURES|EQUITIES|LP|LLP)\\\\b.*'
+  AND NOT o CONTAINS 'UNAVAILABLE'
+  AND NOT o CONTAINS 'HDFC'
+  AND NOT o CONTAINS 'HOUSING DEVELOPMENT FUND'
+WITH og, o, count(DISTINCT bbl) AS n
+ORDER BY n DESC
+WITH og, collect({o: o, n: n})[0] AS top
+WHERE top IS NOT NULL AND top.n * 5 >= og.building_count * 3
+SET og.name = top.o
 """
 
 
@@ -124,7 +157,7 @@ def load_owner_groups(driver, *, database: str, batch_size: int = 5000) -> int:
             s.run(stmt)
         for i in range(0, len(rows), batch_size):
             s.run(_LOAD, batch=rows[i:i + batch_size], method=OWNER_GROUP_METHOD)
-        for stmt in (_MEMBER_COUNT, _BUILDING_COUNT, _ANCHOR_NAME):
+        for stmt in (_MEMBER_COUNT, _BUILDING_COUNT, _ANCHOR_PERSON, _ANCHOR_ENTITY):
             s.run(stmt)
     return len(rows)
 
