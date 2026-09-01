@@ -359,13 +359,18 @@ def load_edges(session, conn) -> int:
     for stmt in _EDGE_CLEANUP:
         session.run(stmt)
     aggregators = _aggregator_addresses(conn)
-    total = 0
+    by_kind = {"NAME": 0, "ADDRESS": 0}
     for kind, batch in _edge_batches(conn, aggregators):
         session.run(_EDGE_CYPHER[kind], batch=batch)
-        total += len(batch)
+        by_kind[kind] += len(batch)
+        total = by_kind["NAME"] + by_kind["ADDRESS"]
         if total % 50_000 == 0:
             print(f"    {total:,} connection edges written ...")
-    return total
+    # Split reported so the aggregator mask is visible: address edges anchored on the excluded
+    # megaoffices are skipped, so this count drops sharply when the mask is active.
+    print(f"    {by_kind['NAME']:,} name + {by_kind['ADDRESS']:,} address edge rows written "
+          f"(address edges on the {len(aggregators):,} aggregator addresses skipped).")
+    return by_kind["NAME"] + by_kind["ADDRESS"]
  
  
 def step_edges(driver) -> None:
