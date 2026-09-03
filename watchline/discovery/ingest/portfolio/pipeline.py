@@ -596,14 +596,22 @@ def step_managed(driver) -> None:
 def step_ownergroup(driver) -> None:
     """Build the OWNERSHIP layer: (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup) — the owner-identity
     partition (portfolio/owner_groups.py) = the connected components of the CONNECTED_BY_SPLINK
-    edges the `splink` step already wrote (model + curated + registered-LLC). A fast Neo4j-only
-    pass — no Postgres, no re-run of the resolution. Requires --step splink (edges) and --step
-    schema (:OwnerGroup/IN_OWNER_GROUP declared) to have run first."""
-    from . import owner_groups
+    edges the `splink` step already wrote (model + curated + registered-LLC). First tags
+    Building.coop_condo (portfolio/coop_condo.py, from the WoW dump) so the layer can exclude
+    co-op/condo buildings (owned by shareholders, not a landlord) and drop co-op/condo-dominated
+    groups. Requires --step splink (edges) and --step schema (:OwnerGroup/IN_OWNER_GROUP +
+    Building.coop_condo declared) to have run first."""
+    from . import owner_groups, coop_condo
 
     print("Step 3b -- IN_OWNER_GROUP: owner-identity components -> :OwnerGroup (ownership layer) ...")
+    conn = pg_conn()
+    try:
+        cc = coop_condo.tag_coop_condo(conn, driver, database=NEO4J_DATABASE)
+        print(f"  tagged {cc:,} co-op/condo buildings (excluded from ownership attribution).")
+    finally:
+        conn.close()
     n = owner_groups.load_owner_groups(driver, database=NEO4J_DATABASE)
-    print(f"  {n:,} IN_OWNER_GROUP edges written (multi-member owner groups).")
+    print(f"  {n:,} IN_OWNER_GROUP edges written (rental owner groups; co-op/condo-dominated dropped).")
 
 
 def run_all(driver) -> None:

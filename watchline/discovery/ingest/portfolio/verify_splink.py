@@ -156,9 +156,11 @@ ORDER BY bldgs DESC LIMIT 12
 
 # LAYER DIVERGENCE (three-axis non-alignment). The Portfolio / Manager / OwnerGroup layers earn
 # their place ONLY where they DISAGREE — each of these counts is the number of cases one layer
-# resolves that Portfolio alone cannot. They are expected to be well above zero (measured 2026-09:
-# 508 / 103 / 1,461). A count collapsing to zero while its layer is materialized means the layer
-# has aligned with Portfolio and stopped adding information — the "regression toward blur" WARN.
+# resolves that Portfolio alone cannot. They are expected to be well above zero (measured 2026-09,
+# co-op/condo-excluded OwnerGroups: 473 / 86 / 1,461). A count collapsing to zero while its layer is
+# materialized means the layer has aligned with Portfolio and stopped adding information — the
+# "regression toward blur" WARN.
+Q_COOP_CONDO = "MATCH (b:Building) WHERE b.coop_condo RETURN count(b) AS n"
 Q_PF_MULTI_OWNER = """
 MATCH (l:Landlord)-[:MEMBER_OF]->(p:Portfolio)
 MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
@@ -275,6 +277,9 @@ def main() -> int:
         # Three-axis non-alignment: what each layer resolves that Portfolio alone cannot. Expected
         # well above zero; a collapse to zero (layer materialized) = it aligned with Portfolio (blur).
         print("\n=== LAYER DIVERGENCE (three-axis non-alignment; the layers earn their place where they disagree) ===")
+        cc = one(Q_COOP_CONDO)["n"]
+        print(f"[info] co-op/condo buildings flagged (excluded from OwnerGroup ownership): {cc:,}"
+              + ("" if cc else "  <- 0: run --step ownergroup (tags Building.coop_condo) so counts are rental-only"))
         checks = [
             ("Portfolios holding >1 OwnerGroup   (one nexus, many owners -> OwnerGroup splits it)",
              Q_PF_MULTI_OWNER, "OwnerGroup", "ownergroup"),

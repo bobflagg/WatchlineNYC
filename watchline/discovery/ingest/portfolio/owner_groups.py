@@ -18,6 +18,13 @@ No name/address glue -> no management-nexus conflation. The identity-component c
 by construction (a landlord with no splink edge is its own owner). This is INFERRED ownership,
 never a legal determination (Type II).
 
+Co-op/condo exclusion. Co-op/condo buildings are owned by shareholders/unit-owners, not a landlord,
+and their shared managing agent (the HPD registration signatory) otherwise fuses hundreds of
+unrelated boards into one phantom "owner". So ``building_count`` counts RENTAL buildings only
+(``Building.coop_condo`` = false), and groups whose buildings are >50% co-op/condo are dropped as
+management artifacts. This requires ``coop_condo.py`` to have tagged the buildings first (the
+``ownergroup`` step does so); absent the flag, nothing is excluded (graceful degradation).
+
 A group can span multiple SURNAMES: the registered-LLC signal (entity resolution) merges the
 co-officers of one owner LLC, which is accepted as entity-level ownership ("same owner LLC", not
 "same person"). The anchor name reflects this — a multi-surname group whose buildings are
@@ -109,10 +116,25 @@ _MEMBER_COUNT = """
 MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
 WITH og, count(DISTINCT l) AS mc SET og.member_count = mc
 """
+# building_count is RENTAL buildings only: co-op/condo buildings (Building.coop_condo, set by
+# coop_condo.py) are owned by shareholders/unit-owners, not a landlord, so they are excluded from
+# ownership attribution. total_building_count keeps the full footprint for the dominance test below.
 _BUILDING_COUNT = """
 MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
 UNWIND l.bbls AS bbl
-WITH og, count(DISTINCT bbl) AS bc SET og.building_count = bc
+OPTIONAL MATCH (b:Building {bbl: bbl})
+WITH og, bbl, coalesce(b.coop_condo, false) AS cc
+WITH og, count(DISTINCT bbl) AS total,
+     count(DISTINCT CASE WHEN NOT cc THEN bbl END) AS rental
+SET og.total_building_count = total, og.building_count = rental
+"""
+# Drop co-op/condo-DOMINATED groups (> 50% of buildings co-op/condo, i.e. rental < half of total):
+# these are management artifacts (one agent's many boards fused by the shared registration), not
+# rental owners. Groups with a rental majority survive, attributed to their rental buildings only.
+_DROP_COOP_DOMINATED = """
+MATCH (og:OwnerGroup)
+WHERE coalesce(og.total_building_count, 0) > 0 AND 2 * coalesce(og.building_count, 0) < og.total_building_count
+CALL (og) { DETACH DELETE og } IN TRANSACTIONS OF 5000 ROWS
 """
 # Anchor name in two passes. (1) Default = the member with the most buildings — right for a
 # person-identity group (one person and their aliases/typos; the person is the recognizable
@@ -133,6 +155,7 @@ WHERE surnames >= 2
 MATCH (l2:Landlord)-[:IN_OWNER_GROUP]->(og)
 UNWIND l2.bbls AS bbl
 MATCH (b:Building {bbl: bbl})
+WHERE NOT coalesce(b.coop_condo, false)          // rental buildings only, matching building_count
 WITH og, toUpper(trim(b.dof_ownername)) AS o, bbl
 WHERE o IS NOT NULL
   AND o =~ '(?i).*\\\\b(LLC|L\\\\.L\\\\.C|CORP|INC|REALTY|ASSOCIATES|PROPERTIES|HOLDINGS?|PARTNERS|VENTURES|EQUITIES|LP|LLP)\\\\b.*'
@@ -160,7 +183,7 @@ def load_owner_groups(driver, *, database: str, batch_size: int = 5000) -> int:
             s.run(stmt)
         for i in range(0, len(rows), batch_size):
             s.run(_LOAD, batch=rows[i:i + batch_size], method=OWNER_GROUP_METHOD)
-        for stmt in (_MEMBER_COUNT, _BUILDING_COUNT, _ANCHOR_PERSON, _ANCHOR_ENTITY):
+        for stmt in (_MEMBER_COUNT, _BUILDING_COUNT, _DROP_COOP_DOMINATED, _ANCHOR_PERSON, _ANCHOR_ENTITY):
             s.run(stmt)
     return len(rows)
 

@@ -59,6 +59,11 @@ ALTER CURRENT GRAPH TYPE SET {
      dof_zonedist1     :: STRING,
      dof_landmark      :: STRING,
      dof_histdist      :: STRING,
+     // Co-op/condo flag from the HPD registration contactdescription (portfolio/coop_condo.py,
+     // set during the `ownergroup` step). TRUE = the building's owner-role registrations are
+     // predominantly CO-OP/CONDO, so it is owned by shareholders/unit-owners, not a single
+     // landlord — excluded from the ownership (OwnerGroup) layer. Absent/false = rental/other.
+     coop_condo        :: BOOLEAN,
      created_at        :: ZONED DATETIME,
      updated_at        :: ZONED DATETIME
   }),
