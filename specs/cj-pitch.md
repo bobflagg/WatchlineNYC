@@ -11,48 +11,51 @@ and computational-journalism researchers who already know and rely on JustFix's 
 **Format:** 15-minute talk + live demo of the conversational query tool (works as a talk or a
 demo-session).
 
-## Pitch (~230 words)
+## Pitch (~235 words)
 
 Reporters covering housing lean on JustFix's *Who Owns What* to turn one troubled building into a
-landlord's full portfolio. It's indispensable — and it has a structural blind spot. It clusters
-buildings by shared registration, so a single "portfolio" blurs three different questions — who
-*operates* a building, who *manages* it, and who *owns* it — and its name-and-address matching
-breaks in both directions at once. It fuses hundreds of unrelated owners who merely share a
-management office, and it splits a single owner hiding behind differently-named LLCs.
+landlord's full portfolio. It's indispensable — and for most landlords it works well. But it has a
+structural blind spot on the sophisticated ones. WoW clusters buildings by shared registration —
+name, address, managing agent — so a landlord who obscures all three slips through: buy buildings
+together, then re-deed each into its own single-purpose LLC under a different registered agent, and
+WoW sees unrelated buildings.
 
-We'll show a system that pulls those three questions into separate, separately-checkable layers, and
-resolves ownership through a ladder of signals — probabilistic record linkage, shared-entity links,
-and a name-free "veil-pierce" that uses ACRIS co-conveyance deeds to prove differently-named LLCs
-are one owner.
+We'll show a system that (1) separates the three questions a single "portfolio" blurs — who
+*operates* a building, who *manages* it, who *owns* it — into separately checkable layers, and (2)
+resolves ownership with a ladder of signals ending in a name-free **veil-pierce**: ACRIS
+co-conveyance deeds prove differently-named LLCs are one owner, even when the owner later split them
+into separate shells.
 
-Two real cases make the stakes concrete. It de-aggregates a **216-owner cluster** that was really
-just clients of one management firm, FirstService Residential — owners a reporter might otherwise
-chase as a single empire. And it reunites a genuine operator that the standard tool splits across
-two portfolios. On the live NYC graph the layers measurably disagree: **508** portfolios hide more
-than one owner; **103** owners cross portfolios.
+A verified example: two rent-stabilized Queens apartment buildings, bought together on one 2018
+deed, then moved into "BBGT Property LLC" and "Cherry 168 LLC." WoW places them in *separate*
+portfolios — a reporter pulling one would never find the other. Our deed layer reunites them. On the
+live graph the layers measurably disagree: **479** portfolios hide more than one owner; **157**
+owners cross portfolios.
 
-Everything is framed as **investigative leads, not legal determinations** — the distinction
-reporters live and die by. We'll demo the tool live and discuss an evaluation, built with JustFix,
-for measuring when a layered ownership graph beats registration clustering.
+Honest scope: WoW already handles landlords who register consistently; the veil-pierce reaches the
+hidden minority it can't. Everything is framed as **investigative leads, not legal determinations** —
+the distinction reporters live and die by. We'll demo the tool live and discuss an evaluation, built
+toward a collaboration with JustFix, for measuring what the layered graph adds.
 
 ## What the audience leaves with
 
 - A concrete way to separate *operator / manager / owner* in public housing records — and why
   conflating them misleads a story.
-- The deed **veil-pierce**: using co-conveyance to link shell LLCs by name-free evidence, not fuzzy
-  name-matching.
-- Two named, inspectable before/after corrections — one over-merge, one under-merge.
-- An honest **reliability model** (leads vs. verdicts) built for accountability work with real libel
-  exposure.
+- The deed **veil-pierce** with linked-successor recovery: catching the owner who restructured into
+  per-building shells to hide, exactly where name-matching can't.
+- A **verified before/after** reporters can re-check on WoW themselves: two Queens buildings WoW
+  splits, the deed layer unifies.
+- An honest **reliability model** (leads vs. verdicts) for accountability work with real libel
+  exposure — including honest scope: a specialist signal, not a wholesale win over WoW.
 
 ---
 
 **Notes for the submitter.**
-- The closing line names a JustFix collaboration as aspirational — if nothing is confirmed, soften
-  to "toward a collaboration with JustFix" so you don't overstate in a room where they may be
-  present.
-- Divergence counts (508 / 103) are from the current `entity-linking-prototype` snapshot; refresh
-  before submitting if the pipeline is rebuilt.
+- JustFix collaboration is framed as aspirational ("toward a collaboration") — keep it that way
+  unless something is confirmed; they may be in the room.
+- Divergence counts (479 / 157) and the Queens example are from the rebuilt `entity-linking-prototype`
+  snapshot; the example was verified against WoW's *live* site (both buildings still resolve to
+  separate portfolios there) — spot-check again before submitting, as WoW's data updates.
 - Companion materials: [`paper-abstract.md`](paper-abstract.md) (fuller writeup),
   [`eval-protocol.md`](eval-protocol.md) (the evaluation referenced in the closing line),
   [`ownership-layer-decision.md`](ownership-layer-decision.md) (the design rationale).

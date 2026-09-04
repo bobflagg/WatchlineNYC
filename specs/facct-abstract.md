@@ -25,12 +25,14 @@ harm borne by tenants).
 We present a system that (i) decomposes the portfolio into three separately-verifiable layers —
 operational nexus, disclosed management, beneficial-owner identity — each carrying an explicit
 reliability type (directly-sourced vs. inferred); (ii) resolves ownership through an auditable
-ladder of signals, including a name-free "veil-pierce" from co-conveyance deeds; and (iii) attaches
-standardized caveats so every derived claim reads as an investigative lead, not a legal
-determination — a transparency-and-contestability mechanism, not a disclaimer. We treat the
-merge-vs-split (recall-vs-precision) tradeoff as an explicit, documented design decision rather than
-a hidden threshold. On the live NYC graph the layers measurably diverge (508 portfolios hide >1
-owner; 103 owners cross portfolios). We contribute an evaluation protocol with an INDETERMINATE
+ladder of signals, including a name-free "veil-pierce" from co-conveyance deeds — with a
+linked-successor guard that reaches owners who restructured their buildings into per-building shells,
+the case no name/address method can see; and (iii) attaches standardized caveats so every derived
+claim reads as an investigative lead, not a legal determination — a transparency-and-contestability
+mechanism, not a disclaimer. We treat the merge-vs-split (recall-vs-precision) tradeoff as an
+explicit, documented design decision rather than a hidden threshold, and exclude structures the
+resolution should not touch (co-ops/condos are owned by shareholders, not a landlord). On the live
+NYC graph the layers measurably diverge (479 portfolios hide >1 owner; 157 owners cross portfolios). We contribute an evaluation protocol with an INDETERMINATE
 class and a paired comparison to registration clustering that refuses to claim ownership the public
 record cannot support, and reflect on the dual-use tension of infrastructure that names people —
 arguing that typed provenance and contestability, not accuracy alone, are what make such systems
@@ -47,7 +49,9 @@ responsible.
 3. **The three-layer decomposition as accountability design** — holding operation, management, and
    ownership to distinct evidentiary standards instead of laundering an inference as a fact.
 4. **An auditable, recall-biased resolution ladder with documented precision guards** — the
-   merge/split tradeoff as an explicit design decision — including the name-free deed veil-pierce.
+   merge/split tradeoff as an explicit design decision — including the name-free deed veil-pierce
+   with its linked-successor guard, and precision hygiene (aggregator-address masking, co-op/condo
+   exclusion) that removes management artifacts a naive ownership inference would mint.
 5. **An evaluation methodology for accountability inference**: stratified adjudication with an
    INDETERMINATE class, a circularity control, a data-vintage control, and a paired head-to-head vs.
    registration clustering — honest about what public record can and cannot establish.
@@ -106,7 +110,13 @@ because it keeps a human adjudicator in the loop and marks each claim as challen
 **merge-vs-split tradeoff is documented, not hidden**, so downstream users can calibrate trust to
 the error profile rather than to an implied certainty. (4) **Capability is governed**: the deepest,
 open-ended investigative tier is gated behind a trust level and is not available to anonymous public
-use, so the most powerful profiling is not a one-click public affordance.
+use, so the most powerful profiling is not a one-click public affordance. (5) **Structural exclusion
+of management artifacts** directly attacks the misidentification vector above: co-op/condo buildings
+(owned by shareholders/unit-owners, not a landlord) are excluded from the ownership layer and
+co-op/condo-dominated groups are dropped, so a management company's registration signatory that would
+otherwise resolve to a large phantom "owner" — in our data, a signatory who resolved to a 231-building
+group that was 99% co-op/condo — is dropped rather than named. This is the safeguard working on the
+exact harm we identified, not a hypothetical.
 
 **The honest residual, and the thesis.** These safeguards are partial. We do not yet offer a formal
 **contestation and redress channel** by which a named party can see the basis of an inference and
@@ -123,6 +133,7 @@ are what make the system responsible, not accuracy alone.**
 
 ---
 
-*Divergence counts (508 / 103) and design details reflect the current `entity-linking-prototype`
-snapshot. The capability-gating claim refers to the trust-level control on the deep investigative
-tier; the contestation channel is future work, stated as such.*
+*Divergence counts (479 / 157) and design details reflect the rebuilt `entity-linking-prototype`
+snapshot (co-op/condo excluded; linked-successor deed guard applied). The capability-gating claim
+refers to the trust-level control on the deep investigative tier; the contestation channel is future
+work, stated as such.*
