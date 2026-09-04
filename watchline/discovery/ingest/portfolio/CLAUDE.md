@@ -156,7 +156,13 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   non-institutional grantees. **Staleness guard** (`_deed_sql`): groups buildings by their *latest*
   deed (`DISTINCT ON (bbl) … ORDER BY date DESC`), so old-but-still-held co-ownership counts and
   co-bought-then-resold-apart does not — strictly better than a date cutoff, which drops old-but-held
-  and keeps recent-but-sold. **Deed-hub cap** (`_hub_nodes`, `DEED_HUB_CAP=20`): a landlord on >20
+  and keeps recent-but-sold. **Linked-successor guard** (`_restructured_groups`, `_retained`,
+  `SUCCESSOR_MAX=3`): the latest-deed rule alone misses the shell game's signature move — buy together,
+  then re-deed each parcel into its own single-purpose LLC (so the joint deed is superseded). Recover
+  it when the joint grantee G is the *grantor* of each parcel's latest deed (G restructured them) AND
+  the successor LLC is a shell (globally the latest grantee of ≤3 buildings) — which separates
+  same-owner restructuring from an arms-length sale. Verified on 156-06/156-10 43rd Ave (LIBERTY 162
+  → BBGT / CHERRY 168): WoW splits them, this guard reunites them. **Deed-hub cap** (`_hub_nodes`, `DEED_HUB_CAP=20`): a landlord on >20
   distinct multi-parcel deeds is a serial co-investor whose transitive links would over-merge unrelated
   parties (the deed analogue of the aggregator megaoffice) → dropped from the cliques (precision-safe).
   One clique per deed over the co-conveyed buildings' landlord nodes (bbl→nodeid explode-join, same
@@ -164,9 +170,10 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   `CONNECTED_BY_SPLINK|CONNECTED_BY_DEED`; NOT projected into the address-nexus Portfolio (deeds are
   ownership evidence, not an operational nexus). Deterministic + name-free → excluded from the model
   cross-surname/scatter hard gates (shows on the `[info]` lines). SPECIALIST + sparse by design
-  (~1,197 edges / 971 deeds / 2 hubs masked): most buildings are bought individually. Validated on
-  PF-…739 — merged a 22-building bundle across 17 LLC names + the `175 REALTY ASSOCIATES I/II/IV`
-  numbered shells. Wired
+  (~1,428 edges / 2,124 nodes / 2 hubs masked, incl. the linked-successor recoveries): most buildings
+  are bought individually. The fully-obscured shell game (different LLC + different head officer,
+  unified only by deed) is rare and small — WoW already merges anything with a consistent name/address
+  signal, so this catches the hardest cases it can't. Wired
   `--step deed` (after splink, before ownergroup) / `make discovery-portfolio-deed`; `:CONNECTED_BY_DEED`
   declared in `graph_type.cypher` (run `--step schema` first). See `specs/ownership-layer-decision.md`.
 - **`propose_merges.py`** — the candidate generator that **populates** `curated_owners`.
