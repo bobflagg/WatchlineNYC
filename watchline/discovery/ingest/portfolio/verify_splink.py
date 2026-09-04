@@ -28,12 +28,15 @@ import sys
 
 from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
-# Canary operators: known real single-operators that WoW fragmented; B should consolidate.
-TARGETS = ["CROMAN", "RASHAD"]
-# OwnerGroup canary: the curated marquee operators MUST each resolve to exactly one
-# :OwnerGroup (the curated overrides force-merge them). >1 = a regression in the ownership
-# layer; a soft WARN, not a hard fail, and skipped entirely if the layer isn't materialized.
-OWNER_TARGETS = ["CROMAN", "DIVYA RASHAD", "KADDEN"]
+# Canary operators: verified real RENTAL single-operators that WoW fragmented; B should consolidate.
+# DIVYA RASHAD was removed: it is a co-op/condo MANAGEMENT signatory (99% co-op/condo buildings),
+# correctly DROPPED from the ownership layer by the co-op/condo filter (coop_condo.py) — not a rental
+# owner. CROMAN and KADDEN are verified rentals (0% co-op/condo), so they remain valid canaries.
+TARGETS = ["CROMAN", "KADDEN"]
+# OwnerGroup canary: these verified rental operators MUST each resolve to exactly one :OwnerGroup
+# (curated overrides force-merge them). >1 = a merge regression; 0 = the group was dropped (e.g. the
+# co-op/condo exclusion). A soft WARN, not a hard fail, and skipped if the layer isn't materialized.
+OWNER_TARGETS = ["CROMAN", "KADDEN"]
 # Portfolios bigger than this are listed for manual review (not an auto-fail: a real
 # large operator legitimately exceeds it — a human decides operator vs. merge-blob).
 BLOWUP_REVIEW_CEILING = 500
@@ -157,7 +160,9 @@ ORDER BY bldgs DESC LIMIT 12
 # LAYER DIVERGENCE (three-axis non-alignment). The Portfolio / Manager / OwnerGroup layers earn
 # their place ONLY where they DISAGREE — each of these counts is the number of cases one layer
 # resolves that Portfolio alone cannot. They are expected to be well above zero (measured 2026-09,
-# co-op/condo-excluded OwnerGroups: 473 / 86 / 1,461). A count collapsing to zero while its layer is
+# co-op/condo-excluded OwnerGroups + linked-successor deed: 479 / 157 / 1,461 — the 157 cross-nexus
+# owners rose from 86 as the deed guard's restructuring recoveries link owners across nexuses). A
+# count collapsing to zero while its layer is
 # materialized means the layer has aligned with Portfolio and stopped adding information — the
 # "regression toward blur" WARN.
 Q_COOP_CONDO = "MATCH (b:Building) WHERE b.coop_condo RETURN count(b) AS n"
