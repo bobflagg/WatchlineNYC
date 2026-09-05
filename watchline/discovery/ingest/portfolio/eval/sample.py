@@ -148,7 +148,8 @@ def build(out_dir: Path) -> dict:
                           "b": {"ref": "B", "name": b["name"], "bbls": [str(x) for x in b["bbls"]]}})
             key.append({"pair_id": pid, "stratum": stratum, "signal": SIGNAL[stratum],
                         "watchline": WATCHLINE[stratum], "wow": None, "anchor": None,
-                        "a_nodeid": a["nodeid"], "b_nodeid": b["nodeid"]})
+                        "a_nodeid": a["nodeid"], "b_nodeid": b["nodeid"],
+                        "a_bbls": [str(x) for x in a["bbls"]], "b_bbls": [str(x) for x in b["bbls"]]})
 
     rng.shuffle(queue)                       # present strata interleaved, not blocked
     qorder = {p["pair_id"]: i for i, p in enumerate(queue)}
