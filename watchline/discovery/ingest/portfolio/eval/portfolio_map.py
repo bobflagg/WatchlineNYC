@@ -168,7 +168,7 @@ _TEMPLATE = """<!doctype html>
   </div>
   <div class="legend" id="legend"></div>
   <div class="note">Coordinates: NYC DOF/PLUTO via the discovery graph. WoW assignment: justfix
-    <code>wow.wow_portfolios</code>. Base map © OpenStreetMap contributors.</div>
+    <code>wow.wow_portfolios</code>. Base map tiles © Esri.</div>
 </div>
 <script>
 const DATA = __GEOJSON__;
@@ -179,10 +179,17 @@ const map = new maplibregl.Map({
   container: "map",
   style: {
     version: 8,
-    sources: {osm: {type:"raster",
-      tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize:256, maxzoom:19, attribution:"© OpenStreetMap contributors"}},
-    layers: [{id:"osm",type:"raster",source:"osm"}]
+    // Esri free basemap: keyless and (unlike OSM's CDN) served without a Referer requirement,
+    // so it loads when the HTML is opened directly from disk (file://). Gray base + labels overlay.
+    sources: {
+      esribase: {type:"raster", tileSize:256, maxzoom:16,
+        tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+        attribution:"Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors"},
+      esriref: {type:"raster", tileSize:256, maxzoom:16,
+        tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"]}
+    },
+    layers: [{id:"esribase",type:"raster",source:"esribase"},
+             {id:"esriref",type:"raster",source:"esriref"}]
   },
   center:[-73.9,40.84], zoom:11
 });

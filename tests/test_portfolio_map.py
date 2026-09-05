@@ -62,4 +62,4 @@ def test_render_html_is_self_contained_and_embeds_data():
     assert "__GEOJSON__" not in html and "__WL_LEGEND__" not in html   # every token substituted
     assert json.dumps(gj) in html                                     # data baked into the file
     assert "maplibre-gl" in html and "mapbox-gl" not in html          # open-source lib, not proprietary
-    assert "tile.openstreetmap.org" in html                          # keyless basemap
+    assert "server.arcgisonline.com" in html                         # keyless, no-referer basemap
