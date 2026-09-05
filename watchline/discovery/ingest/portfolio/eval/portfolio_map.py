@@ -223,7 +223,10 @@ map.on("load", ()=>{
   });
   map.on("mouseenter","pts",()=>map.getCanvas().style.cursor="pointer");
   map.on("mouseleave","pts",()=>map.getCanvas().style.cursor="");
+  window._mapReady = true;   // hook for headless PNG export
 });
+// resolves once the map has finished rendering (tiles + paint settled)
+window.mapIdle = () => new Promise(res => map.once("idle", res));
 </script>
 </body></html>
 """
@@ -271,15 +274,54 @@ def generate(portfolio_id: str, out: Path) -> dict:
             "unplaced": sum(1 for p in points if p["bbl"] not in bbl2pf), "out": str(out)}
 
 
+def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int = 1200) -> list[Path]:
+    """Headless-render both views of an emitted map HTML to slide-ready PNGs (needs Playwright).
+
+    Writes  <stem>-watchline.png  and  <stem>-wow.png  beside the HTML. The toggle chrome is hidden;
+    the heading + legend remain (the legend carries the counts and the fracturing address variants).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ModuleNotFoundError as e:
+        raise SystemExit(
+            "PNG export needs Playwright. Install it once:\n"
+            "  uv run --with playwright python -m playwright install chromium\n"
+            "then re-run with:  uv run --with playwright python -m "
+            "watchline.discovery.ingest.portfolio.eval.portfolio_map ... --png") from e
+
+    url = html_path.resolve().as_uri()
+    outs: list[Path] = []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=scale)
+        page.goto(url)
+        page.wait_for_function("() => window._mapReady === true", timeout=30000)
+        page.add_style_tag(content=".toggle{display:none!important}")
+        for view, suffix in (("wl", "watchline"), ("wow", "wow")):
+            page.evaluate(f"() => setView('{view}')")
+            page.evaluate("() => window.mapIdle()")   # await tiles + paint
+            page.wait_for_timeout(600)                # small settle for raster tiles
+            out = html_path.with_name(f"{html_path.stem}-{suffix}.png")
+            page.screenshot(path=str(out))
+            outs.append(out)
+        browser.close()
+    return outs
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Render a WoW-vs-WatchlineNYC portfolio comparison map.")
     ap.add_argument("--portfolio", required=True, help="WatchlineNYC portfolio_id")
     ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<pid>.html)")
+    ap.add_argument("--png", action="store_true", help="also export slide-ready PNGs of both views (Playwright)")
+    ap.add_argument("--scale", type=int, default=2, help="PNG device-scale factor (default 2 = retina)")
     args = ap.parse_args()
     out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
     info = generate(args.portfolio, out)
     print(f"wrote {info['out']}  ({info['buildings']} buildings, "
           f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
+    if args.png:
+        for p in render_png(out, scale=args.scale):
+            print(f"wrote {p}")
 
 
 if __name__ == "__main__":
