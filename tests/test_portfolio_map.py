@@ -62,4 +62,15 @@ def test_render_html_is_self_contained_and_embeds_data():
     assert "__GEOJSON__" not in html and "__WL_LEGEND__" not in html   # every token substituted
     assert json.dumps(gj) in html                                     # data baked into the file
     assert "maplibre-gl" in html and "mapbox-gl" not in html          # open-source lib, not proprietary
-    assert "server.arcgisonline.com" in html                         # keyless, no-referer basemap
+    assert "__BM_SOURCES__" not in html and "__BM_NOTE__" not in html  # basemap tokens substituted
+
+
+def test_basemap_selection_swaps_tile_host():
+    colors = M._assign_colors(_BBL2PF, _POINTS)
+    gj = M.build_geojson(_POINTS, _BBL2PF, colors, majority_pf="700")
+    kw = dict(wl_legend="WL", wow_legend="WOW", wl_color=M.PALETTE[0], n_wow_pfs=2, n=4)
+    osm = M.render_html("PF", gj, **kw, basemap="osm")
+    esri = M.render_html("PF", gj, **kw, basemap="esri")
+    assert "tile.openstreetmap.org" in osm and "arcgisonline" not in osm
+    assert "server.arcgisonline.com" in esri and "openstreetmap.org/{z}" not in esri
+    assert M.DEFAULT_BASEMAP == "osm" and set(M.BASEMAPS) >= {"osm", "esri", "esri-street"}

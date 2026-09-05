@@ -36,6 +36,40 @@ from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE,
 PALETTE = ["#2563eb", "#dc2626", "#d97706", "#059669", "#7c3aed", "#0891b2", "#db2777", "#65a30d"]
 NO_PF_COLOR = "#9ca3af"  # a building WoW never placed in any portfolio
 
+# Keyless raster basemaps, selectable with --basemap. Each is a MapLibre style fragment
+# (sources + layers) injected verbatim. NOTE: OSM's CDN 403s tile requests that carry no Referer,
+# so `osm` (the most detailed) can fail to load when the HTML is opened from disk (file://) in some
+# browsers; `esri`/`esri-street` serve without a Referer requirement and are the safe fallbacks.
+BASEMAPS: dict[str, dict] = {
+    "osm": {  # most detailed; needs a browser that sends a Referer (works in Chrome from file://)
+        "sources": {"osm": {"type": "raster", "tileSize": 256, "maxzoom": 19,
+            "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            "attribution": "© OpenStreetMap contributors"}},
+        "layers": [{"id": "osm", "type": "raster", "source": "osm"}],
+        "note": "Base map © OpenStreetMap contributors.",
+    },
+    "esri": {  # clean light-gray canvas (base + labels); keyless, no Referer requirement
+        "sources": {
+            "esribase": {"type": "raster", "tileSize": 256, "maxzoom": 16,
+                "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+                "attribution": "Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors"},
+            "esriref": {"type": "raster", "tileSize": 256, "maxzoom": 16,
+                "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"]},
+        },
+        "layers": [{"id": "esribase", "type": "raster", "source": "esribase"},
+                   {"id": "esriref", "type": "raster", "source": "esriref"}],
+        "note": "Base map tiles © Esri.",
+    },
+    "esri-street": {  # detailed streets like OSM, but keyless and no Referer requirement
+        "sources": {"esristreet": {"type": "raster", "tileSize": 256, "maxzoom": 19,
+            "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
+            "attribution": "Tiles © Esri — Esri, DeLorme, NAVTEQ"}},
+        "layers": [{"id": "esristreet", "type": "raster", "source": "esristreet"}],
+        "note": "Base map tiles © Esri.",
+    },
+}
+DEFAULT_BASEMAP = "osm"
+
 _Q_BUILDINGS = (
     "MATCH (p:Portfolio {portfolio_id:$pid})<-[:IN_PORTFOLIO]-(b:Building) "
     "WHERE b.latitude IS NOT NULL AND b.longitude IS NOT NULL "
@@ -168,7 +202,7 @@ _TEMPLATE = """<!doctype html>
   </div>
   <div class="legend" id="legend"></div>
   <div class="note">Coordinates: NYC DOF/PLUTO via the discovery graph. WoW assignment: justfix
-    <code>wow.wow_portfolios</code>. Base map tiles © Esri.</div>
+    <code>wow.wow_portfolios</code>. __BM_NOTE__</div>
 </div>
 <script>
 const DATA = __GEOJSON__;
@@ -177,20 +211,7 @@ const LEGEND = {wl: `__WL_LEGEND__`, wow: `__WOW_LEGEND__`};
 
 const map = new maplibregl.Map({
   container: "map",
-  style: {
-    version: 8,
-    // Esri free basemap: keyless and (unlike OSM's CDN) served without a Referer requirement,
-    // so it loads when the HTML is opened directly from disk (file://). Gray base + labels overlay.
-    sources: {
-      esribase: {type:"raster", tileSize:256, maxzoom:16,
-        tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
-        attribution:"Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors"},
-      esriref: {type:"raster", tileSize:256, maxzoom:16,
-        tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"]}
-    },
-    layers: [{id:"esribase",type:"raster",source:"esribase"},
-             {id:"esriref",type:"raster",source:"esriref"}]
-  },
+  style: {version: 8, sources: __BM_SOURCES__, layers: __BM_LAYERS__},
   center:[-73.9,40.84], zoom:11
 });
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), "top-right");
@@ -240,7 +261,8 @@ window.mapIdle = () => new Promise(res => map.once("idle", res));
 
 
 def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: str,
-                wl_color: str, n_wow_pfs: int, n: int) -> str:
+                wl_color: str, n_wow_pfs: int, n: int, basemap: str = DEFAULT_BASEMAP) -> str:
+    bm = BASEMAPS[basemap]
     sub = (f"{n} buildings · WatchlineNYC = 1 portfolio · "
            f"Who Owns What = {n_wow_pfs} portfolio{'s' if n_wow_pfs != 1 else ''}")
     return (_TEMPLATE
@@ -250,10 +272,13 @@ def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: st
             .replace("__GEOJSON__", json.dumps(geojson))
             .replace("__WL_COLOR__", wl_color)
             .replace("__WL_LEGEND__", wl_legend)
-            .replace("__WOW_LEGEND__", wow_legend))
+            .replace("__WOW_LEGEND__", wow_legend)
+            .replace("__BM_SOURCES__", json.dumps(bm["sources"]))
+            .replace("__BM_LAYERS__", json.dumps(bm["layers"]))
+            .replace("__BM_NOTE__", bm["note"]))
 
 
-def generate(portfolio_id: str, out: Path) -> dict:
+def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
     driver = neo4j_driver()
     try:
         points = building_points(driver, portfolio_id)
@@ -273,7 +298,8 @@ def generate(portfolio_id: str, out: Path) -> dict:
     majority_pf = counts.most_common(1)[0][0] if counts else None
     geojson = build_geojson(points, bbl2pf, pf_color, majority_pf)
     wl_legend, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], len(points))
-    html = render_html(portfolio_id, geojson, wl_legend, wow_legend, PALETTE[0], len(pf_color), len(points))
+    html = render_html(portfolio_id, geojson, wl_legend, wow_legend, PALETTE[0],
+                       len(pf_color), len(points), basemap=basemap)
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
@@ -319,11 +345,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Render a WoW-vs-WatchlineNYC portfolio comparison map.")
     ap.add_argument("--portfolio", required=True, help="WatchlineNYC portfolio_id")
     ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<pid>.html)")
+    ap.add_argument("--basemap", choices=list(BASEMAPS), default=DEFAULT_BASEMAP,
+                    help="base map tiles (default osm = most detailed; esri/esri-street load from "
+                         "file:// without a Referer if osm shows 403)")
     ap.add_argument("--png", action="store_true", help="also export slide-ready PNGs of both views (Playwright)")
     ap.add_argument("--scale", type=int, default=2, help="PNG device-scale factor (default 2 = retina)")
     args = ap.parse_args()
     out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
-    info = generate(args.portfolio, out)
+    info = generate(args.portfolio, out, basemap=args.basemap)
     print(f"wrote {info['out']}  ({info['buildings']} buildings, "
           f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     if args.png:
