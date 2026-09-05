@@ -132,20 +132,28 @@ watchline/discovery/ingest/portfolio/eval/
                 #   precision (Wilson CIs), coverage, C2 share, κ, McNemar vs WoW, recall on anchors
 ```
 
-### Proposed strata for `sample.py` (confirm before freezing)
+### Strata for `sample.py` — FROZEN 2026-09-05 (seed 42)
 
-Updated for what the diligence taught us (co-op/condo, the linked-successor recoveries):
+| Stratum | Frame (candidate pairs) | watchline | n |
+|---|---|---|---|
+| **S1a deed (held)** | `CONNECTED_BY_DEED` pair whose nodes co-occur in a still-latest joint-deed group | SAME | 70 |
+| **S1b deed (linked-successor)** | `CONNECTED_BY_DEED` pair **not** in any held group — recovered by the restructuring guard (novel, riskiest claim) | SAME | 70 |
+| **S2 model** | `CONNECTED_BY_SPLINK` method `splink-fellegi-sunter` | SAME | 150 |
+| **S3 aggregator** | two landlords sharing a high-degree (> 25) business address, **not** linked by splink/deed — the mask kept them apart; test they're genuinely different owners | DIFFERENT | 120 |
+| **S4 hard negatives** | same surname (2–20 sharers), not linked by splink/deed and not same owner group — veto/blocking over-firing guard | DIFFERENT | 120 |
 
-| Stratum | Frame | n |
-|---|---|---|
-| **S1a deed (held)** | `CONNECTED_BY_DEED` from a still-latest joint deed | 120 |
-| **S1b deed (linked-successor)** | `CONNECTED_BY_DEED` recovered via the restructuring guard — the novel, riskiest claim; its own stratum | 120 |
-| **S2 model** | `CONNECTED_BY_SPLINK` method `splink-fellegi-sunter` | 150 |
-| **S3 precision-hygiene** | pairs the system **declined/dropped** — co-op/condo-excluded and aggregator-masked — test they are genuinely *not* one rental owner | 120 |
-| **S4 hard negatives** | same surname or address, not merged (over-firing guard) | 120 |
+Total ~530. Notes on what changed from the proposal:
+- **S1 is split held vs linked-successor** and classified at sample time (a deed edge is "held" iff
+  its endpoints co-occur in a held-latest-deed group, computed from `deed_edges._deed_sql`); the KG
+  is not modified.
+- **S3 is high-degree-shared-address**, not "co-op/condo + aggregator." Co-op/condo exclusion is a
+  *building-level* filter, not a pairwise-same-owner question, so it is validated separately (spot-check
+  that dropped groups are genuinely co-op/condo), not in the pairwise frame.
+- **`wow` decision** (same WoW portfolio? from the dump `wow_portfolios`) is filled by `score.py`, not
+  `sample.py` — sample.py is a graph sampler; the key it writes carries `wow: null` for score.py to set.
 
-Recall anchors (not sampled) per §2/§ recall — **re-vetted** for co-op/condo / institutional /
-nonprofit contamination before use (see [`recall-anchors.md`](recall-anchors.md)).
+Recall anchors (not sampled) per §5 — **re-vetted** for co-op/condo / institutional / nonprofit
+contamination before use (see [`recall-anchors.md`](recall-anchors.md)).
 
 ---
 
