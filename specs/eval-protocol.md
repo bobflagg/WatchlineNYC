@@ -15,8 +15,17 @@ adjudicating (lightweight preregistration; note it in the paper).
 
 **Unit:** the pairwise decision — *"are landlord entities X and Y the same beneficial owner?"*
 **Labels:** `SAME` · `DIFFERENT` · `INDETERMINATE`. Indeterminate is a first-class outcome
-(public record often can't settle ownership); it is excluded from precision/recall denominators
-and reported separately as **coverage**.
+(public record often can't settle ownership); excluded from precision/recall denominators and
+reported separately as **coverage**.
+
+Every `SAME` also carries a **corroboration class**, assigned at scoring from the recorded evidence
+and the system's signal (see §3):
+- **C1 — cross-source corroborated**: rests on ≥1 source *other than* the record the system keyed on.
+- **C2 — same-source verified**: rests only on the primary record the system's signal used, with all
+  three mandatory checks (§3) passed.
+
+Precision is reported **both ways** — strict (C1 only) and inclusive (C1+C2); the gap discloses how
+much of a result stands on single-source (typically deed-only) evidence.
 
 ## 2. Strata & sampling (~600 pairs)
 
@@ -36,29 +45,57 @@ investigative reporting). Used only for recall (§4).
 
 ## 3. Annotator codebook
 
-Apply this **evidence hierarchy**; record the highest tier reached and a one-line rationale.
+**Golden rule — what counts as evidence.** The system's *output* (a `CONNECTED_BY_DEED` edge, an
+OwnerGroup assignment, any "match" flag) is **never** evidence. Only **primary records** are — ACRIS
+deeds, NYS DOS filings, HPD registrations, court/enforcement records. The tool presents *all* primary
+records for both entities and never highlights "the match," and the annotator is **blind** to the
+system's signal (§4), so they reconstruct the picture independently.
 
-- **T1** — ACRIS deed grantee identity / documented conveyance chain
-- **T2** — NYS DOS entity filing: shared registered principal / officer / signatory
-- **T3** — shared principal across *independent* filings (HPD reg, mortgage, court) — **not** the
-  signal the system used
-- **T4** — external record: AG/DOF settlement, court judgment, named-portfolio reporting, JustFix
-  curated data
-- **Insufficient** — address-only, name-only, **or only the signal the system used**
+**Evidence hierarchy** (record the highest tier reached + a one-line rationale):
+
+- **T1** — ACRIS deed grantee identity / documented conveyance chain (incl. grantor-chain restructuring).
+- **T2** — NYS DOS entity filing: shared CEO / process / registered-agent principal. *Thin in
+  practice — `ceoname` is populated for ~11% of LLCs, the process name is usually the entity itself,
+  and DOS is active-only (dissolved shells absent). "No DOS match" ≠ "no such entity."*
+- **T3** — shared principal across independent filings (HPD registration, mortgage, court).
+- **T4** — external record: AG/DOF settlement, court judgment, named-portfolio reporting, JustFix data.
+- **Insufficient** — address-only, name-only, or nothing but the system's own output.
 
 **Decision rules.**
-- `SAME` ⇐ ≥1 corroboration at T1–T4 that is **independent of the system's driving signal**.
-- `DIFFERENT` ⇐ positive evidence of *distinct* ownership (distinct grantees / distinct principals).
+- `DIFFERENT` ⇐ positive evidence of *distinct* ownership (distinct grantees / distinct principals /
+  no linking conveyance).
+- `SAME` ⇐ co-ownership verified from primary records, recorded as **C1** (a corroboration from a
+  source *other than* the record the system keyed on) or **C2** (only the same primary-record type the
+  system's signal used — permitted **only** behind the hard gate below).
 - else `INDETERMINATE`.
 
-**Circularity rule (mandatory).** If the system merged the pair via signal *S* (e.g. a deed), the
-adjudicator may **not** use *S* as the basis for `SAME`; independent corroboration is required, or
-the pair is `INDETERMINATE`. State this explicitly in the paper.
+**Circularity ruling.** Circularity is *not* "used the same signal" — it is "used the system's
+*output*, or confirmed a match the adjudicator could not have overturned." Verifying the same primary
+*record* the system keyed on is allowed, because the adjudicator checks inputs the heuristic cannot
+and can reject the pair — but only as **C2**, and only when **all three** mandatory checks pass
+(recorded as checkboxes; no C2 `SAME` without all three):
+
+1. **Entity identity** — the linking party is the *same* entity across the deeds, not a
+   normalized-name collision (confirm via DOS record / consistent address, not the name string alone).
+2. **Successor reality** — each successor LLC is genuinely single-purpose (pull *its own* full ACRIS
+   history), not an independent portfolio the system's size proxy under-counted.
+3. **Restructuring vs. sale** — the onward conveyance reads as the grantee restructuring its own
+   holdings (nominal/related-party transfer; timing/attorney pattern), not an arms-length sale.
+
+If any check fails or cannot be made, the pair is `INDETERMINATE`, not `SAME`. Rationale for the
+ruling: the fully-obscured veil-pierce cases — the system's most valuable output — show *nothing* in
+DOS/HPD by design, so a rule that demanded cross-source corroboration for every `SAME` could never
+confirm them; C2 credits them, the hard gate keeps them honest, and §5's strict number quarantines
+them for skeptics.
 
 ## 4. Annotation process
 
 - **2 annotators**, independent, **blind** to which system (WatchlineNYC / WoW) produced any
   decision and blind to the driving signal.
+- **Every pair captures**: label, highest evidence tier, a one-line rationale, and — for any `SAME`
+  whose only corroboration is the deed record — the **three C2 checkboxes** (§3). The tool enforces
+  the hard gate: a deed-only `SAME` missing any checkbox is recorded as `INDETERMINATE`. The system's
+  signal is *not* shown; class C1/C2 is assigned at scoring by rejoining the blinding key.
 - Report **inter-annotator agreement (Cohen's κ)**; target κ ≥ 0.70, else diagnose the stratum.
 - **Third-party adjudication** (or documented consensus) resolves disagreements → the gold label.
 
@@ -66,8 +103,11 @@ the pair is `INDETERMINATE`. State this explicitly in the paper.
 
 Compute per stratum; report **Wilson 95% CIs** on all proportions.
 
-- **Precision (S1, S2)** = `SAME / (SAME + DIFFERENT)` among system-merged pairs; report
-  **coverage** = `1 − INDETERMINATE/n`.
+- **Precision (S1, S2)** among system-merged pairs, reported **two ways** (see §1 corroboration
+  classes): **strict** = `C1 / (C1 + DIFFERENT)`, **inclusive** = `(C1+C2) / (C1+C2 + DIFFERENT)`.
+  `INDETERMINATE` excluded from the denominator. Also report **coverage** = `1 − INDETERMINATE/n` and
+  the **C2 share** of confirmed SAMEs (the strict↔inclusive gap) — expect it large on S1 (deed),
+  small on S2 (model).
 - **Split precision (S3)** = `DIFFERENT / (SAME + DIFFERENT)` (a correct split = the pair really is
   two different owners).
 - **False-merge rate (S4)** = `SAME / adjudicable` (guards against vetoes/mask over-firing —
@@ -95,7 +135,8 @@ Compute per stratum; report **Wilson 95% CIs** on all proportions.
 
 ## 8. Deliverables
 
-1. Head-to-head metrics table (per stratum + WoW comparison, CIs, McNemar *p*).
+1. Head-to-head metrics table (per stratum + WoW comparison, CIs, McNemar *p*) — precision **strict
+   and inclusive**, with the **C2 share** per stratum.
 2. κ and coverage / indeterminate rate.
 3. Error-taxonomy breakdown (counts by cause).
 4. **Released benchmark:** anonymization-reviewed pairs + gold labels + evidence tiers + rationales
