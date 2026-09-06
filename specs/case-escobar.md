@@ -4,7 +4,10 @@ A presentation- and paper-grade worked example of the merge WatchlineNYC gets
 right that Who Owns What splits — driven by a single registration-address typo,
 recovered by the ACRIS held-deed signal, and independently confirmed by a blind
 human reviewer. Eval pair **P0012** (stratum `S1a_deed_held`, signal
-`acris-deed`).
+`acris-deed`). A second owner sharing the name "Ramon Escobar" (a *different*
+person) is a second WoW split by a *different* mechanism, and the two are
+correctly kept apart — see **Same name, two owners** below for the full
+recall-plus-precision story.
 
 All figures below were pulled from the live JustFix `wow` schema, the PLUTO /
 ACRIS / HPD records, and the discovery graph on **2026-09-05**. Re-verify vintage
@@ -89,6 +92,55 @@ garble in the 1970s–80s in-rem deed rows.
    turning a deed-only (C2) candidate into a cross-source (C1) confirmation —
    exactly what the human-in-the-loop is for.
 
+## Same name, two owners — and WoW splits the second one too
+
+The name "Ramon Escobar" resolves to **two distinct portfolios** in the KG — and
+they are **two different people**, correctly kept apart:
+
+| Watchline portfolio | Bldgs | Where | Who |
+|---|---|---|---|
+| `PF-…-77675` | 26 | Bronx | Ramon Escobar @ 2432 Grand Concourse (the case above) |
+| `PF-…-44544` | 12 | Manhattan / Bronx / Bklyn / Queens | an **Escobar + Espinal** partnership @ PO Box 370 (Manhattan) / 374 McLean Ave (Yonkers) |
+
+Different addresses, different co-principals, no BBL overlap. A naïve name match
+would fuse them into a bogus 38-building "Ramon Escobar"; WatchlineNYC does not —
+linkage rests on deeds and the shared registration/address nexus, never the name
+string. **That is the precision half of the story.**
+
+And the second owner is *another* WoW split — by a **different mechanism**:
+
+| WoW portfolio | Bldgs | Landlords on the registrations | Business address |
+|---|---|---|---|
+| `#50057` | 8 | RAMON ESCOBAR, JOSE ESPINAL | **PO BOX 370, Manhattan** |
+| `#44728` | 4 | RAMON ESCOBAR, JOSE ESPINAL, Levites, Rettner | **374 McLean Ave, Yonkers** |
+
+Here the fracture isn't a typo but **two legitimate business addresses** (a
+Manhattan PO box and a Yonkers street address) for the *same* principals — so
+WoW's name+address graph never joins them. WatchlineNYC merges all 12.
+
+**Why that merge is sound (not an over-merge)** — two checks:
+
+- *Signals.* The 12 landlords are joined by **four** corroborating edge types, not
+  one: `CONNECTED_BY_ADDRESS` (7 edges), `acris-deed` (3 — including an
+  Escobar↔Espinal co-grantee deed), `registered-llc` (3), and the Fellegi-Sunter
+  model (1).
+- *Principals.* In the HPD owner-role records, **Jose Espinal appears on 10 of the
+  12 buildings and Ramon Escobar on 6**, recurring across *both* business
+  addresses — one operation under two registration addresses, not a name-based
+  guess.
+
+### The combined lesson (one name, three phenomena)
+
+- **Recall, case A** — merges the Bronx Escobar's 26 (WoW: 24 + 2).
+- **Recall, case B** — merges the Escobar/Espinal 12 (WoW: 8 + 4).
+- **Two different fracture mechanisms** — an address *typo* (A) and *two distinct
+  addresses* for shared principals (B).
+- **Precision** — the two unrelated Escobars are kept apart despite the identical
+  name.
+
+Together these pre-empt the obvious objection — *"aren't you just merging on
+names?"* — on the very name that would seem to invite it.
+
 ## Reproduce
 
 ```sql
@@ -104,6 +156,26 @@ JOIN wow.wow_landlords l ON l.bbl=pf.bbl GROUP BY orig_id, upper(l.name), upper(
 // Watchline: one portfolio, 26 buildings, all three Creston neighbors inside it
 MATCH (p:Portfolio {portfolio_id:'PF-20260901T165123Z-77675'})<-[:IN_PORTFOLIO]-(b:Building)
 RETURN count(b), collect(b.bbl);
+```
+
+Case B (the Escobar/Espinal 12; WoW splits 8 + 4):
+
+```cypher
+// The KG holds two distinct "Ramon Escobar" portfolios (two different owners)
+MATCH (l:Landlord) WHERE toUpper(l.name) CONTAINS 'RAMON ESCOBAR'
+OPTIONAL MATCH (l)-[:MEMBER_OF]->(p:Portfolio)
+RETURN count(DISTINCT p) AS portfolios, collect(DISTINCT p.portfolio_id);
+
+// Signals that merge case B, and the recurring principals check
+MATCH (p:Portfolio {portfolio_id:'PF-20260901T165123Z-44544'})<-[:MEMBER_OF]-(a:Landlord)
+MATCH (p)<-[:MEMBER_OF]-(b:Landlord) WHERE id(a)<id(b)
+OPTIONAL MATCH (a)-[r:CONNECTED_BY_DEED|CONNECTED_BY_ADDRESS|CONNECTED_BY_NAME|CONNECTED_BY_SPLINK]-(b)
+RETURN type(r) AS rel, r.method AS method, count(*) ORDER BY rel;
+```
+
+```sql
+-- WoW splits case B into #50057 (8, PO Box 370 Manhattan) + #44728 (4, McLean Ave Yonkers)
+SELECT orig_id, array_length(bbls,1) FROM wow.wow_portfolios WHERE orig_id IN (50057,44728);
 ```
 
 ## Show it (map + blind review page)
