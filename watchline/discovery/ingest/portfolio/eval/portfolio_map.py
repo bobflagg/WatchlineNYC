@@ -73,7 +73,9 @@ DEFAULT_BASEMAP = "osm"
 _Q_BUILDINGS = (
     "MATCH (p:Portfolio {portfolio_id:$pid})<-[:IN_PORTFOLIO]-(b:Building) "
     "WHERE b.latitude IS NOT NULL AND b.longitude IS NOT NULL "
-    "RETURN b.bbl AS bbl, b.address AS address, b.latitude AS lat, b.longitude AS lon "
+    "RETURN b.bbl AS bbl, b.address AS address, b.latitude AS lat, b.longitude AS lon, "
+    "b.building_class AS bldgclass, b.residential_units AS units, b.year_built AS year, "
+    "b.dof_ownername AS owner "
     "ORDER BY b.bbl"
 )
 
@@ -136,6 +138,10 @@ def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str
             "properties": {
                 "bbl": p["bbl"],
                 "address": p["address"] or p["bbl"],
+                "bldgclass": p.get("bldgclass") or "?",
+                "units": p.get("units") if p.get("units") is not None else "?",
+                "year": p.get("year") or "?",
+                "owner": p.get("owner") or "—",
                 "wow_pf": pf or "—",
                 "wow_color": pf_color.get(pf, NO_PF_COLOR) if pf else NO_PF_COLOR,
                 "stray": bool(majority_pf) and pf != majority_pf,  # WoW split it off (or never placed it)
@@ -188,9 +194,12 @@ _TEMPLATE = """<!doctype html>
   .legend .nm{color:var(--ink);font-weight:600;}
   .legend .addr{color:var(--soft);font-family:ui-monospace,monospace;font-size:.72rem;}
   .note{padding:0 14px 12px;font-size:.72rem;color:var(--soft);}
-  .maplibregl-popup-content{font:13px/1.4 -apple-system,sans-serif;}
-  .maplibregl-popup-content b{font-size:.82rem;}
+  .maplibregl-popup-content{font:13px/1.4 -apple-system,sans-serif;padding:9px 12px;border-radius:7px;
+        box-shadow:0 2px 10px rgba(0,0,0,.18);}
+  .maplibregl-popup-content b{font-size:.85rem;}
   .pp{color:#5b6570;font-family:ui-monospace,monospace;font-size:.72rem;}
+  .tip .mrow{margin-top:4px;font-size:.78rem;color:var(--ink);}
+  .tip .tag{background:var(--flag,#b23a2e);color:#fff;font-size:.66rem;padding:1px 5px;border-radius:3px;}
 </style></head>
 <body>
 <div id="map"></div>
@@ -241,16 +250,21 @@ map.on("load", ()=>{
   if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:15});
   document.getElementById("legend").innerHTML = LEGEND.wl;
 
-  const pop = new maplibregl.Popup({closeButton:false,closeOnClick:true});
-  map.on("click","pts",e=>{
+  // Hover tooltip with building details.
+  const tip = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12,
+                                    className:"tip", maxWidth:"280px"});
+  map.on("mousemove","pts",e=>{
+    map.getCanvas().style.cursor="pointer";
     const p = e.features[0].properties;
-    pop.setLngLat(e.lngLat).setHTML(
-      `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span><br>`+
-      `WoW portfolio: ${p.wow_pf}${p.stray==="true"||p.stray===true?" · split-off":""}`
+    const stray = (p.stray===true||p.stray==="true") ? ' <span class="tag">split-off</span>' : '';
+    tip.setLngLat(e.lngLat).setHTML(
+      `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
+      `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
+      `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
+      `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`
     ).addTo(map);
   });
-  map.on("mouseenter","pts",()=>map.getCanvas().style.cursor="pointer");
-  map.on("mouseleave","pts",()=>map.getCanvas().style.cursor="");
+  map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
   window._mapReady = true;   // hook for headless PNG export
 });
 // resolves once the map has finished rendering (tiles + paint settled)
