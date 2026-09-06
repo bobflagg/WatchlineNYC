@@ -119,6 +119,36 @@ def wow_split(pgc, bbls: list[str]) -> tuple[dict[str, str], dict[str, dict]]:
     return bbl2pf, labels
 
 
+_HPD_SQL = """
+    SELECT g.bbl, c.type,
+           coalesce(c.corporationname, trim(concat_ws(' ', c.firstname, c.lastname))) AS name,
+           trim(concat_ws(' ', c.businesshousenumber, c.businessstreetname, c.businessapartment)) AS street,
+           c.businesscity, c.businessstate, c.businesszip
+    FROM hpd_contacts c
+    JOIN hpd_registrations_grouped_by_bbl_with_contacts g ON g.registrationid = c.registrationid
+    WHERE g.bbl = ANY(%s::text[]) AND c.type IN ('HeadOfficer','Officer','IndividualOwner','CorporateOwner')
+"""
+_HPD_PRIORITY = {"HeadOfficer": 0, "Officer": 1, "IndividualOwner": 2, "CorporateOwner": 3}
+
+
+def hpd_officers(pgc, bbls: list[str]) -> dict[str, dict]:
+    """bbl -> {officer, bizaddr} from HPD registration contacts, preferring the HeadOfficer."""
+    want = [str(b).strip() for b in bbls]
+    cur = pgc.cursor()
+    cur.execute(_HPD_SQL, (want,))
+    best: dict[str, tuple[int, str, str]] = {}  # bbl -> (priority, officer, bizaddr)
+    for bbl, typ, name, street, city, state, zip_ in cur.fetchall():
+        bbl = str(bbl).strip()
+        if not name:
+            continue
+        locality = " ".join(x for x in (city, state, zip_) if x)
+        bizaddr = ", ".join(x for x in ((street or "").strip(), locality) if x) or "—"
+        pr = _HPD_PRIORITY.get(typ, 9)
+        if bbl not in best or pr < best[bbl][0]:
+            best[bbl] = (pr, name, bizaddr)
+    return {b: {"officer": v[1], "bizaddr": v[2]} for b, v in best.items()}
+
+
 def _assign_colors(bbl2pf: dict[str, str], points: list[dict]) -> dict[str, str]:
     """Map each WoW orig_id to a color: the portfolio holding the most of OUR buildings gets the
     majority blue; the rest cycle through the accent colors so strays stand out."""
@@ -128,10 +158,12 @@ def _assign_colors(bbl2pf: dict[str, str], points: list[dict]) -> dict[str, str]
 
 
 def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str, str],
-                  majority_pf: str | None) -> dict:
+                  majority_pf: str | None, hpd: dict[str, dict] | None = None) -> dict:
+    hpd = hpd or {}
     feats = []
     for p in points:
         pf = bbl2pf.get(p["bbl"])
+        h = hpd.get(p["bbl"], {})
         feats.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [p["lon"], p["lat"]]},
@@ -142,6 +174,8 @@ def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str
                 "units": p.get("units") if p.get("units") is not None else "?",
                 "year": p.get("year") or "?",
                 "owner": p.get("owner") or "—",
+                "officer": h.get("officer") or "—",
+                "bizaddr": h.get("bizaddr") or "—",
                 "wow_pf": pf or "—",
                 "wow_color": pf_color.get(pf, NO_PF_COLOR) if pf else NO_PF_COLOR,
                 "stray": bool(majority_pf) and pf != majority_pf,  # WoW split it off (or never placed it)
@@ -261,6 +295,8 @@ map.on("load", ()=>{
       `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
       `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
       `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
+      `<div class="mrow">HPD head officer: ${p.officer}</div>`+
+      `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
       `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`
     ).addTo(map);
   });
@@ -303,14 +339,16 @@ def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> di
 
     pgc = pg_conn()
     try:
-        bbl2pf, labels = wow_split(pgc, [p["bbl"] for p in points])
+        bbls = [p["bbl"] for p in points]
+        bbl2pf, labels = wow_split(pgc, bbls)
+        hpd = hpd_officers(pgc, bbls)
     finally:
         pgc.close()
 
     pf_color = _assign_colors(bbl2pf, points)
     counts = Counter(bbl2pf[p["bbl"]] for p in points if p["bbl"] in bbl2pf)
     majority_pf = counts.most_common(1)[0][0] if counts else None
-    geojson = build_geojson(points, bbl2pf, pf_color, majority_pf)
+    geojson = build_geojson(points, bbl2pf, pf_color, majority_pf, hpd=hpd)
     wl_legend, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], len(points))
     html = render_html(portfolio_id, geojson, wl_legend, wow_legend, PALETTE[0],
                        len(pf_color), len(points), basemap=basemap)

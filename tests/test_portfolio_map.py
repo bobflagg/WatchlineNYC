@@ -41,6 +41,16 @@ def test_build_geojson_marks_strays_and_unplaced():
     assert f1["geometry"]["coordinates"] == [-73.90, 40.85]
 
 
+def test_build_geojson_carries_hpd_officer_and_bizaddr():
+    colors = M._assign_colors(_BBL2PF, _POINTS)
+    hpd = {"b1": {"officer": "RAMON ESCOBAR", "bizaddr": "2432 GRAND CONCOURSE 504, BRONX NY 10458"}}
+    gj = M.build_geojson(_POINTS, _BBL2PF, colors, majority_pf="700", hpd=hpd)
+    props = {f["properties"]["bbl"]: f["properties"] for f in gj["features"]}
+    assert props["b1"]["officer"] == "RAMON ESCOBAR"
+    assert "GRAND CONCOURSE" in props["b1"]["bizaddr"]
+    assert props["b2"]["officer"] == "—" and props["b2"]["bizaddr"] == "—"   # missing -> em dash
+
+
 def test_legend_surfaces_bizaddr_variants():
     colors = M._assign_colors(_BBL2PF, _POINTS)
     labels = {
