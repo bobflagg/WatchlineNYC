@@ -105,3 +105,24 @@ JOIN wow.wow_landlords l ON l.bbl=pf.bbl GROUP BY orig_id, upper(l.name), upper(
 MATCH (p:Portfolio {portfolio_id:'PF-20260901T165123Z-77675'})<-[:IN_PORTFOLIO]-(b:Building)
 RETURN count(b), collect(b.bbl);
 ```
+
+## Show it (map + blind review page)
+
+Two views make the case in a talk — the **map** shows what each system concluded;
+the **review page** shows the raw records a human weighs to check it (no system
+answer, no WoW comparison — so there's no circularity). Open both in tabs.
+
+```bash
+# 1) Comparison map (WatchlineNYC 1 portfolio vs WoW 24+2). Hover a dot for building
+#    facts + HPD head officer + business address; the two red Creston strays show the
+#    "2432 GRAND COURSE 504" typo that fractured WoW. Add --png for slide images.
+uv run python -m watchline.discovery.ingest.portfolio.eval.portfolio_map \
+    --portfolio PF-20260901T165123Z-77675 --out eval_out/maps/escobar.html
+```
+
+```bash
+# 2) The blind reviewer page for this pair (P0012), in the owner-review repo.
+#    Needs RECORDS_DSN in owner-review/.env (the records dump).
+cd ../owner-review && scripts/serve.sh P0012        # or open the URL directly:
+# http://127.0.0.1:8000/pair/P0012?annotator=demo
+```
