@@ -198,3 +198,14 @@ uv run python -m watchline.discovery.ingest.portfolio.eval.portfolio_map \
 cd ../owner-review && scripts/serve.sh P0012        # or open the URL directly:
 # http://127.0.0.1:8000/pair/P0012?annotator=demo
 ```
+
+Case B is **not** in the frozen eval sample, so it has an OFF-EVAL one-pair queue
+(`PB01`) for a blind walkthrough — reviewed the same way, but never mixed into the
+metrics (see `eval_out/offeval/README.md`):
+
+```bash
+# 3) Blind review of case B (Escobar/Espinal), split along WoW's 8-vs-4 fracture.
+cd ../owner-review && REVIEW_QUEUE=../WatchlineNYC/eval_out/offeval/review_queue.jsonl \
+  OWNER_REVIEW_STORE=data/offeval.sqlite uvicorn owner_review.review.app:app --port 8020
+# then open http://127.0.0.1:8020/pair/PB01?annotator=demo
+```
