@@ -18,6 +18,7 @@ reflects a genuine deterministic/attribute contradiction — routed to adjudicat
 """
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 
 # C2 allowlist + C3 precedence. Deterministic methods sort strictly above probabilistic ones.
@@ -119,3 +120,79 @@ def resolve(references: list[dict], edges: list[dict]) -> dict:
             partition[m] = rid
     return {"partition": partition, "adjudication": adjudication,
             "dropped": dropped, "deterministic_core": deterministic_core}
+
+
+# --- graph read (read-only; feeds `resolve`) ----------------------------------------------------
+
+# Map the graph's CONNECTED_BY_SPLINK method strings to the C2 contract vocabulary. `registered-llc`
+# in the live graph is name-only (no DOS id+jurisdiction), so it maps to the PROBABILISTIC
+# `registered-llc-name` (C2). `registered-llc-id` activates only when a DOS-entity-id join exists.
+_METHOD_MAP = {
+    "curated-same-owner": "curated-same-owner",
+    "registered-llc": "registered-llc-name",
+    "splink-fellegi-sunter": "splink-fellegi-sunter",
+}
+
+# Entity-type classification from the party name (C3 cannot-link input). Institution first, then
+# corporate markers, else a natural person. Mirrors the exclusion vocabulary used elsewhere.
+_INST_RE = re.compile(
+    r"\b(HDFC|HOUSING DEVELOPMENT FUND|NYCHA|HOUSING AUTHORITY|CITY OF NEW YORK|DEPARTMENT|"
+    r"UNIVERSITY|COLLEGE|CHURCH|HOSPITAL|MINISTR|FOUNDATION|COALITION|MUTUAL HOUSING|MHANY)\b", re.I)
+_ENTITY_RE = re.compile(
+    r"\b(LLC|L\.L\.C|CORP|INC|REALTY|ASSOCIATES?|PROPERTIES|PROPERTY|HOLDINGS?|PARTNERS|PARTNERSHIP|"
+    r"VENTURES?|EQUITIES|LP|LLP|PLLC|P\.C|COMPANY|GROUP|MANAGEMENT|MGMT|TRUST|FUND|ENTERPRISES?|"
+    r"GARDENS|APARTMENTS?|ESTATES?)\b", re.I)
+
+
+def entity_type(name: str | None) -> str | None:
+    """'institution' | 'entity' | 'person' | None (name absent). A C3 cannot-link attribute."""
+    if not name or not name.strip():
+        return None
+    n = name.upper()
+    if _INST_RE.search(n):
+        return "institution"
+    if _ENTITY_RE.search(n):
+        return "entity"
+    return "person"
+
+
+def surname(name: str | None, etype: str | None) -> str | None:
+    """Last whitespace token, for **persons** only (entities/institutions have no surname)."""
+    if etype != "person" or not name:
+        return None
+    toks = name.upper().split()
+    return toks[-1] if toks else None
+
+
+_Q_ID_EDGES = ("MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord) WHERE a.nodeid < b.nodeid "
+               "RETURN a.nodeid AS a, b.nodeid AS b, coalesce(r.method,'') AS method, "
+               "coalesce(r.weight, 0) AS score")
+_Q_ID_NODES = ("MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-() "
+               "RETURN DISTINCT a.nodeid AS id, a.name AS name")
+
+
+def read_inputs(driver, *, database: str) -> tuple[list[dict], list[dict]]:
+    """Read the identity universe from the graph as (references, edges) for `resolve` — read-only.
+
+    References are the endpoints of `CONNECTED_BY_SPLINK` (singletons are implied, as in the legacy
+    layer); `id` is the within-run `nodeid` handle (the stable `party_reference_id` is a later Phase-2
+    unit). Only identity edges are read — `CONNECTED_BY_DEED` is never touched. `identifier` is `None`
+    until the DOS-entity-id join exists.
+    """
+    with driver.session(database=database) as s:
+        nodes = [{"id": r["id"], "name": r["name"]} for r in s.run(_Q_ID_NODES)]
+        raw_edges = [dict(r) for r in s.run(_Q_ID_EDGES)]
+    references = []
+    for n in nodes:
+        et = entity_type(n["name"])
+        references.append({"id": n["id"], "name": n["name"], "entity_type": et,
+                           "surname": surname(n["name"], et), "identifier": None})
+    edges = [{"a": e["a"], "b": e["b"], "method": _METHOD_MAP.get(e["method"], e["method"]),
+              "score": e["score"]} for e in raw_edges]
+    return references, edges
+
+
+def resolve_graph(driver, *, database: str) -> dict:
+    """Read the graph and run the C3 resolver — the parallel ResolvedEntityV2 partition (read-only)."""
+    references, edges = read_inputs(driver, database=database)
+    return resolve(references, edges)

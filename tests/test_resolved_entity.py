@@ -9,7 +9,7 @@ import random
 
 import pytest
 
-from watchline.discovery.ingest.portfolio.resolved_entity import resolve
+from watchline.discovery.ingest.portfolio.resolved_entity import resolve, entity_type, surname
 
 
 def _ref(i, entity_type=None, surname=None, identifier=None):
@@ -90,6 +90,19 @@ def test_deterministic_edge_not_preempted_by_probabilistic():
     assert out["partition"]["B"] != out["partition"]["A"]
     assert out["adjudication"] == []                        # no deterministic edge was blocked
     assert out["dropped"][0]["method"] == "splink-fellegi-sunter"
+
+
+def test_entity_type_and_surname_classification():
+    assert entity_type("STEVEN CROMAN") == "person"
+    assert entity_type("BEACH 99TH LLC") == "entity"
+    assert entity_type("2432 GRAND CONCOURSE REALTY CORP") == "entity"
+    assert entity_type("NEIGHBORHOOD PARTNERSHIP HOUSING DEVELOPMENT FUND") == "institution"
+    assert entity_type("COLUMBIA UNIVERSITY") == "institution"
+    assert entity_type(None) is None and entity_type("  ") is None
+    # surname only for persons
+    assert surname("STEVEN CROMAN", "person") == "CROMAN"
+    assert surname("BEACH 99TH LLC", "entity") is None
+    assert surname(None, "person") is None
 
 
 def test_permutation_invariance():
