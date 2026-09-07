@@ -50,7 +50,8 @@ def party_reference_id(name: str | None, bizaddr: str | None) -> str:
 
 # --- graph read (read-only) ---------------------------------------------------------------------
 
-_Q_LANDLORDS = "MATCH (l:Landlord) RETURN l.nodeid AS nodeid, l.name AS name, l.bizaddr AS bizaddr"
+_Q_LANDLORDS = ("MATCH (l:Landlord) "
+                "RETURN l.nodeid AS nodeid, l.name AS name, l.bizaddr AS bizaddr, l.bbls AS bbls")
 
 
 def read_party_refs(driver, *, database: str) -> dict:
@@ -59,16 +60,19 @@ def read_party_refs(driver, *, database: str) -> dict:
     - ``nodeid_to_prid``: ``{nodeid: party_reference_id}`` — the within-run join handle → stable id;
     - ``collapses``: ``{party_reference_id: [nodeid, …]}`` for **Level-0 collapses** (≥2 nodeids sharing a
       key) — the governed C0 dedup, reported as an indicator (not a same-identity claim);
+    - ``node_bbls``: ``{nodeid: [bbl]}`` — for C0 lineage / affected-building counts;
     - ``n_nodes`` / ``n_refs``: counts.
     """
     with driver.session(database=database) as s:
         rows = [dict(r) for r in s.run(_Q_LANDLORDS)]
     nodeid_to_prid: dict = {}
+    node_bbls: dict = {}
     members: dict = defaultdict(list)
     for r in rows:
         pid = party_reference_id(r["name"], r["bizaddr"])
         nodeid_to_prid[r["nodeid"]] = pid
+        node_bbls[r["nodeid"]] = r.get("bbls") or []
         members[pid].append(r["nodeid"])
     collapses = {pid: nids for pid, nids in members.items() if len(nids) >= 2}
-    return {"nodeid_to_prid": nodeid_to_prid, "collapses": collapses,
+    return {"nodeid_to_prid": nodeid_to_prid, "collapses": collapses, "node_bbls": node_bbls,
             "n_nodes": len(rows), "n_refs": len(members)}
