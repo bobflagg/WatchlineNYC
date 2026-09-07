@@ -174,16 +174,26 @@ public) — which this minimal eval does not establish.
 The [migration plan](ownership-migration-plan.md) Phase-5 identity cutover has its own preregistered gate —
 fixed **before Phase 2 results are examined**, so the new clustering can't be graded on a curve. This is the
 identity/`ResolvedEntityV2` quality bar, distinct from the WoW head-to-head above. Preregister, per an
-adjudicated identity sample with an `INDETERMINATE` class excluded from denominators:
+adjudicated identity sample with an `INDETERMINATE` class excluded from denominators.
 
-- **Pairwise precision by identity mechanism** (`registered-llc` / `curated` / `fellegi-sunter`).
-- **Component-level false-merge rate**, and a **severe false-merge rate** (distinct real parties collapsed
-  into one identity) — the headline gate.
-- **Reported separately for natural persons vs. legal entities**, and for **common names** and components
-  that depend on a **probabilistic bridge** (removing one edge splits them).
-- **Weighting: a false merge counts more than a false split** (a merge wrongly fuses distinct parties;
-  precision-first).
-- **An explicit cutover threshold `[value]` and the failure response** (do not cut over; fix; re-measure).
+`[RATIFY]` values below are **proposals for the team to freeze at sign-off** (the run manifest pins this
+section's revision hash so they can't change silently). They reflect a precision-first public-accountability
+posture; adjust with the co-adjudicator, but freeze before any Phase-2 result is seen.
+
+| Gate | `[RATIFY]` proposed | Rationale |
+|---|---|---|
+| **Severe false-merge rate** (distinct real parties fused) — *headline* | **≤ 0.5%** and **0** in protected strata | the worst error for accountability; near-zero tolerance |
+| Component-level false-merge rate | **≤ 2%** | overall merge precision |
+| Pairwise precision — `curated` / `registered-llc-id` | **≥ 0.99** | deterministic mechanisms |
+| Pairwise precision — `registered-llc-name` / `fellegi-sunter` | **≥ 0.95** | probabilistic mechanisms |
+| Max `INDETERMINATE` (coverage) | **≤ 30%** (coverage ≥ 0.70) | a mostly-inconclusive sample doesn't gate |
+| Min sample per protected stratum | **≥ 100 pairs**, Wilson 95% CI reported | stat power |
+| Protected strata (report each) | natural-person, legal-entity, **common-name**, **probabilistic-bridge** components, **Level-0 same-name/same-address collisions** (C0) | where merges are riskiest |
+| False-merge : false-split weight | **≥ 5 : 1** | precision-first |
+| **Failure response** | **do not cut over**; pull or fix the offending mechanism/stratum; re-measure | no grading on a curve |
+
+The main §8 rules likewise carry `[RATIFY]` proposals to freeze at sign-off: false-merge S4 `[bar] ≤ 2%`,
+severe-attribution stopping `[rate] ≤ 0.5%`, bridge-group size `[T] = 25`. Same freeze-and-pin discipline.
 
 ## 9. Cluster-level validity & ablation
 
