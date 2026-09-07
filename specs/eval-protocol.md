@@ -133,7 +133,61 @@ Compute per stratum; report **Wilson 95% CIs** on all proportions.
   `common-name` · `stale-deed` · `aggregator-leak` · `missing-filing` · `genuine-ambiguity`.
   This figure is the contribution, not just the number.
 
-## 8. Deliverables
+## 8. Preregistered decision rules (fix these before adjudication)
+
+Fixing the rules before any data is seen is what turns the head-to-head from a demo into evidence.
+Folded from [`ownership-model-spec.md`](ownership-model-spec.md) §9. Bracketed values are defaults to
+**fix with the team / co-adjudicator before adjudication**, not post hoc.
+
+- **Primary metric:** strict precision (C1-only) on system-merged pairs (S1+S2); inclusive is secondary.
+  The strict number is the claim; the strict↔inclusive gap (C2 share) is reported, not buried.
+- **INDETERMINATE in the headline:** reported *as* coverage (`1 − INDET/n`) beside every precision
+  figure, never silently dropped. A stratum with coverage `< [0.70]` is reported **inconclusive**, not
+  scored.
+- **Reviewer-agreement gate:** κ `≥ [0.60]` on the double-adjudicated subset. Below it, revise the
+  codebook and re-adjudicate that stratum *before* reporting any metric.
+- **Blinding of mechanism:** adjudicators see **records only** — blind to both the system's decision and
+  the linking mechanism. Per-mechanism precision/recall (`registered-llc` / `acris-deed` /
+  `fellegi-sunter` / `curated`) is computed **post hoc** by rejoining the private key, so mechanism
+  knowledge can't bias a label.
+- **Independent ground truth:** a SAME is C1 only if corroborated by ≥2 **independent primary sources**
+  (§1); the system's own output is never evidence.
+- **Recall proxy (name which):** recall is reported only against the **curated anchor portfolios**
+  (documented owners) as an explicit proxy — full-population recall is undefined for unknown
+  common-control and is **not** claimed. Optionally add discovery-yield among known cases.
+- **Sampling weights:** strata are fixed-n, not proportional; per-stratum numbers are primary, and any
+  pooled/population estimate must **reweight by stratum prevalence**.
+- **Go / no-go for the method claim (design-paper level):** WatchlineNYC strict precision `≥` WoW
+  precision on the disagreement strata, McNemar `p < 0.05`, with false-merge rate (S4) `≤ [bar]`.
+  Failing that, report the honest negative.
+- **Stopping / rollback:** if *severe* false-attribution — a false SAME implicating a **living person**
+  or bridging groups whose combined size `> [T]` — exceeds `[rate]` in any stratum, that mechanism is
+  pulled from the merged set pending fix, and the fact is reported, not hidden.
+
+**Launch thresholds are staged and stricter (deferred).** The bars above validate the *method* for a
+design paper. *Public attribution* requires the separate, consequence-tiered thresholds in
+[`ownership-model-spec.md`](ownership-model-spec.md) §8/§10 — set per rollout stage (research < beta <
+public) — which this minimal eval does not establish.
+
+## 9. Cluster-level validity & ablation
+
+Pairwise precision (§5) is necessary but not sufficient: a good edge rate can still produce bad
+clusters (one false bridge merges two valid groups). On the anchor portfolios (where a gold cluster
+exists), also report:
+
+- **Cluster metrics:** false-merge / false-split rate, **B³ purity & completeness**, and the max and
+  distribution of cluster error (not just the mean).
+- **Bridge sensitivity:** recompute clusters after removing each single inferred edge; a group that
+  collapses when one edge is dropped is a bridge-risk flag. Report **direct-evidence** membership
+  separately from **transitive** membership.
+- **Ablation (isolates the common-control layer's marginal value):** score four configurations on the
+  same items — (a) WoW, (b) sourced records only, (c) + registration network, (d) + both. If (d) does
+  not beat (c)/(b) on the task metrics, the common-control layer is not earning its complexity.
+- **Adversarial strata (extends §2):** the sample must over-include the dangerous cases random sampling
+  misses — common surnames, shared professional/office addresses, relatives, large managers, reused LLC
+  addresses, high-degree nodes.
+
+## 10. Deliverables
 
 1. Head-to-head metrics table (per stratum + WoW comparison, CIs, McNemar *p*) — precision **strict
    and inclusive**, with the **C2 share** per stratum.

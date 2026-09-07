@@ -123,7 +123,11 @@ public claims; correction/appeal with propagation to caches and exports; version
 snapshots; **living individuals handled more conservatively than entities**; monitoring of false-positive
 complaints and downstream reuse.
 
-## 9. Evaluation decision rules [proposed; extends `eval-protocol.md`]
+## 9. Evaluation decision rules [proposed]
+
+> These rules now **live in** [`eval-protocol.md`](eval-protocol.md) §8 (preregistered decision rules)
+> and §9 (cluster-level validity & ablation) — the single operational source. The summary below is the
+> rationale; edit the protocol, not this section, when the rules change.
 
 Measurement categories (record/linkage validity by mechanism on adversarial strata; cluster validity —
 false-merge/split, purity/completeness, bridge failures, by size, robustness to edge removal, direct vs.
