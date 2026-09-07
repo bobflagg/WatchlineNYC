@@ -141,6 +141,47 @@ WoW's name+address graph never joins them. WatchlineNYC merges all 12.
 Together these pre-empt the obvious objection — *"aren't you just merging on
 names?"* — on the very name that would seem to invite it.
 
+## Which signal to trust — edge-reliability ranking
+
+Both Escobar cases were rescued by `CONNECTED_BY_DEED`. It is the most reliable of
+the *heuristic* connection edges for the veil-pierce job — but reliability is
+really per-*method*, not per-edge-type, and a couple of deterministic signals match
+it on precision while the deed edge wins on a different axis (it is **name-free**).
+The pipeline's own weighting, strongest first:
+
+| Signal (edge · method) | Basis | Reliability | Weakness |
+|---|---|---|---|
+| `CONNECTED_BY_SPLINK` · `curated` | human-verified table | highest (tiny, manual) | doesn't scale |
+| `CONNECTED_BY_SPLINK` · `registered-llc` | **exact** legal owner name (PLUTO) | precision-1, weight 100 | needs the *same* legal name |
+| **`CONNECTED_BY_DEED`** · `acris-deed` (held) | co-grantees on one recorded deed | **very high — documentary, name-free** | proves co-ownership *at deed time* |
+| `CONNECTED_BY_DEED` · `acris-deed-linked-successor` | grantor-chain reconstruction | high but **more inferential** | gated by single-purpose-successor check |
+| `CONNECTED_BY_SPLINK` · `splink-fellegi-sunter` | probabilistic model | medium (weight 10) | name-anchored |
+| `CONNECTED_BY_NAME` | fuzzy name | low (weight 1.5) | **namesake collisions** (the Espinal trap above) |
+| `CONNECTED_BY_ADDRESS` | shared business address | low (weight 1.0) | aggregator over-merge; **typo splits** (the `GRAND COURSE` case) |
+
+Why the deed edge is special: two buildings on one deed share a grantee → same
+owner **regardless of LLC name**, so it merges differently-named LLCs that both the
+name-anchored model and the exact-name `registered-llc` edge keep apart. It is
+immune to exactly the noise — typos, namesakes, aggregator addresses — that
+fractures the name/address edges, which is why it is deliberately specialist and
+sparse (~1,428 edges) and targets the hardest fully-obscured cases.
+
+Three qualifiers keep it from being *unconditionally* "most reliable":
+
+1. **Deterministic name signals tie or beat it on precision** — `registered-llc`
+   (exact legal name) and `curated` (human) are both weight-100 / precision-1. The
+   deed edge wins on being *name-free*, not on raw precision; they cover different
+   failure modes, so the pipeline uses all of them.
+2. **It's only as good as its guards** — a raw deed proves co-ownership *at
+   conveyance time*; the **staleness guard** (group by each building's latest deed)
+   and **deed-hub cap** (drop a grantee on >20 deeds) are what make it trustworthy.
+   The `linked-successor` variant is more inferential than a currently-held deed.
+3. **All `CONNECTED_BY_*` edges are Type II** (derived, caveat-bearing, never a
+   legal determination), and a deed-**only** SAME is the eval's *most*-scrutinized
+   class (C2, behind the three-check hard gate). The strongest *conclusion* is not
+   any single edge but **cross-source corroboration** — e.g. deed **+** HPD (C1),
+   exactly what elevated P0012 to the strict-precision bar.
+
 ## Reproduce
 
 ```sql
