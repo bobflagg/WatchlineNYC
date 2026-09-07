@@ -6,6 +6,10 @@ precision/recall numbers, pending the ground-truth eval in [`eval-protocol.md`](
 The one worked example below is verified against WoW's live output. Submittable as a design/experience
 paper today; archival once the eval numbers land.
 
+A second, fully-worked flagship example — Ramon Escobar (recall *and* precision on one name, two WoW
+splits by two different mechanisms, the edge-reliability ranking, and both live views) is in
+[`case-escobar.md`](case-escobar.md).
+
 Candidate venues: Computation + Journalism Symposium (C+J), NICAR (talk), ACM COMPASS (short
 paper), FAccT (the reliability-class / "inference vs. determination" angle).
 
