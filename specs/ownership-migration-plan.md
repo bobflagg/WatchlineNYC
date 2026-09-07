@@ -1,7 +1,9 @@
-# Option B migration plan (v3) — parallel construction, then cutover
+# Option B migration plan (v4) — parallel construction, then cutover
 
-**Date:** 2026-09-07 · **Status:** plan, approved-in-direction; execution-ready for Track A · **Implements:**
-the Option B decision + invariant in [`ownership-model-spec.md`](ownership-model-spec.md).
+**Date:** 2026-09-07 · **Status:** direction approved; **Phase 0–1 execution-ready**, Phases 2–5 executable
+once Phase 1's identity contracts, the component-consistency algorithm, and the Phase-5 thresholds are
+approved · **Implements:** the Option B decision + invariant in
+[`ownership-model-spec.md`](ownership-model-spec.md).
 
 **Invariant to make — and keep — true** (generalized beyond deeds, per review):
 > Identity assertions may determine entity membership. **No substantive relationship assertion may
@@ -10,9 +12,11 @@ the Option B decision + invariant in [`ownership-model-spec.md`](ownership-model
 > never by graph connectivity.
 
 **Two tracks.** *Track A* (Phases 0–5) is the identity/relationship separation and cutover — a correctness
-fix with **no public exposure**; execution-ready. *Track B* (Phases 6–8) exposes deed paths to research
-users and draws control conclusions — separate risk transitions, gated by the eval; **deferred**. Don't
-block Track A on Track B.
+fix with **no public exposure**. **Phases 0–1 are execution-ready now; Phases 2–5 unlock once Phase 1 is
+approved** (the component-consistency algorithm determines entity membership, so it is *designed, reviewed,
+and tested as a Phase-1 contract deliverable — before any Phase-2 implementation*, not "specified while
+constructing"). *Track B* (Phases 6–8) exposes deed paths and draws control conclusions — separate risk
+transitions, gated by the eval; **deferred**. Don't block Track A on Track B.
 
 **Right-sizing.** Pre-production prototype: `OwnerGroup` has ~4 *internal* consumers (`aggregator_audit`,
 `verify_splink`, `eval/`, `case-escobar`), no serving/caches/indexes/API/external users. The durable,
@@ -50,11 +54,23 @@ Relationships record **which `resolution_id` supported their endpoints**. Invari
 conclusions retain the entity-resolution version under which they were generated, even after later merges
 or splits.* (Decide before Phase 3, so re-resolution can't silently reinterpret old relationships.)
 
-## Rollback = version selection
+## Rollback = version selection **at a common source watermark**
 
-Choose a prior **version** (run-id / read-alias), not a snapshot restore (a static snapshot staleness as
-ingestion continues). Rollback unit: source watermark · code rev · config/thresholds · run-ids · schemas &
-indexes · derived datasets (masks, fixtures) · cache/index version · consumer-contract version.
+Choose a prior **version** (run-id / read-alias), not a snapshot restore. But version-selection only
+isolates *semantics* if both projections sit on the **same source watermark** — otherwise reverting to
+legacy also reverts data freshness, conflating two changes. So during the rollback window:
+
+```
+source watermark N
+├── legacy semantics  (run L-N)
+└── v2 semantics      (run V2-N)
+```
+
+The switch chooses semantics at a common N; a test verifies **source-coverage parity** between the two
+runs. *(Cheap here: the graph is batch-rebuilt from one Postgres snapshot per run, so building L-N and V2-N
+from the same dump satisfies this by construction — no dual continuous-ingestion pipeline needed.)*
+Rollback unit: source watermark · code rev · config/thresholds · run-ids · schemas & indexes · derived
+datasets (masks, fixtures) · cache/index version · consumer-contract version.
 
 ---
 
@@ -113,9 +129,10 @@ Switch canonical identity reads to v2 behind a version switch (light now — a r
 criteria** (this is the identity fix; the public control-eval is *not* required for it): complete evidence
 reconciliation; **zero prohibited edge mechanisms** in identity components; all known consumers migrated;
 all output differences either explained by the transition matrix or recorded as intentional; **no
-unexplained source-reference loss**; stable-ID merge/split tests pass; acceptable identity-resolution
-precision; rollback switch exercised; no severity-1 discrepancies open. This cutover is **separate** from
-any later public exposure of deed paths or control conclusions.
+unexplained source-reference loss**; stable-ID merge/split tests pass; **identity-resolution quality clears
+the preregistered thresholds** in [`eval-protocol.md`](eval-protocol.md) §8.1 (fixed *before* Phase 2
+results are examined); rollback switch exercised; no severity-1 discrepancies open. This cutover is
+**separate** from any later public exposure of deed paths or control conclusions.
 
 ---
 

@@ -169,6 +169,22 @@ design paper. *Public attribution* requires the separate, consequence-tiered thr
 [`ownership-model-spec.md`](ownership-model-spec.md) §8/§10 — set per rollout stage (research < beta <
 public) — which this minimal eval does not establish.
 
+### 8.1 Identity-resolution cutover thresholds (gate the Option B Phase-5 cutover)
+
+The [migration plan](ownership-migration-plan.md) Phase-5 identity cutover has its own preregistered gate —
+fixed **before Phase 2 results are examined**, so the new clustering can't be graded on a curve. This is the
+identity/`ResolvedEntityV2` quality bar, distinct from the WoW head-to-head above. Preregister, per an
+adjudicated identity sample with an `INDETERMINATE` class excluded from denominators:
+
+- **Pairwise precision by identity mechanism** (`registered-llc` / `curated` / `fellegi-sunter`).
+- **Component-level false-merge rate**, and a **severe false-merge rate** (distinct real parties collapsed
+  into one identity) — the headline gate.
+- **Reported separately for natural persons vs. legal entities**, and for **common names** and components
+  that depend on a **probabilistic bridge** (removing one edge splits them).
+- **Weighting: a false merge counts more than a false split** (a merge wrongly fuses distinct parties;
+  precision-first).
+- **An explicit cutover threshold `[value]` and the failure response** (do not cut over; fix; re-measure).
+
 ## 9. Cluster-level validity & ablation
 
 Pairwise precision (§5) is necessary but not sufficient: a good edge rate can still produce bad
