@@ -162,6 +162,10 @@ Three findings:
    controller (`OwnerGroup`-only = 0), and the controller landlord is itself a *member* of the group.
    They cannot disagree on identity — the owner group is a *superset* ("this controller is part of a
    larger beneficial owner spanning N landlords").
+   *(Clarifier: "aggregation above" holds only against `APPARENT_CONTROL` (the per-building control
+   edge). Against the `Portfolio` layer, `OwnerGroup` is not merely an aggregation — it independently
+   **subdivides** (479 portfolios) and **crosses** (157 groups) WoW clusters; see
+   [`three-layer-case.md`](three-layer-case.md) §3. The two comparisons are different and both stand.)*
 2. **`OwnerGroup` is a specialist rollup.** It fires for only 28% of controlled buildings (the
    multi-landlord owners the signal ladder unified); the other 72% have a singleton controller that
    *is* its own owner. Replacing `APPARENT_CONTROL` with `OwnerGroup` would lose ~123k buildings'
