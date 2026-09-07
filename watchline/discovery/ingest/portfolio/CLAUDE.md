@@ -140,10 +140,14 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   tagged `identity` (≤1 resolved identity entity; deed redundant/extends it), `deed_only` (no identity
   edge — the pure veil-pierce; deed-only ⇒ eval class C2), or `deed_bridged` (a `CONNECTED_BY_DEED`
   edge fused ≥2 resolved identity entities — the cross-mechanism transitivity risk to hold to a higher
-  bar). Live: **6,618 / 118 / 34**. Additive only — membership is unchanged; the flag lets the
-  consumption layer and eval separate "same registered owner" from "linked via deed." Whether to stop
-  fusing the 34 `deed_bridged` groups (treat deed as a typed path, not a merge) is an OPEN decision —
-  see `specs/ownership-model-spec.md` §2–§4, §11.
+  bar). Counts: raw union-find (what `classify_composition` returns) **6,618 / 118 / 34**; over the
+  materialized post-co-op/condo-drop layer (6,540) **6,402 / 105 / 33** (reconciled in
+  `specs/ownership-model-spec.md` §6). Additive only — membership unchanged; the flag lets the consumption
+  layer and eval separate "same registered owner" from "linked via deed." **DECIDED (Option B):** no deed
+  edge may enter identity union-find — the **138** deed-derived groups (deed_only + deed_bridged) are to
+  be re-expressed as typed relationships, common-control only via an explicit evaluated rule; the current
+  fusion stays as a versioned legacy view, `composition` deny-by-default. See `ownership-model-spec.md`
+  callout + §2–§6, §11. Not yet implemented (migration is the next build).
 - **`aggregator_audit.py`** — read-only tool that produces the **precision-safe address-mask list**
   for the address-nexus (Portfolio) flaw. A business address shared by many landlords (degree >25)
   is either an AGGREGATOR (management/agent megaoffice, many *unrelated* owners → the Orsid-style

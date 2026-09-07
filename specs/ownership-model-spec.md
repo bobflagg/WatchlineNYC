@@ -1,4 +1,4 @@
-# Ownership model & inference specification — for critique (v4)
+# Ownership model & inference specification (v5) — Option B decided
 
 *(Formerly `three-layer-case.md`; renamed when it grew from a decomposition argument into this
 data-model + inference spec. History predating the rename is under the old name in git.)*
@@ -14,6 +14,18 @@ builds the owner partition as a single union-find over the union of `CONNECTED_B
 informal pipeline description with a data-model + inference spec, and marks every element
 **[implemented] / [proposed] / [open]**. Figures are from the live graph as of the date above.
 
+### Changelog v5 (after review of the decision callout)
+
+- **Decision made: Option B** + the invariant (see the callout); scope corrected to **all** deed-derived
+  groups (138), not just the 34 mixed ones.
+- **Reconciled the 6,770 vs 6,540 count** (§6): materialized layer 6,540 → **6,402 / 105 / 33**; the 6,770
+  was raw pre-drop union-find. Every count now carries its universe + snapshot.
+- Reframed A as a **type error** (not recall-vs-precision); `composition` is **deny-by-default
+  instrumentation**, not a safety control; "fully obscured" → "candidate obscured-control."
+- Source-near deed naming (`co_grantee_on_deed`, not `co-title`); **linked-successor** kept distinct as
+  the first admissibility-rule candidate (§4); probabilistic-identity **component-consistency checks** (§2);
+  **path-admissibility + calibration** for step 3 (§10); **projection specified before eval** (§5).
+
 ### Changelog v4 (after review of v3)
 
 - Confirmed and conceded the transitivity contradiction against the code; reframed around the reviewer's
@@ -26,29 +38,40 @@ informal pipeline description with a data-model + inference spec, and marks ever
 
 ---
 
-> ## The decision on the table
+> ## Decision: Option B (decided after review)
 >
-> The owner layer is a single union-find over identity edges (`CONNECTED_BY_SPLINK`) **and** a deed
-> co-conveyance *relationship* (`CONNECTED_BY_DEED`). Measured on the live graph, of **6,770** owner
-> groups: **6,618** are a single resolved identity entity, **118** are pure-deed veil-pierces, and
-> **34** are `deed_bridged` — a deed edge fuses **≥2 already-resolved identity entities** into one
-> group (the cross-mechanism transitivity you flagged). Those 34 are now *tagged* (an additive
-> `composition` flag; membership unchanged). **The open call is what to do with them:**
+> **Stop fusing identity entities across deed relationships; expose the deed as a typed relationship /
+> path — applied to *every* deed-derived union, not only the mixed cases.**
 >
-> - **Option A — keep fusing, hold to a higher bar.** Leave the 34 merged; use the `composition` flag
->   to down-rank/withhold them from public surfaces and route them to review. *Pro:* preserves the
->   veil-pierce's recall on obscured shell games; smallest change. *Con:* still asserts a single group
->   built partly by a relationship edge, i.e. keeps the semantic conflation, just labeled.
-> - **Option B — stop fusing; expose the deed as a typed path.** Split the 34 back into their identity
->   entities and represent the bridging deed as a `co-title` evidence *path* between them, not a merge.
->   *Pro:* removes the transitivity conflation at the source; matches the three-level model (§2).
->   *Con:* the 34 (and future such cases) no longer read as one owner without an explicit inference
->   rule; a little more machinery.
+> **Invariant.** *Identity assertions may determine entity membership. Deed assertions may create typed
+> relationships between those entities. No deed relationship may merge entity identities. Any
+> common-control grouping must be produced by an explicit, evaluated admissibility rule — never by
+> graph connectivity.*
 >
-> The trade-off is **recall on the hardest fully-obscured owners (A) vs. transitivity precision (B)**.
-> The `composition` flag makes either safe to implement. Context: §2–§4 (the model), §11 (status +
-> numbers), §12 (my specific questions). A concrete `deed_only`/veil-pierce instance is in
-> [`case-escobar.md`](case-escobar.md).
+> **Why not Option A.** Keeping the fusion (even behind the `composition` flag and a higher bar)
+> preserves a **type error** — a relationship *between* entities read as identity-like *membership*. A
+> perfect co-conveyance record still does not prove its parties are one owner. The flag makes the error
+> observable, not valid. (So the choice is not "recall vs. precision"; A is logically invalid unless
+> `OwnerGroup` is redefined as an "investigative association component," which would undo the split.)
+>
+> **Scope — all deed-derived groups, not just the 34.** Any group whose identity depends on a
+> `CONNECTED_BY_DEED` edge is in scope: `deed_bridged` **and** `deed_only`. Over the materialized layer
+> (6,540 groups, §6): **6,402 `identity` · 105 `deed_only` · 33 `deed_bridged`** → **138 deed-derived
+> groups** to re-express as typed relationships. *(The earlier 6,618 / 118 / 34 were the raw
+> current-edge union-find before the co-op/condo drop; see the reconciliation in §6. Use the
+> materialized numbers.)*
+>
+> **What migration produces:** identity components from admissible identity assertions only; deed-derived
+> *typed relationships* between them; the 138 groups re-expressed as relationship structures; a
+> common-control group only when an explicit, evaluated rule succeeds. The recall "loss" is only the
+> automatic "one owner" label — the deed, parties, roles, path, temporal context, and
+> successor/restructuring evidence are all retained. The present grouping survives only as a
+> **versioned legacy view** while consumers migrate.
+>
+> **The `composition` flag is instrumentation, not a safety control** — and its default is
+> **deny-by-default**: a consumer must explicitly opt into deed-composed behavior; unmodified consumers
+> must not treat deed-composed groups like identity groups. Context: §2–§5 (model), §6/§11 (numbers +
+> reconciliation), §12. A concrete `deed_only` instance: [`case-escobar.md`](case-escobar.md).
 
 ---
 
@@ -71,7 +94,11 @@ heterogeneous edges — the construction under review.**
 1. **Source-reference claims** — *Record X names string/identifier S in role R w.r.t. B, dated.*
 2. **Identity-resolution assertions** — *two references probably denote the same entity.* This is where
    `registered-llc` (exact legal entity), `curated` (human), and `fellegi-sunter` (probabilistic
-   same-person) belong. Identity is transitive *within the resolved model* (with the existing vetoes).
+   same-person) belong. Identity is transitive *within the resolved model* — **but probabilistic
+   identity is not harmlessly transitive**: an A≈B, B≈C chain can resolve A and C together despite poor
+   direct compatibility. The existing edge vetoes help; the identity layer still needs **component-level
+   consistency checks** (name, entity type, temporal impossibility, conflicting identifiers) before a
+   connected component is accepted as one entity.
 3. **Typed substantive relationships between resolved entities** — e.g. `co-title` (from a deed),
    `common-principal`. These are **not** identity and are **not** freely transitive.
 
@@ -104,10 +131,19 @@ not control:
 | `registered-llc` | identity | the *same legal entity* was reported in an ownership-bearing role (needs role **and** identity established) | strong |
 | `curated` | identity | a human judged the references the same owner — **requires** standard, date, reviewer, scope | strong, but auditable, not axiomatic |
 | `fellegi-sunter` | identity | two references *probably denote the same party* (probabilistic) | identity only, not a relationship |
-| `acris-deed` (co-conveyance) | relationship | parties appeared together in a conveyance in roles — **not** necessarily equal co-title, continuing ownership, or control | signal only with the successor/restructuring + temporal gate |
+| `acris-deed` (co-conveyance) | relationship | parties **co-appeared in a conveyance** in specified roles — **not** equal co-title, continuing ownership, or control | never merges identity; a candidate for an explicit rule |
 
-The data may ultimately support **several typed relations** (co-title, common-principal, associated-via-conveyance)
-rather than one "common control"; the evaluation should test whether collapsing them is valid at all.
+Name the relation source-near — **`co_grantee_on_deed`** (both roles grantee) or **`conveyance_party`**
+(roles retained) — **not** `co-title`, which overstates the record. A derived `co-title` (or common-control)
+assertion is then produced by an *explicit rule* over the right doc type, roles, lot coverage, and temporal
+window. The data may support **several typed relations** (`co_grantee_on_deed`, `common-principal`,
+`conveyance_party`) rather than one "common control"; the evaluation tests whether collapsing them is valid.
+
+**The linked-successor gate is the natural first admissibility rule.** `acris-deed-linked-successor` already
+encodes single-purpose-successor + restructuring-not-sale + a temporal chain — i.e. it is rule-shaped, not
+raw co-conveyance. Under the invariant it still must not enter identity union-find; instead it is the first
+candidate to *produce a common-control grouping via an explicit, evaluated rule*. Held vs. linked-successor
+deeds must be kept distinct in the migration, not lumped as one `CONNECTED_BY_DEED`.
 
 ## 5. Unit of clustering & projection [proposed; currently under-specified]
 
@@ -116,16 +152,33 @@ explicitly: which nodes exist; which receive identity resolution (party referenc
 substantive-relationship edges (resolved entities); how a **building** joins a group (party → `bbls`
 projection); that a building **may belong to multiple groups** (joint ownership = multiple party
 relationships, never a node merge); and that a projected building cluster must not discard the party/edge
-structure that justifies it. *(This is the least-specified area today and a priority for the redesign.)*
+structure that justifies it. **Projection semantics are a prerequisite to meaningful evaluation** —
+false-merge, usefulness, and harm all depend on whether buildings inherit every party relationship,
+retain overlapping memberships, group by current vs. historical claims, propagate through joint
+ownership, and receive allegations from projected membership. So §5 must be specified *before* the
+ablation and safety studies (§9), not left open.
 
-## 6. Empirical topology — evidence, not a risk bound [implemented data]
+## 6. Empirical topology & count reconciliation — evidence, not a risk bound [implemented data]
 
-6,540 groups; 78% pairs; ~98% ≤5; **max 37**; 90 groups (1.4%) span ≥3 surnames. This describes the
+**Two universes, reconciled** (every count below carries its snapshot 2026-09-07):
+
+- **Materialized layer** = the `:OwnerGroup` nodes in the graph *after* the co-op/condo drop, from the
+  last `--step ownergroup` rebuild: **6,540 groups**. Composition over these: **6,402 `identity` · 105
+  `deed_only` · 33 `deed_bridged`** (138 deed-derived). This is the universe for the distribution and the
+  divergence counts (479 / 157 / 28%).
+- **Raw current-edge union-find** = `classify_composition` over `CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED`
+  at read time, size ≥ 2, *before* the co-op/condo drop: **6,770 groups** (6,618 / 118 / 34). It is larger
+  because (a) it precedes the co-op/condo-dominated-group drop and (b) edges shifted since the last
+  rebuild — 652 identity and 90 deed edges now cross materialized-group boundaries.
+
+The two converge on the next rebuild (composition is computed and written in the same pass; the
+`verify_splink` canary then reports on the single materialized universe). **Use the materialized numbers.**
+
+**Topology (materialized):** 78% pairs; ~98% ≤5; **max 37**; 90 groups (1.4%) span ≥3 surnames. This is
 *observed topology under current thresholds/caps* — it does **not** prove risk is bounded (small
 components may reflect sparse data or caps; two wrongly-joined pairs can be worse than one correct
 20-node cluster; shared surnames neither cause nor exclude false bridges). The only bounded claim: a
-single bridge's blast radius is capped by existing component sizes. **Risk is established by §9, not by
-this distribution.** The 11–37 tail and the 90 heterogeneous groups are the cluster-level review target.
+single bridge's blast radius is capped by existing component sizes. **Risk is established by §9.**
 
 ## 7. Temporal model [proposed; only latest-deed staleness implemented]
 
@@ -180,25 +233,31 @@ whether errors implicate living people or bridge large groups.
 5. Only then decide whether the evidence justifies **publicly named** common-control groups, via an
    explicit admissibility model — not connectivity.
 
-A formal cluster-confidence model is **not** required before step 3 *if* step 3 exposes only typed paths;
-it **is** required (or a stricter admissibility model) before any canonical named group.
+A formal cluster-confidence model is **not** required before step 3 *if* step 3 exposes only typed paths
+(there are no clusters to score). But step 3 is **not** rule-free — it needs **path-admissibility rules**
+(which edge-type sequences may be shown, maximum path length, permitted mechanisms, temporal coherence,
+whether a weak identity edge may anchor a path) and **path-level calibration + consequence controls** (a
+path can be a correct record sequence yet be misread as ownership; vetted reporters/advocates still
+publish). The consequence-tiered model (§8) substitutes for cluster confidence at step 3 **only** alongside
+these explicit path semantics.
 
 ## 11. Implemented / proposed / open
 
 - **Implemented:** the `OwnerGroup` union-find + edge vetoes; deed staleness / hub-cap / linked-successor
-  gates; co-op/condo exclusion; `MANAGED_BY` management layer; the registration `Portfolio`. **New:**
-  a `composition` provenance flag on every `OwnerGroup` (`identity` / `deed_only` / `deed_bridged`) that
-  makes the identity-vs-relationship distinction visible without changing membership — measured on the
-  live graph as **6,618 / 118 / 34** (`owner_groups.classify_composition`). The 34 `deed_bridged` groups
-  are the concrete, bounded instance of the transitivity risk.
-- **Proposed (this doc):** the three-level split; identity-resolution beneath the relationship graph; the
-  composition algebra; typed evidence paths; the temporal combination rules; the visibility-and-propagation
-  matrix; the eval decision rules. **Open decision surfaced by the measurement:** whether to stop *fusing*
-  the 34 `deed_bridged` groups (treat the bridging deed as a typed evidence path between two identity
-  entities, not a merge) — the additive `composition` flag now makes either choice safe to implement.
-- **Open research:** a cluster-confidence model; the admissibility rule for named groups; the
-  party/building projection & joint-ownership representation; the choice of recall proxy; whether "common
-  control" should be one relation or several typed relations.
+  gates; co-op/condo exclusion; `MANAGED_BY` management layer; the registration `Portfolio`; the additive
+  `composition` provenance flag (`identity` / `deed_only` / `deed_bridged`; materialized layer **6,402 /
+  105 / 33**, see §6) + a `verify_splink` canary.
+- **Decided (Option B, see the callout):** no deed edge may participate in identity union-find; identity
+  membership from admissible identity assertions only; deed edges become typed relationships; the **138**
+  deed-derived groups (105 `deed_only` + 33 `deed_bridged`) are re-expressed as relationship structures;
+  common-control groups only via an explicit, evaluated admissibility rule; the current grouping kept as a
+  **versioned legacy view**, `composition` **deny-by-default** for consumers.
+- **To build (Option B migration):** separate identity resolution (with **component-level consistency
+  checks** for probabilistic edges, §2) from the deed relationship; keep held vs. linked-successor deeds
+  distinct (§4); specify the party/building **projection before** the eval (§5); path-admissibility +
+  calibration for step 3 (§10); the deny-by-default consumer contract.
+- **Open research:** the admissibility rule(s) for named groups (linked-successor is the first candidate,
+  §4); the choice of recall proxy; whether "common control" is one relation or several typed relations.
 
 ## 12. What this is not / questions for the reviewer
 
