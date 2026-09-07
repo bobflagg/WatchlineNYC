@@ -171,29 +171,69 @@ public) — which this minimal eval does not establish.
 
 ### 8.1 Identity-resolution cutover thresholds (gate the Option B Phase-5 cutover)
 
-The [migration plan](ownership-migration-plan.md) Phase-5 identity cutover has its own preregistered gate —
-fixed **before Phase 2 results are examined**, so the new clustering can't be graded on a curve. This is the
-identity/`ResolvedEntityV2` quality bar, distinct from the WoW head-to-head above. Preregister, per an
-adjudicated identity sample with an `INDETERMINATE` class excluded from denominators.
+The Phase-5 identity cutover gate is preregistered and frozen (run manifest pins this section's revision
+hash) **before Phase-2 results are seen**. `[RATIFY]` = a value the team fixes at sign-off. Two rules that
+make the earlier draft statistically coherent:
 
-`[RATIFY]` values below are **proposals for the team to freeze at sign-off** (the run manifest pins this
-section's revision hash so they can't change silently). They reflect a precision-first public-accountability
-posture; adjust with the co-adjudicator, but freeze before any Phase-2 result is seen.
+- **Gates are on confidence bounds, not point estimates.** Precision passes only if its **one-sided 95%
+  lower bound** meets the threshold; an error rate passes only if its **one-sided 95% upper bound** is below
+  it. (99/100 correct does *not* pass a 99% gate.)
+- **Sample size is power-derived per independently-gated population, not fixed.** With zero observed errors
+  the one-sided 95% upper bound ≈ 3/n, so certifying an error rate `p` needs ≈ `3/p` **determinate**
+  observations — ~**299** for a 99% precision lower bound, ~**598** for a 0.5% upper bound; at 70–80%
+  coverage, ~430–855 sampled. A fixed n≈100 is for **descriptive** strata only, never for certifying 0.5%.
 
-| Gate | `[RATIFY]` proposed | Rationale |
-|---|---|---|
-| **Severe false-merge rate** (distinct real parties fused) — *headline* | **≤ 0.5%** and **0** in protected strata | the worst error for accountability; near-zero tolerance |
-| Component-level false-merge rate | **≤ 2%** | overall merge precision |
-| Pairwise precision — `curated` / `registered-llc-id` | **≥ 0.99** | deterministic mechanisms |
-| Pairwise precision — `registered-llc-name` / `fellegi-sunter` | **≥ 0.95** | probabilistic mechanisms |
-| Max `INDETERMINATE` (coverage) | **≤ 30%** (coverage ≥ 0.70) | a mostly-inconclusive sample doesn't gate |
-| Min sample per protected stratum | **≥ 100 pairs**, Wilson 95% CI reported | stat power |
-| Protected strata (report each) | natural-person, legal-entity, **common-name**, **probabilistic-bridge** components, **Level-0 same-name/same-address collisions** (C0) | where merges are riskiest |
-| False-merge : false-split weight | **≥ 5 : 1** | precision-first |
-| **Failure response** | **do not cut over**; pull or fix the offending mechanism/stratum; re-measure | no grading on a curve |
+### Tiered by consequence (matches the staged rollout: research < beta < public)
 
-The main §8 rules likewise carry `[RATIFY]` proposals to freeze at sign-off: false-merge S4 `[bar] ≤ 2%`,
-severe-attribution stopping `[rate] ≤ 0.5%`, bridge-group size `[T] = 25`. Same freeze-and-pin discipline.
+The full statistical **certification** is the bar for **production / public exposure** (Track B, or any
+public use of the identity layer). The **Track-A internal cutover** — reversible by version selection, no
+public exposure, replacing a legacy layer never certified to any bound — uses a proportionate gate: it must
+be **no worse than the incumbent and carry no observed severe error**, not independently certify 0.5%.
+
+**Track-A internal-cutover gate (feasible now):**
+- **Severe-error veto:** *any* adjudicated **severe** false merge (defined below) fails the candidate.
+- **Relative gate:** weighted loss `L = 5·(false-merge rate) + 1·(false-split rate)` — v2 must satisfy
+  `L(v2) ≤ L(legacy)` on the *same* adjudicated sample (v2 no worse than what it replaces).
+- **Descriptive, honestly bounded:** report every metric with one-sided 95% bounds **and** a sensitivity
+  pair — best case and **worst case (every `INDETERMINATE` counted as an error)** — plus coverage and
+  indeterminacy reasons by mechanism and stratum. Nothing regresses vs. legacy.
+- Feasible sample: the ~530-pair eval frame + a component-sampled identity set — enough for the relative
+  comparison and descriptive bounds, not for certifying 0.5%.
+
+**Production / public-exposure certification (deferred):**
+
+| Gate | Rule |
+|---|---|
+| Deterministic pairwise precision (`curated`/`registered-llc-id`) | one-sided 95% **lower** bound **≥ 99%** |
+| Probabilistic pairwise precision (`registered-llc-name`/`fellegi-sunter`) | one-sided 95% **lower** bound **≥ 95%** |
+| Component false-merge rate | one-sided 95% **upper** bound **≤ 2%** |
+| Severe false merge | any observed case **vetoes**; pooled deployment-weighted **upper** bound **≤ 0.5%** before production |
+| Coverage | **≥ 80% overall and per gated mechanism**; ≤80% (down to 70%) only for explicitly-labeled exploratory strata, which are then inconclusive + reported with the worst-case bound |
+| Sample size | **power-derived** per independently-gated population (≈299/≈598 determinate; ~430–855 sampled) — not fixed |
+| Protected strata | report all; **independently gate only** strata with sufficient determinate sample, else assurance ≤ 2% |
+| False splits | secondary constraint via the weighted loss `L` above |
+| Failure | no cutover; correct/remove the mechanism, **freeze a new candidate version**, evaluate on fresh or sequestered data |
+
+### Definitions (fixed here)
+
+- **Severe false merge (consequence-based, not just "distinct parties fused"):** a false merge that
+  implicates a **living person**, **bridges components above a declared combined size** (`[RATIFY] T = 25`),
+  transfers allegations/enforcement statistics, or connects otherwise-unrelated portfolios through a
+  high-impact party. Track A exposes no allegations/public results, so its severe class is the **intrinsic**
+  identity kind (living-person / large-bridge); downstream **publication** harm is a Track-B gate.
+- **Component false-merge rate denominator:** *number of adjudicated multi-member components containing ≥1
+  false merge ÷ number of adjudicated multi-member components.* **Sample components directly**, stratified
+  by size and bridge-dependence (pair sampling under-detects one bad member in a large component). An
+  `INDETERMINATE` member makes the component `INDETERMINATE` (excluded), and is also reported under the
+  worst-case (member-is-error) bound.
+- **C0 (Level-0) collisions use a different unit:** sample **sets of contributing source rows within one
+  `party_reference`** (not party-reference pairs — the collision is *inside* a reference, pre-resolution).
+  Report the collision rate among multi-row party references, the % showing evidence of >1 real party, and
+  the buildings/records affected. The severe-error veto applies to C0 too (it is an irreversible
+  pre-resolution identity operation).
+
+The main §8 head-to-head rules carry `[RATIFY]` proposals frozen the same way: false-merge S4 `[bar]`,
+severe-attribution stopping `[rate]`, bridge size `[T] = 25`.
 
 ## 9. Cluster-level validity & ablation
 

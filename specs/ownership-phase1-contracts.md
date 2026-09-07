@@ -1,4 +1,9 @@
-# Option B migration — Phase 1 contracts (rev 3, for re-review)
+# Option B migration — Phase 1 contracts (rev 4, for re-review)
+
+*rev 3 → rev 4: C7 + eval §8.1 made statistically coherent — gates on one-sided 95% confidence bounds,
+power-derived sample sizes, consequence-based "severe", defined component/C0 denominators, coverage ≥80%
+with worst-case sensitivity, and a weighted-loss false-split constraint; tiered so the full certification
+gates production while the reversible Track-A internal cutover uses a severe-veto + relative-loss gate.*
 
 **Date:** 2026-09-07 · **Status:** contracts, **for re-review before any Phase-2 implementation** · **Plan:**
 [`ownership-migration-plan.md`](ownership-migration-plan.md) · **Baseline:**
@@ -134,12 +139,20 @@ stale `bbl` yields a **dated** latest-observed claim, not a current one.
 
 `[DECISION]` No consumer requires durable `entity_id`; `resolution_id` within a declared run suffices.
 
-## C7 — Acceptance thresholds
+## C7 — Acceptance thresholds (tiered; confidence-bound; power-derived)
 
-Phase-5 cutover gated by [`eval-protocol.md`](eval-protocol.md) **§8.1**. rev 3 adds **`[RATIFY]` proposed
-concrete values** there; they are **frozen at sign-off, before any Phase-2 results are seen**, and the
-**run manifest pins the §8.1 protocol revision hash** so the adopted numbers cannot change silently. The
-checklist below reflects that these are proposed-pending-ratification, not yet fixed.
+Gated by [`eval-protocol.md`](eval-protocol.md) **§8.1**, now made statistically coherent (rev 4):
+- **Gates are on one-sided 95% confidence bounds, not point estimates**; **sample size is power-derived**
+  per gated population (a fixed ~100 is descriptive only — certifying 0.5%/99% needs ≈598/≈299 determinate).
+- **Tiered by consequence.** The **Track-A internal cutover** (reversible, no public exposure, replacing an
+  uncertified legacy layer) uses a proportionate gate — **severe-error veto** + **relative loss `L(v2) ≤
+  L(legacy)`** (`L = 5·FM + 1·FS`) + honestly-bounded descriptive metrics (incl. worst-case
+  `INDETERMINATE`-as-error). The **full certification** (deterministic precision LB ≥ 99%, probabilistic
+  ≥ 95%, component FM UB ≤ 2%, severe UB ≤ 0.5%, coverage ≥ 80%/mechanism, power-derived n) gates
+  **production / public exposure** (deferred with Track B).
+- `[RATIFY]` numeric values are frozen at sign-off before any Phase-2 result is seen; the run manifest
+  **pins the §8.1 revision hash**. "Severe" is consequence-based (living-person / large-bridge / allegation
+  transfer), distinct from ordinary false merge.
 
 ## C8 — Synchronized legacy/v2 build
 
@@ -156,7 +169,7 @@ selector **records semantic version + watermark** (rollback reverts semantics on
 - [ ] C4 — event-centric deeds + derived-view shape.
 - [ ] C5 — source-qualified latest-observed projection; multi-membership; no propagation.
 - [ ] C6 — consumers keyed on `resolution_id`; deny-by-default.
-- [ ] C7 — **§8.1 `[RATIFY]` values frozen + protocol hash pinned** (not merely referenced).
+- [ ] C7 — §8.1 gate is **confidence-bound + power-derived + tiered** (Track-A relative/veto vs production certification); `[RATIFY]` values frozen + protocol hash pinned.
 - [ ] C8 — synchronized legacy/v2 build + parity.
 
 On sign-off, Phases 2–5 unlock against the untouched legacy layer, reversible by version selection.
