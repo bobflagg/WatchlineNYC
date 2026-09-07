@@ -152,6 +152,10 @@ ALTER CURRENT GRAPH TYPE SET {
      run_id             :: STRING,
      member_count       :: INTEGER,
      deterministic_core :: BOOLEAN,
+     // C5 projection (co-op/condo excluded from ownership attribution; entity never dropped):
+     building_count       :: INTEGER,   // rental buildings
+     total_building_count :: INTEGER,   // full footprint
+     coop_condo_dominated :: BOOLEAN,   // >50% co-op/condo = mgmt artifact for ownership, flagged not dropped
      generated_at       :: ZONED DATETIME
   }),
 
