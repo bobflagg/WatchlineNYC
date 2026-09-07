@@ -158,10 +158,16 @@ it **is** required (or a stricter admissibility model) before any canonical name
 ## 11. Implemented / proposed / open
 
 - **Implemented:** the `OwnerGroup` union-find + edge vetoes; deed staleness / hub-cap / linked-successor
-  gates; co-op/condo exclusion; `MANAGED_BY` management layer; the registration `Portfolio`.
+  gates; co-op/condo exclusion; `MANAGED_BY` management layer; the registration `Portfolio`. **New:**
+  a `composition` provenance flag on every `OwnerGroup` (`identity` / `deed_only` / `deed_bridged`) that
+  makes the identity-vs-relationship distinction visible without changing membership — measured on the
+  live graph as **6,618 / 118 / 34** (`owner_groups.classify_composition`). The 34 `deed_bridged` groups
+  are the concrete, bounded instance of the transitivity risk.
 - **Proposed (this doc):** the three-level split; identity-resolution beneath the relationship graph; the
   composition algebra; typed evidence paths; the temporal combination rules; the visibility-and-propagation
-  matrix; the eval decision rules.
+  matrix; the eval decision rules. **Open decision surfaced by the measurement:** whether to stop *fusing*
+  the 34 `deed_bridged` groups (treat the bridging deed as a typed evidence path between two identity
+  entities, not a merge) — the additive `composition` flag now makes either choice safe to implement.
 - **Open research:** a cluster-confidence model; the admissibility rule for named groups; the
   party/building projection & joint-ownership representation; the choice of recall proxy; whether "common
   control" should be one relation or several typed relations.

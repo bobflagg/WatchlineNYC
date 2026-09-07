@@ -138,6 +138,9 @@ ALTER CURRENT GRAPH TYPE SET {
      method         :: STRING NOT NULL,
      member_count   :: INTEGER,
      building_count :: INTEGER,
+     // how identity vs. deed edges combine: 'identity' | 'deed_only' | 'deed_bridged'
+     // (deed_bridged = a co-conveyance fused >=2 resolved identity entities — held to a higher bar)
+     composition    :: STRING,
      generated_at   :: ZONED DATETIME
   }),
 

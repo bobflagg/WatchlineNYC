@@ -136,6 +136,14 @@ edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
   `:OwnerGroup`/`IN_OWNER_GROUP` declared in `graph_type.cypher` (run `--step schema` first). Load
   matches on `:Actor` (indexed KEY), not `:Landlord` (no index → per-row label scan). Live: 6,690
   owner groups over 16k landlord nodes. Canary in `verify_splink`. See `specs/ownership-layer-decision.md`.
+  **`composition` provenance** (`classify_composition` / `owner_group_composition`): each group is
+  tagged `identity` (≤1 resolved identity entity; deed redundant/extends it), `deed_only` (no identity
+  edge — the pure veil-pierce; deed-only ⇒ eval class C2), or `deed_bridged` (a `CONNECTED_BY_DEED`
+  edge fused ≥2 resolved identity entities — the cross-mechanism transitivity risk to hold to a higher
+  bar). Live: **6,618 / 118 / 34**. Additive only — membership is unchanged; the flag lets the
+  consumption layer and eval separate "same registered owner" from "linked via deed." Whether to stop
+  fusing the 34 `deed_bridged` groups (treat deed as a typed path, not a merge) is an OPEN decision —
+  see `specs/ownership-model-spec.md` §2–§4, §11.
 - **`aggregator_audit.py`** — read-only tool that produces the **precision-safe address-mask list**
   for the address-nexus (Portfolio) flaw. A business address shared by many landlords (degree >25)
   is either an AGGREGATOR (management/agent megaoffice, many *unrelated* owners → the Orsid-style

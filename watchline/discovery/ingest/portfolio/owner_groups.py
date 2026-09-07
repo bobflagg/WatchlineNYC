@@ -85,10 +85,83 @@ WHERE a.nodeid < b.nodeid
 RETURN DISTINCT a.nodeid AS a, b.nodeid AS b
 """
 
+# The two edge classes SEPARATELY, for the composition provenance below. CONNECTED_BY_SPLINK is an
+# IDENTITY signal (same owner across LLCs — Fellegi-Sunter + registered-LLC + curated); CONNECTED_BY_DEED
+# is a co-conveyance RELATIONSHIP repurposed as a veil-pierce. `composition` records, per group, how the
+# two combine — so the consumption layer can distinguish "same registered owner" from "linked only via a
+# deed," and the deed-bridged minority can be held to a higher bar. See specs/ownership-model-spec.md §4.
+_IDENTITY_EDGES = ("MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-(b:Landlord) WHERE a.nodeid < b.nodeid "
+                   "RETURN DISTINCT a.nodeid AS a, b.nodeid AS b")
+_DEED_EDGES = ("MATCH (a:Landlord)-[:CONNECTED_BY_DEED]-(b:Landlord) WHERE a.nodeid < b.nodeid "
+               "RETURN DISTINCT a.nodeid AS a, b.nodeid AS b")
+
+
+def _roots(pairs) -> dict[int, int]:
+    """Union-find over ``pairs``; returns ``{node: root}`` with root = MIN nodeid in the component
+    (same convention as ``_union_groups``, so group ids line up)."""
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        parent.setdefault(x, x)
+        r = x
+        while parent[r] != r:
+            r = parent[r]
+        while parent[x] != r:
+            parent[x], x = r, parent[x]
+        return r
+
+    for a, b in pairs:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+    return {n: find(n) for n in parent}
+
+
+def classify_composition(identity_pairs, deed_pairs, *, min_size: int = 2) -> dict[str, str]:
+    """Per owner group (component of identity ∪ deed, size >= ``min_size``), one of:
+
+    * ``"identity"``    — at most one resolved identity entity (>=2 identity-linked nodes) is involved;
+                          deed edges, if any, are redundant or extend that one entity. Safe.
+    * ``"deed_only"``   — no resolved identity entity; the group exists purely via deed edges (the
+                          intended name-free veil-pierce; deed-only ⇒ eval corroboration class C2).
+    * ``"deed_bridged"``— a deed edge fuses **two or more** resolved identity entities into one group
+                          (cross-mechanism transitivity — the case to hold to a higher bar / review).
+
+    Returns ``{owner_group_id: composition}``. Pure; the SQL/Cypher reader passes the two edge lists in.
+    """
+    id_root = _roots(identity_pairs)
+    id_multinode = {r for r in set(id_root.values())
+                    if sum(1 for v in id_root.values() if v == r) >= 2}
+    all_root = _roots(list(identity_pairs) + list(deed_pairs))
+
+    members: dict[int, list[int]] = defaultdict(list)
+    for node, root in all_root.items():
+        members[root].append(node)
+
+    out: dict[str, str] = {}
+    for root, ms in members.items():
+        if len(ms) < min_size:
+            continue
+        gid = f"OG-{root}"                       # root is the min nodeid, matching _union_groups
+        entities = {id_root[n] for n in ms if n in id_root and id_root[n] in id_multinode}
+        out[gid] = ("deed_bridged" if len(entities) >= 2
+                    else "identity" if len(entities) == 1
+                    else "deed_only")
+    return out
+
+
+def owner_group_composition(driver, *, database: str) -> dict[str, str]:
+    """Read the two edge classes and classify each owner group (see ``classify_composition``)."""
+    with driver.session(database=database) as s:
+        idp = [(r["a"], r["b"]) for r in s.run(_IDENTITY_EDGES)]
+        dp = [(r["a"], r["b"]) for r in s.run(_DEED_EDGES)]
+    return classify_composition(idp, dp)
+
 
 def owner_groups(driver, *, database: str) -> list[dict]:
     """``[{nodeid, owner_group_id}]`` — multi-node owner-identity groups = connected components of
-    the materialized CONNECTED_BY_SPLINK edges. Empty if the splink step has not run."""
+    the materialized CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED edges. Empty if the splink step has not
+    run. (Composition provenance — identity vs. deed — is set separately; see owner_group_composition.)"""
     with driver.session(database=database) as s:
         pairs = [(r["a"], r["b"]) for r in s.run(_EDGES)]
     groups = _union_groups(pairs, min_size=2)
@@ -168,16 +241,25 @@ WITH og, collect({o: o, n: n})[0] AS top
 WHERE top IS NOT NULL AND top.n * 5 >= og.building_count * 3
 SET og.name = top.o
 """
+# Provenance: how identity vs. deed edges combine in each group (see classify_composition).
+_COMPOSITION = """
+UNWIND $batch AS row
+MATCH (og:OwnerGroup {owner_group_id: row.gid})
+SET og.composition = row.composition
+"""
 
 
 def load_owner_groups(driver, *, database: str, batch_size: int = 5000) -> int:
-    """Rebuild the ownership layer from the materialized CONNECTED_BY_SPLINK edges: drop existing
-    :OwnerGroup/IN_OWNER_GROUP, then write fresh and set member_count / building_count / anchor
-    name. Refuses if no splink edges are present (run --step splink first)."""
+    """Rebuild the ownership layer from the materialized CONNECTED_BY_SPLINK + CONNECTED_BY_DEED
+    edges: drop existing :OwnerGroup/IN_OWNER_GROUP, then write fresh and set member_count /
+    building_count / anchor name / composition. Refuses if no splink edges are present (run --step
+    splink first)."""
     rows = owner_groups(driver, database=database)
     if not rows:
         raise RuntimeError(
             "no CONNECTED_BY_SPLINK edges found — run `--step splink` before `--step ownergroup`")
+    comp = [{"gid": gid, "composition": c}
+            for gid, c in owner_group_composition(driver, database=database).items()]
     with driver.session(database=database) as s:
         for stmt in _CLEANUP:
             s.run(stmt)
@@ -185,6 +267,8 @@ def load_owner_groups(driver, *, database: str, batch_size: int = 5000) -> int:
             s.run(_LOAD, batch=rows[i:i + batch_size], method=OWNER_GROUP_METHOD)
         for stmt in (_MEMBER_COUNT, _BUILDING_COUNT, _DROP_COOP_DOMINATED, _ANCHOR_PERSON, _ANCHOR_ENTITY):
             s.run(stmt)
+        for i in range(0, len(comp), batch_size):   # after the co-op/condo drop: dropped groups won't match
+            s.run(_COMPOSITION, batch=comp[i:i + batch_size])
     return len(rows)
 
 
