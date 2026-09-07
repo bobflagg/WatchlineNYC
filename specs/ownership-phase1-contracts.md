@@ -1,11 +1,12 @@
-# Option B migration — Phase 1 contracts (rev 5, for sign-off)
+# Option B migration — Phase 1 contracts (rev 6)
 
-*rev 4 → rev 5 (final statistical review): the Track-A relative gate is now a **paired noninferiority test**
-on the deployment-weighted `L(v2)−L(legacy)` (upper 95% bound ≤ margin `δ`); **C0's claim weakened** to
-"detect collision indicators / estimate residual risk" (absence of contradiction ≠ same identity); the
-production **protected-stratum** rule fixed (underpowered ⇒ inconclusive + blocks production of that
-mechanism, no fabricated ≤2% assurance); CI method **pinned to Clopper–Pearson**, `3/n` planning-only, and
-**census** for sub-sample populations.*
+**Status: Part A + B1 SIGNED OFF (2026-09-07); Phase 2 approved to begin. B2 (production) deferred.**
+
+*rev 5 → rev 6 (post-sign-off corrections): loss formula made explicit with deployment weights
+`L = 5·w_M·FM_cond + w_S·FS_cond`; production certification **gates each mechanism independently** (no
+pooling); CI method is **estimator-specific** (Clopper–Pearson only for unweighted per-mechanism binomial;
+survey/bootstrap for weighted pooled; paired bootstrap for the loss diff; finite-population for a census).
+Ratified: `T=25`, `δ=0.01`. B2 numbers remain to be ratified before any production/public exposure.*
 
 **Date:** 2026-09-07 · **Status:** contracts, **for re-review before any Phase-2 implementation** · **Plan:**
 [`ownership-migration-plan.md`](ownership-migration-plan.md) · **Baseline:**
@@ -150,21 +151,21 @@ stale `bbl` yields a **dated** latest-observed claim, not a current one.
 
 ## C7 — Acceptance thresholds (tiered; confidence-bound; power-derived)
 
-Gated by [`eval-protocol.md`](eval-protocol.md) **§8.1**, now statistically coherent (rev 5):
-- **Gates are on one-sided 95% confidence bounds** (method fixed: **Clopper–Pearson exact** for gates,
-  Wilson for descriptive only; `3/n` is planning-only), **power-derived** per gated population, with a
-  **census** for populations smaller than the required n (not "permanently uncertifiable").
-- **Tiered by consequence.** The **Track-A internal cutover** (reversible, no public exposure, replacing an
-  uncertified legacy layer) uses a proportionate gate — **severe-error veto** + a **paired noninferiority
-  test** (upper 95% bound of the **deployment-weighted** `L(v2) − L(legacy)`, `L = 5·FM + 1·FS`, paired
-  bootstrap, ≤ preregistered margin `δ`) + honestly-bounded descriptive metrics (incl.
-  worst-case `INDETERMINATE`-as-error). The **full certification** (deterministic precision LB ≥ 99%,
-  probabilistic ≥ 95%, component FM UB ≤ 2%, severe UB ≤ 0.5%, coverage ≥ 80%/mechanism, power-derived n)
-  gates **production / public exposure**; an **underpowered protected stratum blocks production** of the
-  affected mechanism (Track-A: reported inconclusive, not a blocker).
-- `[RATIFY]` values (incl. `δ`) frozen at sign-off before any Phase-2 result; the run manifest **pins the
-  §8.1 revision hash**. "Severe" is consequence-based (living-person / large-bridge / allegation transfer),
-  distinct from ordinary false merge.
+Gated by [`eval-protocol.md`](eval-protocol.md) **§8.1** (rev 6):
+- **Confidence-interval method is estimator-specific:** Clopper–Pearson for **unweighted per-mechanism**
+  binomial gates; a **stratified survey estimator / stratum-resampled bootstrap** for **weighted pooled**
+  rates; the **paired bootstrap** for the loss difference; **finite-population** reporting for a census
+  (adjudicator uncertainty separate). `3/n` is planning-only.
+- **Track-A internal cutover** (reversible, no public exposure): **severe-error veto** + a **paired
+  noninferiority test** — upper 95% bound of `L(v2) − L(legacy)` `≤ δ = 0.01`, with the mix explicit
+  `L = 5·w_M·FM_cond + w_S·FS_cond` (`w_M+w_S=1` preregistered deployment proportions) — + worst-case
+  `INDETERMINATE` sensitivity. **[RATIFIED 2026-09-07: T=25, δ=0.01.]**
+- **Production / public exposure (deferred):** **each mechanism gated independently** (no pooling) —
+  deterministic LB ≥ 99%, probabilistic LB ≥ 95%; component FM UB ≤ 2%; severe UB ≤ 0.5%; coverage
+  ≥ 80%/mechanism; power-derived n or census; an **underpowered protected stratum blocks production** of
+  that mechanism. **[B2 not yet ratified — pending the per-mechanism + estimator corrections, now applied.]**
+- "Severe" is consequence-based (living-person / large-bridge `T`), distinct from ordinary false merge; the
+  run manifest **pins the §8.1 revision hash**.
 
 ## C8 — Synchronized legacy/v2 build
 

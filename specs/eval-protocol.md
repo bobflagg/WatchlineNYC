@@ -192,15 +192,18 @@ be **no worse than the incumbent and carry no observed severe error**, not indep
 
 **Track-A internal-cutover gate (feasible now):**
 - **Severe-error veto:** *any* adjudicated **severe** false merge (defined below) fails the candidate.
-- **Relative gate — a paired noninferiority test, not a point comparison.** Weighted loss
-  `L = 5·FM + 1·FS`, where **FM** and **FS** are each **deployment-weighted rates** — the adversarial
-  strata are reweighted back to population prevalence so the two terms share a common per-decision estimand
-  (FM among merge decisions, FS among split decisions, combined on the deployment-weighted decision mix).
+- **Relative gate — a paired noninferiority test, not a point comparison.** Loss, with the deployment mix
+  **explicit**:
+  \[ L = 5\,w_M\,FM_{\text{cond}} + w_S\,FS_{\text{cond}} \]
+  where `FM_cond` = false-merge rate **among merge decisions**, `FS_cond` = false-split rate **among split
+  decisions**, and `w_M, w_S` are the **preregistered deployment proportions** of merge vs. split decisions
+  (`w_M + w_S = 1`) — so the adversarially-oversampled strata are reweighted to deployment prevalence and
+  the two conditional rates combine on a common per-decision scale. *(Equivalently, define `FM = w_M·FM_cond`
+  and `FS = w_S·FS_cond` as unconditional per-decision error contributions and write `L = 5·FM + FS`.)*
   Both systems are scored on the **same adjudicated items** (paired), determinate-only for the primary
-  estimate. The gate: the **one-sided 95% upper bound of the paired, deployment-weighted difference
-  `L(v2) − L(legacy)`** (paired bootstrap over adjudicated items) must be **≤ a preregistered
-  noninferiority margin `[RATIFY] δ`**. `δ = 0` is strict noninferiority and may need more sample than the
-  feasible frame supports; a small positive `δ` keeps it feasible — the team fixes `δ` at sign-off.
+  estimate. The gate: the **one-sided 95% upper bound of the paired difference `L(v2) − L(legacy)`**
+  (paired bootstrap over adjudicated items, respecting strata) must be **≤ the preregistered margin
+  `δ = 0.01`**. (`δ = 0` is strict noninferiority and may exceed the feasible sample.)
 - **Descriptive, honestly bounded:** report every metric with its named-method one-sided 95% bound **and**
   a sensitivity pair — best case and **worst case (every `INDETERMINATE` counted as an error)** — plus
   coverage and indeterminacy reasons by mechanism and stratum.
@@ -211,8 +214,8 @@ be **no worse than the incumbent and carry no observed severe error**, not indep
 
 | Gate | Rule |
 |---|---|
-| Deterministic pairwise precision (`curated`/`registered-llc-id`) | one-sided 95% **lower** bound **≥ 99%** |
-| Probabilistic pairwise precision (`registered-llc-name`/`fellegi-sunter`) | one-sided 95% **lower** bound **≥ 95%** |
+| Deterministic pairwise precision — **each mechanism gated independently** (`curated`, `registered-llc-id`) | per-mechanism one-sided 95% **lower** bound **≥ 99%** (no pooling — a high-volume mechanism must not mask a weak one) |
+| Probabilistic pairwise precision — **each independently** (`registered-llc-name`, `fellegi-sunter`) | per-mechanism one-sided 95% **lower** bound **≥ 95%** |
 | Component false-merge rate | one-sided 95% **upper** bound **≤ 2%** |
 | Severe false merge | any observed case **vetoes**; pooled deployment-weighted **upper** bound **≤ 0.5%** before production |
 | Coverage | **≥ 80% overall and per gated mechanism**; ≤80% (down to 70%) only for explicitly-labeled exploratory strata, which are then inconclusive + reported with the worst-case bound |
@@ -222,9 +225,17 @@ be **no worse than the incumbent and carry no observed severe error**, not indep
 | False splits | secondary constraint via the weighted loss `L` (paired noninferiority, above) |
 | Failure | no cutover; correct/remove the mechanism, **freeze a new candidate version**, evaluate on fresh or sequestered data |
 
-**Confidence-interval method (fixed):** gates use **one-sided Clopper–Pearson (exact)** bounds; Wilson is
-acceptable for *descriptive* reporting only. The `≈3/p` rule is **planning only** — the actual gate is the
-exact bound on observed data. Use the same method consistently across mechanisms and reruns.
+**Confidence-interval method (fixed, estimator-specific — Clopper–Pearson is *not* universal):**
+- **Per-mechanism precision / error gates** (unweighted binomial from an applicable random sample):
+  one-sided **Clopper–Pearson (exact)**.
+- **Deployment-weighted / stratified / pooled rates** (e.g. the pooled severe-merge upper bound): a
+  **preregistered stratified survey estimator** or an appropriately **stratum-resampled bootstrap** — not
+  Clopper–Pearson.
+- **Track-A loss difference `L(v2)−L(legacy)`**: the **paired bootstrap** (above), respecting strata.
+- **Census** (entire mechanism population adjudicated): report the **finite-population** result directly —
+  no sampling interval — while still reporting **adjudicator uncertainty** separately.
+- Wilson is descriptive-only; the `≈3/p` rule is **planning only** (the gate is the exact/estimator bound on
+  observed data). Fix the estimator per quantity and use it consistently across mechanisms and reruns.
 
 ### Definitions (fixed here)
 

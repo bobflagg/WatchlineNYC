@@ -69,7 +69,21 @@ Gates public exposure, **not** the Track-A internal cutover — safe to defer, b
 - **Does not unlock:** Track B (research-user deed paths, control-conclusion rules, public attribution) —
   separately gated by the B2 certification + the eval ablation.
 
-## Ratified by
+## Ratified — disposition (2026-09-07)
 
-- Reviewer: __________________  date: __________  ·  §8.1 revision hash pinned: __________
-- Notes / adjustments: 
+- **Part A — APPROVED.** C0, C1, C2, C3, C4, C5, C6, C8 govern Phase 2 implementation.
+- **B1 (Track-A gate) — RATIFIED**, conditional on the loss-formula clarification (now applied): `T = 25`;
+  `δ = 0.01`; severe-error veto; determinate-only primary + worst-case sensitivity; paired,
+  deployment-weighted comparison with the mix **explicit** —
+  `L = 5·w_M·FM_cond + w_S·FS_cond`, `w_M+w_S=1` preregistered.
+- **B2 (production) — DEFERRED** pending two corrections, **now applied** (await final ratification before
+  any production/public exposure): (1) **each mechanism gated independently** (no pooling curated with
+  registered-llc-id, or registered-llc-name with Fellegi–Sunter); (2) **estimator-specific CIs** —
+  Clopper–Pearson only for unweighted per-mechanism binomial gates; stratified survey estimator / resampled
+  bootstrap for weighted pooled rates; paired bootstrap for the loss difference; finite-population reporting
+  for a census (adjudicator uncertainty separate).
+- **Disposition:** Phase 2 implementation **approved to begin**; Track-A cutover approved subject to the
+  (now-applied) loss-formula clarification; **no production or public exposure authorized**; Track B locked.
+
+**Signed:** reviewer, 2026-09-07. §8.1 revision hash to be pinned in the Phase-2 run manifest (eval-protocol
+at commit that carries rev 6 corrections).
