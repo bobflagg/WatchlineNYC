@@ -136,3 +136,55 @@ M4 above is the census that justifies it.
   justify the deed pass.
 - Positioning: this is where Watchline diverges from WoW (inference vs. connections). `CONNECTED_BY_SPLINK`
   stays upstream-contributable; `:OwnerGroup` + deeds is a Watchline differentiator, not a WoW PR.
+
+## `OwnerGroup` vs `APPARENT_CONTROL` — coverage measurement + consumption contract
+
+**Date:** 2026-09-07 · **Status:** decided (consume: *enrich, don't replace*) · resolves the
+agent/UI integration question of whether `:OwnerGroup` supersedes `APPARENT_CONTROL`.
+
+`:OwnerGroup` is now built, so before wiring it into the agent/UI (which today know only
+`APPARENT_CONTROL`), we measured how the two relate on the live graph.
+
+### M5 — `OwnerGroup` sits *above* `APPARENT_CONTROL`; it enriches, never replaces
+
+| Measure | Value |
+|---|---|
+| Buildings with `APPARENT_CONTROL` | 171,347 |
+| Buildings touched by an `OwnerGroup` (member landlords' `bbls`) | 44,093 |
+| …that **also** have `APPARENT_CONTROL` | 44,093 (100%) |
+| …that are **`OwnerGroup`-only** (no apparent controller) | **0** |
+| Controlled buildings whose controller **is in** an owner group | 47,961 (**28%**) |
+| Owner groups / member landlords (avg ~2.4 each) | 6,540 / 15,777 |
+
+Three findings:
+
+1. **Containment, not competition.** Every `OwnerGroup`-covered building already has an apparent
+   controller (`OwnerGroup`-only = 0), and the controller landlord is itself a *member* of the group.
+   They cannot disagree on identity — the owner group is a *superset* ("this controller is part of a
+   larger beneficial owner spanning N landlords").
+2. **`OwnerGroup` is a specialist rollup.** It fires for only 28% of controlled buildings (the
+   multi-landlord owners the signal ladder unified); the other 72% have a singleton controller that
+   *is* its own owner. Replacing `APPARENT_CONTROL` with `OwnerGroup` would lose ~123k buildings'
+   control answer and add zero coverage.
+3. **`APPARENT_CONTROL` is the base; `OwnerGroup` the enrichment** — the same "specialist catches what
+   the base can't reach" shape as the deed signal, one layer up.
+
+### Consumption contract (agent + UI)
+
+"Who owns this building?" returns a **hierarchy**, not a swap — the agent/UI must present all
+applicable layers, labeled by reliability class, and nest rather than replace:
+
+- **Recorded owner** — `dof_ownername` (Type I) — may be a shell.
+- **Apparent controller** — `Landlord` via `APPARENT_CONTROL` (Type II) — the specific controlling
+  entity; the **base**, present for 171k buildings; a building with none is a valid answer, not an error.
+- **Beneficial owner group** — the `OwnerGroup` the controller belongs to (Type II) — shown **only when
+  present (28%)**, as "…part of a larger owner spanning N landlords." Never drops the controller; nests it.
+- **Managing agent** — `Manager` via `MANAGED_BY` (Type I, **disclosed**) — a separate axis, and the one
+  layer that carries an interpretation note rather than a reliability caveat.
+
+Implication for the integration work: keep `APPARENT_CONTROL` as the base edge in `ownership.py`; add
+`OwnerGroup` as an optional enrichment above it (not a rewrite); add `caveats.py` entries for
+`OwnerGroup` and `CONNECTED_BY_DEED` and an interpretation note for `Manager`; tag new tools in
+`reliability.py` (`Manager` = Type I, `OwnerGroup` = Type II). (Small wrinkle: 47,961 via the
+AC→landlord→OG path vs 44,093 via the `bbls` path — APPARENT_CONTROL's building set differs slightly
+from landlords' `bbls`; immaterial to the decision.)
