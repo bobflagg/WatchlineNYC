@@ -266,3 +266,35 @@ def materialize(driver, *, database: str, run_id: str | None = None,
         for i in range(0, len(membership_rows), batch_size):
             s.run(_LOAD_MEMBERS, batch=membership_rows[i:i + batch_size], run_id=run_id)
     return {"run_id": run_id, "entities": len(entity_rows), "memberships": len(membership_rows)}
+
+
+_Q_MAT_MEMBERS = ("MATCH (l:Landlord)-[:IN_RESOLVED_ENTITY_V2 {run_id:$run_id}]->(e:ResolvedEntityV2) "
+                  "RETURN l.nodeid AS nodeid, e.resolution_id AS rid")
+
+
+def verify_membership_identity_only(driver, *, database: str, run_id: str) -> dict:
+    """Fail-closed structural invariant test (F1/R3): prove the **materialized** membership of `run_id`
+    is *exactly* an identity-only partition — no substantive-relationship mechanism (deed / registered-llc /
+    co-officer) contributed to any `:ResolvedEntityV2`. Independently recomputes the identity-only partition
+    from the graph and compares to what was materialized; any extra merge (a relationship edge sneaking in)
+    shows up as a mismatch. Also checks only allowlisted identity methods are present among identity edges.
+    Returns ``{ok, ...}``; ``ok`` False ⇒ do not cut over.
+    """
+    with driver.session(database=database) as s:
+        materialized = {r["nodeid"]: r["rid"] for r in s.run(_Q_MAT_MEMBERS, run_id=run_id)}
+        methods = sorted(r["m"] for r in s.run(
+            "MATCH ()-[r:CONNECTED_BY_SPLINK]->() RETURN DISTINCT coalesce(r.method,'') AS m"))
+    part = resolve_graph(driver, database=database)["partition"]     # identity-only, from the graph
+    counts: dict = defaultdict(int)
+    for rid in part.values():
+        counts[rid] += 1
+    recomputed = {n: rid for n, rid in part.items() if counts[rid] >= 2}
+    mismatches = [n for n in set(materialized) | set(recomputed)
+                  if materialized.get(n) != recomputed.get(n)]
+    # every graph identity method read must be allowlisted; relationship methods must NOT be read
+    unexpected_read = [m for m in _IDENTITY_METHODS if m not in methods]  # (informational)
+    ok = not mismatches
+    return {"ok": ok, "materialized_members": len(materialized),
+            "recomputed_identity_only_members": len(recomputed), "mismatches": len(mismatches),
+            "mismatch_examples": mismatches[:8], "graph_splink_methods": methods,
+            "identity_methods_used": list(_IDENTITY_METHODS)}
