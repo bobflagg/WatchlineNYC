@@ -3,7 +3,7 @@
 Draft spine for a systems/method writeup of the three-layer ownership pipeline. Faithful to the
 working, rebuilt system as of this branch; the only placeholders are the formal WoW head-to-head
 precision/recall numbers, pending the ground-truth eval in [`eval-protocol.md`](eval-protocol.md).
-The one worked example below is verified against WoW's live output. Submittable as a design/experience
+A worked example below is verified against WoW's live output. Submittable as a design/experience
 paper today; archival once the eval numbers land.
 
 A second, fully-worked flagship example — Ramon Escobar (recall *and* precision on one name, two WoW
