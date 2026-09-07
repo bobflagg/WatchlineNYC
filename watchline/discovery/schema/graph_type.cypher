@@ -144,6 +144,17 @@ ALTER CURRENT GRAPH TYPE SET {
      generated_at   :: ZONED DATETIME
   }),
 
+  // Option B parallel identity projection (Phase 2). ADDITIVE + VERSIONED (run_id): built alongside
+  // :OwnerGroup, never replacing it; identity-only (fellegi + audited curated), no deed/registered-llc.
+  // Keyed by (resolution_id, run_id) — resolution_id is run-scoped (durable entity_id is separate, C1).
+  (:ResolvedEntityV2 => :WatchlineNode {
+     resolution_id      :: STRING,
+     run_id             :: STRING,
+     member_count       :: INTEGER,
+     deterministic_core :: BOOLEAN,
+     generated_at       :: ZONED DATETIME
+  }),
+
   // ---- Relationship element types ------------------------------------------
 
   (:Building)-[:HAS_EVENT =>]->(:Event),
@@ -223,6 +234,9 @@ ALTER CURRENT GRAPH TYPE SET {
 
   // Landlord -> its apparent owner group (portfolio/owner_groups.py `ownergroup` step).
   // The owner-identity membership; INFERRED, never a legal ownership claim.
-  (:Landlord)-[:IN_OWNER_GROUP =>]->(:OwnerGroup)
+  (:Landlord)-[:IN_OWNER_GROUP =>]->(:OwnerGroup),
+
+  // Option B parallel projection (Phase 2), additive; run_id-versioned, party_reference_id for C1 lineage.
+  (:Landlord)-[:IN_RESOLVED_ENTITY_V2 => { run_id :: STRING, party_reference_id :: STRING }]->(:ResolvedEntityV2)
 
 }

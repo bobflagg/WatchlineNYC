@@ -203,3 +203,66 @@ def resolve_graph(driver, *, database: str) -> dict:
     """Read the graph and run the C3 resolver — the parallel ResolvedEntityV2 partition (read-only)."""
     references, edges = read_inputs(driver, database=database)
     return resolve(references, edges)
+
+
+# --- materialization (versioned, additive, parallel — legacy owner_groups is untouched) ---------
+
+def build_rows(result: dict) -> tuple[list[dict], list[dict]]:
+    """Pure: turn a `resolve` result into (entity_rows, membership_rows) for the loader. Only
+    multi-member components are materialized (singletons implied, as in the legacy layer)."""
+    members: dict = defaultdict(list)
+    for nid, rid in result["partition"].items():
+        members[rid].append(nid)
+    det = result["deterministic_core"]
+    entity_rows, membership_rows = [], []
+    for rid, nids in members.items():
+        if len(nids) < 2:
+            continue
+        entity_rows.append({"resolution_id": rid, "member_count": len(nids),
+                            "deterministic_core": bool(det.get(rid, False))})
+        for n in nids:
+            membership_rows.append({"nodeid": n, "resolution_id": rid})
+    return entity_rows, membership_rows
+
+
+# Versioned by run_id: a rebuild for the same run_id replaces it; other runs (and legacy) coexist, so
+# rollback is version selection. Additive labels — :ResolvedEntityV2 / IN_RESOLVED_ENTITY_V2 (declare in
+# graph_type.cypher, --step schema, first). Membership matches :Actor (indexed actor_id), like owner_groups.
+_CLEANUP_V2 = [
+    "MATCH ()-[r:IN_RESOLVED_ENTITY_V2 {run_id:$run_id}]->() CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS",
+    "MATCH (e:ResolvedEntityV2 {run_id:$run_id}) CALL (e) { DETACH DELETE e } IN TRANSACTIONS OF 5000 ROWS",
+]
+_LOAD_ENTITIES = """
+UNWIND $batch AS row
+MERGE (e:ResolvedEntityV2:WatchlineNode {resolution_id: row.resolution_id, run_id: $run_id})
+  ON CREATE SET e.generated_at = datetime()
+SET e.member_count = row.member_count, e.deterministic_core = row.deterministic_core
+"""
+_LOAD_MEMBERS = """
+UNWIND $batch AS row
+MATCH (e:ResolvedEntityV2 {resolution_id: row.resolution_id, run_id: $run_id})
+MATCH (l:Actor {actor_id: 'ACT-LL-' + toString(row.nodeid)})
+MERGE (l)-[m:IN_RESOLVED_ENTITY_V2 {run_id: $run_id}]->(e)
+SET m.party_reference_id = row.party_reference_id
+"""
+
+
+def materialize(driver, *, database: str, run_id: str | None = None,
+                party_refs: dict | None = None, batch_size: int = 5000) -> dict:
+    """Write the parallel `:ResolvedEntityV2` identity projection, stamped with `run_id` (additive;
+    legacy layer untouched). `party_refs` (nodeid → party_reference_id, from `party_reference`) is
+    stamped on each membership for C1 lineage. Idempotent per run_id. Returns run stats."""
+    from datetime import datetime, timezone
+    run_id = run_id or "REV2-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    entity_rows, membership_rows = build_rows(resolve_graph(driver, database=database))
+    pr = party_refs or {}
+    for m in membership_rows:
+        m["party_reference_id"] = pr.get(m["nodeid"])
+    with driver.session(database=database) as s:
+        for stmt in _CLEANUP_V2:
+            s.run(stmt, run_id=run_id)
+        for i in range(0, len(entity_rows), batch_size):
+            s.run(_LOAD_ENTITIES, batch=entity_rows[i:i + batch_size], run_id=run_id)
+        for i in range(0, len(membership_rows), batch_size):
+            s.run(_LOAD_MEMBERS, batch=membership_rows[i:i + batch_size], run_id=run_id)
+    return {"run_id": run_id, "entities": len(entity_rows), "memberships": len(membership_rows)}

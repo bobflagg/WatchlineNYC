@@ -9,7 +9,8 @@ import random
 
 import pytest
 
-from watchline.discovery.ingest.portfolio.resolved_entity import resolve, entity_type, surname
+from watchline.discovery.ingest.portfolio.resolved_entity import (
+    resolve, entity_type, surname, build_rows)
 
 
 def _ref(i, entity_type=None, surname=None, identifier=None):
@@ -105,6 +106,22 @@ def test_entity_type_and_surname_classification():
     assert surname("STEVEN CROMAN", "person") == "CROMAN"
     assert surname("BEACH 99TH LLC", "entity") is None
     assert surname(None, "person") is None
+
+
+def test_build_rows_materialization_shape():
+    # {a,b} deterministic core, {c,d} probabilistic; both multi-member; a lone singleton is dropped.
+    result = resolve(
+        [_ref("a"), _ref("b"), _ref("c"), _ref("d"), _ref("z")],
+        [{"a": "a", "b": "b", "method": "curated-same-owner"},
+         {"a": "c", "b": "d", "method": "splink-fellegi-sunter", "score": 0.9}])
+    ents, mems = build_rows(result)
+    by_id = {e["resolution_id"]: e for e in ents}
+    assert set(by_id) == {"RE-a", "RE-c"}                          # 2 multi-member entities; z (singleton) omitted
+    assert by_id["RE-a"]["member_count"] == 2 and by_id["RE-a"]["deterministic_core"] is True
+    assert by_id["RE-c"]["deterministic_core"] is False            # probabilistic-only → no durable core
+    assert {(m["nodeid"], m["resolution_id"]) for m in mems} == {
+        ("a", "RE-a"), ("b", "RE-a"), ("c", "RE-c"), ("d", "RE-c")}
+    assert all(m["nodeid"] != "z" for m in mems)                   # singleton not materialized
 
 
 def test_permutation_invariance():
