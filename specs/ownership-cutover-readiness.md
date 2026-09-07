@@ -62,6 +62,10 @@ Shadow comparison (`shadow_compare.py`, also run against the materialized run):
      and split decisions; **severe-error veto** and **δ = 0.01 / T = 25** (ratified) must pass.
    - **C0 is a separate inherited-risk stratum** — legacy and v2 share the Level-0 collapse, so it does not
      distinguish them; report it on its own, and remediate any severe C0 finding.
+   - **Frame is BUILT** (`eval/cutover_frame.py`, run `REV2-20260907T230254Z`): **109 S1 split pairs
+     (census of the 79 groups) + 340 S2 retained-merge pairs** → `eval_out/cutover/review_queue.jsonl` (+
+     private key). Ready to adjudicate in the owner-review tool; `score.py` then computes the paired
+     noninferiority. *(S2 n is a starting sample; §8.1 power-derives the final per-mechanism n.)*
 
 ## What the cutover does / does not
 
