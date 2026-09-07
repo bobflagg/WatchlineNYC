@@ -136,7 +136,12 @@ merged**.
 - **Conveyance events (canonical, already in the graph):** `(:Building)-[:HAS_EVENT]->(:Event
   {event_type:'DeedTransfer', source_name:'ACRIS', event_id, source_record_id, event_date})<-[:PARTY_TO
   {role}]-(:Actor)`. `co_grantee_on_deed` / `conveyance_party` is a **derived view** over these w/
-  contributing `event_id`s, roles, dates, method (held vs linked-successor, distinct). Never `co-title`.
+  contributing `event_id`s, roles, dates. Never `co-title`. **Held vs. linked-successor is derived from
+  source** (`deed_edges._deed_sql` vs `_restructured_groups`), **not** from the graph edge: the current
+  `CONNECTED_BY_DEED` edge tags *all* recoveries `acris-deed` (both branches are unioned in
+  `deed_node_groups`), so the distinction must be recomputed from ACRIS, consistent with events being
+  canonical. *(Optional: also tag the legacy edge `acris-deed-linked-successor` at the producer if a legacy
+  consumer needs it — a separate, additive pipeline change.)*
 - **Reported-owner-entity association (from `registered-llc`, F1/R3):** two references share a DOF owner
   entity. Model as `associated_via_reported_owner_entity` between resolved components now; the fuller form
   is an explicit legal entity — `(Person)-[:REPORTED_IN_ROLE {role,date,source}]->(LegalEntity)` and
