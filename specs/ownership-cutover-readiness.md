@@ -64,8 +64,15 @@ Shadow comparison (`shadow_compare.py`, also run against the materialized run):
      distinguish them; report it on its own, and remediate any severe C0 finding.
    - **Frame is BUILT** (`eval/cutover_frame.py`, run `REV2-20260907T230254Z`): **109 S1 split pairs
      (census of the 79 groups) + 340 S2 retained-merge pairs** → `eval_out/cutover/review_queue.jsonl` (+
-     private key). Ready to adjudicate in the owner-review tool; `score.py` then computes the paired
-     noninferiority. *(S2 n is a starting sample; §8.1 power-derives the final per-mechanism n.)*
+     private key). Ready to adjudicate in the owner-review tool. *(S2 n is a starting sample; §8.1
+     power-derives the final per-mechanism n.)*
+   - **Scorer is BUILT** (`eval/cutover_score.py`, 6 hermetic tests): `score_cutover(key_rows,
+     annotations)` joins the key + adjudications and computes exactly this gate — severe-error veto +
+     paired, deployment-weighted noninferiority (upper 95% paired-bootstrap bound of `L(v2)−L(legacy)`,
+     `L = 5·FM + FS`, `δ = 0.01`), with Clopper–Pearson per-mechanism bounds, coverage/worst-case for
+     `INDETERMINATE`, and a `weights_are_deployment` guard. C0 scored separately. **Needs at eval time:**
+     the completed `annotations.jsonl` (with a `severe` field owner-review must capture) + the ratified
+     deployment stratum weights.
 
 ## What the cutover does / does not
 
