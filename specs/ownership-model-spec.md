@@ -1,4 +1,7 @@
-# Ownership model & inference specification (formerly "the three-layer case") — for critique (v4)
+# Ownership model & inference specification — for critique (v4)
+
+*(Formerly `three-layer-case.md`; renamed when it grew from a decomposition argument into this
+data-model + inference spec. History predating the rename is under the old name in git.)*
 
 **Date:** 2026-09-07 · **Status:** proposal, revised after three rounds of review · **Audience:** someone
 who knows [JustFix / Who Owns What](https://www.justfix.org/en/) well.

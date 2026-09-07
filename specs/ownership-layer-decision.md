@@ -165,7 +165,7 @@ Three findings:
    *(Clarifier: "aggregation above" holds only against `APPARENT_CONTROL` (the per-building control
    edge). Against the `Portfolio` layer, `OwnerGroup` is not merely an aggregation — it independently
    **subdivides** (479 portfolios) and **crosses** (157 groups) WoW clusters; see
-   [`three-layer-case.md`](three-layer-case.md) §3. The two comparisons are different and both stand.)*
+   [`ownership-model-spec.md`](ownership-model-spec.md) §3. The two comparisons are different and both stand.)*
 2. **`OwnerGroup` is a specialist rollup.** It fires for only 28% of controlled buildings (the
    multi-landlord owners the signal ladder unified); the other 72% have a singleton controller that
    *is* its own owner. Replacing `APPARENT_CONTROL` with `OwnerGroup` would lose ~123k buildings'
@@ -174,6 +174,16 @@ Three findings:
    the base can't reach" shape as the deed signal, one layer up.
 
 ### Consumption contract (agent + UI)
+
+> **Caveat added after review (see [`ownership-model-spec.md`](ownership-model-spec.md) §2–§3, §10).**
+> The "beneficial owner group" bullet below assumes a *named, canonical* `OwnerGroup` is safe to
+> surface. Review established it is **not yet**: the current `OwnerGroup` is a single union-find over
+> heterogeneous identity **and** relationship edges (`CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED`), which
+> can chain across mechanisms. Until the identity/relationship split and an explicit admissibility rule
+> land — and the evaluation clears it — the consumption side should surface **typed evidence paths**
+> ("possibly connected to N other landlords via these deeds/registrations"), **not a named owner
+> group**, and only to `vetted` (research) trust, never `public`. Read the hierarchy below as the
+> *post-admissibility* target, not the step-3 behavior.
 
 "Who owns this building?" returns a **hierarchy**, not a swap — the agent/UI must present all
 applicable layers, labeled by reliability class, and nest rather than replace:
