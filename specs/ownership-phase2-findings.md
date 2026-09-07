@@ -85,3 +85,30 @@ activates `registered-llc-id`.
 owner-association edges. Correct response = fix the taxonomy, not loosen identity. Implemented in
 `resolved_entity.py` (identity methods = fellegi + curated only; `registered-llc`/deed rejected fail-closed);
 contracts C2/C4 updated accordingly.
+
+## F2 — Shadow comparison confirms v2 is a strict refinement of legacy
+
+`shadow_compare.py` (read-only), v2 vs legacy `OwnerGroup` (also reproduced against the materialized run
+`REV2-20260907T230254Z`): **`v2_entities_spanning_legacy_groups = 0`** — the refinement invariant holds
+(v2 never merges what legacy split; v2 edges ⊆ legacy edges). 79 legacy groups split in v2 (held only by
+registered-llc/deed among shared members); 2,449 nodes correctly leave identity (association-only). One
+finding: `v2_only = 428` because **legacy folds the co-op/condo ownership-exclusion into the grouping**,
+whereas v2 keeps identity clean and applies co-op/condo at the C5 projection — another conflation the
+layered model separates. **Action:** apply co-op/condo exclusion at the v2 C5 projection, not in identity.
+
+## F3 — C0 residual collision risk is small, bounded, and human-sampled (not auto-detectable)
+
+`c0_lineage.py`: the Level-0 collapse population is **349 collapses / 726 nodes / 2,645 buildings (0.31%)**.
+A collapse is same-key by construction (only normalized-away formatting differs), so it carries no
+attribute contradiction to auto-detect; the genuine same-name/same-address different-person risk sits
+*inside* one reference and is **not decidable from HPD fields** (no discriminating identifier). So C0 =
+**retain lineage** (`read_contact_lineage`, demonstrated) + bound the population + **human-sample** the
+residual ambiguity via the eval `§8.1` C0 protected stratum. Absence of a contradiction ≠ same identity.
+
+## Materialization + status
+
+Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
+memberships (all with `party_reference_id` = C1 lineage); legacy `OwnerGroup` (6,540) untouched; shadow
+invariant holds on persisted data. Phase-2 reads/pure/materialization units complete. **Remaining:** apply
+co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 numbers + these shadow
+results); curated audit (Kadden).
