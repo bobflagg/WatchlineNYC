@@ -13,7 +13,9 @@ reconcile`. Read-only (MATCH/RETURN only). Two tiers:
          a hard FAIL that points at a real merge silently undone.
 
   REVIEW (printed + soft-flagged — recall-bias makes these judgement calls, not invariants):
-    4. target operators consolidated (Croman/Rashad canaries) + their APPARENT_CONTROL anchor
+    4. target operators consolidated (Croman/Rashad canaries) + their APPARENT_CONTROL anchor;
+         OwnerGroup composition canary — identity / deed_only / deed_bridged (WARN if deed_bridged
+         grows past DEED_BRIDGED_WARN_MAX, i.e. deed edges fusing >=2 identity entities)
     5. portfolio size distribution + the largest portfolios (mega-merge / connector eyeball)
     6. layer divergence — the three counts where Portfolio / Manager / OwnerGroup disagree (each
          is value a single layer can't give); WARN if any collapses to 0 (regression toward blur)
@@ -48,6 +50,11 @@ BLOWUP_REVIEW_CEILING = 500
 # failed. Below the cap, <= SCATTER_WARN_MAX scattered pairs is a WARN; more is a FAIL.
 MAX_SIZE = 300           # mirror algorithms.MAX_SIZE (kept literal so verify stays dependency-light)
 SCATTER_WARN_MAX = 2
+# OwnerGroup.composition canary: `deed_bridged` = a CONNECTED_BY_DEED edge fused >=2 resolved identity
+# entities (cross-mechanism transitivity — owner_groups.classify_composition). Expected small and
+# stable (measured 34); growth past this soft ceiling is a WARN to re-review the identity-vs-relationship
+# split (specs/ownership-model-spec.md §4). Not a hard fail — the current design fuses them by decision.
+DEED_BRIDGED_WARN_MAX = 50
 
 # The hard Louvain-scatter gate applies ONLY to model (Fellegi-Sunter) edges. The other
 # CONNECTED_BY_SPLINK methods — curated same-owner overrides and deterministic registered-LLC
@@ -138,6 +145,14 @@ OPTIONAL MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup)
 RETURN count(DISTINCT l) AS nodes, count(DISTINCT og) AS groups,
        collect(DISTINCT og.building_count) AS bcounts,
        collect(DISTINCT og.name)[0..3] AS anchors
+"""
+
+# OwnerGroup composition breakdown (identity vs. deed provenance). Reads the materialized property
+# (set by owner_groups.load_owner_groups); '(unset)' if the layer predates the composition build.
+Q_COMPOSITION = """
+MATCH (og:OwnerGroup)
+RETURN coalesce(og.composition, '(unset)') AS composition, count(*) AS n
+ORDER BY n DESC
 """
 
 Q_SIZE_DIST = """
@@ -269,6 +284,22 @@ def main() -> int:
                     warnings_.append(f"{name} resolves to {g} OwnerGroups (curated target expects 1)")
                 print(f"  {name}: {t['nodes']} nodes -> {g} owner group(s), buildings "
                       f"{sorted(t['bcounts'] or [], reverse=True)}, anchor {anchors}  [{tag}]")
+
+            # Composition canary — how identity vs. deed edges combine across the owner layer.
+            comp = {r["composition"]: r["n"] for r in rows(Q_COMPOSITION)}
+            if comp.get("(unset)", 0) >= n_owner:
+                print("  composition: (unset) — rebuild --step ownergroup to populate; canary skipped.")
+            else:
+                db = comp.get("deed_bridged", 0)
+                extra = f" · unset {comp['(unset)']:,}" if comp.get("(unset)") else ""
+                print(f"  composition: identity {comp.get('identity', 0):,} · "
+                      f"deed_only {comp.get('deed_only', 0):,} · deed_bridged {db:,}{extra}  "
+                      f"[deed_bridged = transitivity-risk minority; WARN if > {DEED_BRIDGED_WARN_MAX}]")
+                if db > DEED_BRIDGED_WARN_MAX:
+                    warnings_.append(
+                        f"{db} deed_bridged owner groups (> {DEED_BRIDGED_WARN_MAX}) — a CONNECTED_BY_DEED "
+                        f"edge is fusing >=2 identity entities; re-review the identity-vs-relationship "
+                        f"split (ownership-model-spec.md §4)")
 
         d = one(Q_SIZE_DIST, ceiling=BLOWUP_REVIEW_CEILING)
         print(f"\nportfolios {d['portfolios']:,}   max {d['max_bldgs']} bbls   "
