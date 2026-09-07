@@ -255,9 +255,11 @@ these explicit path semantics.
 - **To build (Option B migration):** separate identity resolution (with **component-level consistency
   checks** for probabilistic edges, §2) from the deed relationship; keep held vs. linked-successor deeds
   distinct (§4); specify the party/building **projection before** the eval (§5); path-admissibility +
-  calibration for step 3 (§10); the deny-by-default consumer contract. **Phased plan:**
-  [`ownership-migration-plan.md`](ownership-migration-plan.md) (Phase 0 snapshot → 1 identity-only →
-  2 entity ids → 3 deed relationships → 4 admissibility rule → 5 consumer contract).
+  calibration for step 3 (§10); the deny-by-default consumer contract. **Phased plan (v2 — parallel
+  construction, then cutover):** [`ownership-migration-plan.md`](ownership-migration-plan.md) — inventory →
+  contracts → parallel identity model (versioned IDs) → parallel event-centric deed model → shadow +
+  consumer migration → cutover → bounded inference rules → legacy retirement, with a property-based
+  invariant test.
 - **Open research:** the admissibility rule(s) for named groups (linked-successor is the first candidate,
   §4); the choice of recall proxy; whether "common control" is one relation or several typed relations.
 
