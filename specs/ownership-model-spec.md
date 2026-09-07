@@ -24,6 +24,34 @@ informal pipeline description with a data-model + inference spec, and marks ever
 - Added a **composition algebra** (§3), **projection/unit** rules (§5), a **visibility-and-propagation**
   matrix (§8), **eval decision rules** (§9), and an **implemented/proposed/open** ledger (§11).
 
+---
+
+> ## The decision on the table
+>
+> The owner layer is a single union-find over identity edges (`CONNECTED_BY_SPLINK`) **and** a deed
+> co-conveyance *relationship* (`CONNECTED_BY_DEED`). Measured on the live graph, of **6,770** owner
+> groups: **6,618** are a single resolved identity entity, **118** are pure-deed veil-pierces, and
+> **34** are `deed_bridged` — a deed edge fuses **≥2 already-resolved identity entities** into one
+> group (the cross-mechanism transitivity you flagged). Those 34 are now *tagged* (an additive
+> `composition` flag; membership unchanged). **The open call is what to do with them:**
+>
+> - **Option A — keep fusing, hold to a higher bar.** Leave the 34 merged; use the `composition` flag
+>   to down-rank/withhold them from public surfaces and route them to review. *Pro:* preserves the
+>   veil-pierce's recall on obscured shell games; smallest change. *Con:* still asserts a single group
+>   built partly by a relationship edge, i.e. keeps the semantic conflation, just labeled.
+> - **Option B — stop fusing; expose the deed as a typed path.** Split the 34 back into their identity
+>   entities and represent the bridging deed as a `co-title` evidence *path* between them, not a merge.
+>   *Pro:* removes the transitivity conflation at the source; matches the three-level model (§2).
+>   *Con:* the 34 (and future such cases) no longer read as one owner without an explicit inference
+>   rule; a little more machinery.
+>
+> The trade-off is **recall on the hardest fully-obscured owners (A) vs. transitivity precision (B)**.
+> The `composition` flag makes either safe to implement. Context: §2–§4 (the model), §11 (status +
+> numbers), §12 (my specific questions). A concrete `deed_only`/veil-pierce instance is in
+> [`case-escobar.md`](case-escobar.md).
+
+---
+
 ## 1. Starting claim (contestable)
 
 WoW's `portfolio` conflates *who operates / manages / owns* — claims of different kind and evidentiary
