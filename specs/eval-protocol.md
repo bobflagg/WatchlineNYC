@@ -192,13 +192,20 @@ be **no worse than the incumbent and carry no observed severe error**, not indep
 
 **Track-A internal-cutover gate (feasible now):**
 - **Severe-error veto:** *any* adjudicated **severe** false merge (defined below) fails the candidate.
-- **Relative gate:** weighted loss `L = 5·(false-merge rate) + 1·(false-split rate)` — v2 must satisfy
-  `L(v2) ≤ L(legacy)` on the *same* adjudicated sample (v2 no worse than what it replaces).
-- **Descriptive, honestly bounded:** report every metric with one-sided 95% bounds **and** a sensitivity
-  pair — best case and **worst case (every `INDETERMINATE` counted as an error)** — plus coverage and
-  indeterminacy reasons by mechanism and stratum. Nothing regresses vs. legacy.
-- Feasible sample: the ~530-pair eval frame + a component-sampled identity set — enough for the relative
-  comparison and descriptive bounds, not for certifying 0.5%.
+- **Relative gate — a paired noninferiority test, not a point comparison.** Weighted loss
+  `L = 5·FM + 1·FS`, where **FM** and **FS** are each **deployment-weighted rates** — the adversarial
+  strata are reweighted back to population prevalence so the two terms share a common per-decision estimand
+  (FM among merge decisions, FS among split decisions, combined on the deployment-weighted decision mix).
+  Both systems are scored on the **same adjudicated items** (paired), determinate-only for the primary
+  estimate. The gate: the **one-sided 95% upper bound of the paired, deployment-weighted difference
+  `L(v2) − L(legacy)`** (paired bootstrap over adjudicated items) must be **≤ a preregistered
+  noninferiority margin `[RATIFY] δ`**. `δ = 0` is strict noninferiority and may need more sample than the
+  feasible frame supports; a small positive `δ` keeps it feasible — the team fixes `δ` at sign-off.
+- **Descriptive, honestly bounded:** report every metric with its named-method one-sided 95% bound **and**
+  a sensitivity pair — best case and **worst case (every `INDETERMINATE` counted as an error)** — plus
+  coverage and indeterminacy reasons by mechanism and stratum.
+- Feasible sample: the ~530-pair eval frame + a component-sampled identity set — enough for the paired
+  noninferiority comparison and descriptive bounds, not for independently certifying 0.5%.
 
 **Production / public-exposure certification (deferred):**
 
@@ -209,10 +216,15 @@ be **no worse than the incumbent and carry no observed severe error**, not indep
 | Component false-merge rate | one-sided 95% **upper** bound **≤ 2%** |
 | Severe false merge | any observed case **vetoes**; pooled deployment-weighted **upper** bound **≤ 0.5%** before production |
 | Coverage | **≥ 80% overall and per gated mechanism**; ≤80% (down to 70%) only for explicitly-labeled exploratory strata, which are then inconclusive + reported with the worst-case bound |
-| Sample size | **power-derived** per independently-gated population (≈299/≈598 determinate; ~430–855 sampled) — not fixed |
-| Protected strata | report all; **independently gate only** strata with sufficient determinate sample, else assurance ≤ 2% |
-| False splits | secondary constraint via the weighted loss `L` above |
+| Sample size | **power-derived** per independently-gated population (planning approx `≈3/p` → ~299/~598 determinate; ~430–855 sampled). If a mechanism's **total population is smaller** than the required n, **census it** (adjudicate all) rather than declaring it uncertifiable |
+| Protected strata | report all. A stratum with an **adequate determinate sample must meet the 2% upper-bound gate**; one **without is reported underpowered/inconclusive and receives no independent assurance** — it does **not** get a fabricated ≤2% claim |
+| Underpowered protected stratum → consequence | **blocks production of the affected mechanism/use case** (a high-risk stratum may not "launch anyway"); it may launch only under an explicitly restricted consequence tier. *(Track-A internal cutover: reported inconclusive, **not** a blocker — the severe-veto + reversibility bound the risk; production is where it blocks.)* |
+| False splits | secondary constraint via the weighted loss `L` (paired noninferiority, above) |
 | Failure | no cutover; correct/remove the mechanism, **freeze a new candidate version**, evaluate on fresh or sequestered data |
+
+**Confidence-interval method (fixed):** gates use **one-sided Clopper–Pearson (exact)** bounds; Wilson is
+acceptable for *descriptive* reporting only. The `≈3/p` rule is **planning only** — the actual gate is the
+exact bound on observed data. Use the same method consistently across mechanisms and reruns.
 
 ### Definitions (fixed here)
 

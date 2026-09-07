@@ -1,9 +1,11 @@
-# Option B migration — Phase 1 contracts (rev 4, for re-review)
+# Option B migration — Phase 1 contracts (rev 5, for sign-off)
 
-*rev 3 → rev 4: C7 + eval §8.1 made statistically coherent — gates on one-sided 95% confidence bounds,
-power-derived sample sizes, consequence-based "severe", defined component/C0 denominators, coverage ≥80%
-with worst-case sensitivity, and a weighted-loss false-split constraint; tiered so the full certification
-gates production while the reversible Track-A internal cutover uses a severe-veto + relative-loss gate.*
+*rev 4 → rev 5 (final statistical review): the Track-A relative gate is now a **paired noninferiority test**
+on the deployment-weighted `L(v2)−L(legacy)` (upper 95% bound ≤ margin `δ`); **C0's claim weakened** to
+"detect collision indicators / estimate residual risk" (absence of contradiction ≠ same identity); the
+production **protected-stratum** rule fixed (underpowered ⇒ inconclusive + blocks production of that
+mechanism, no fabricated ≤2% assurance); CI method **pinned to Clopper–Pearson**, `3/n` planning-only, and
+**census** for sub-sample populations.*
 
 **Date:** 2026-09-07 · **Status:** contracts, **for re-review before any Phase-2 implementation** · **Plan:**
 [`ownership-migration-plan.md`](ownership-migration-plan.md) · **Baseline:**
@@ -34,11 +36,18 @@ The `party_reference` grain collapses source rows sharing a normalized `(name, b
 governed as **Level-0 identity resolution**, not treated as neutral provenance:
 - `[DECISION]` it is **versioned** (normalization-version stamped) and **evaluated as part of the identity
   pipeline** (its own precision on same-key-different-party collisions);
-- `[DECISION]` enough **row-level info is retained** (the contributing `(registrationid, bbl, role, date)`
-  rows, plus any identifiers/entity-type) to **detect collisions** at a `party_reference`;
-- `[DECISION]` a **durable `entity_id` is blocked** for any `party_reference` whose contributing rows carry
-  **incompatible identifiers or entity types** (a suspected Level-0 collision);
-- `[DECISION]` **same-name/same-address collision cases are included in the cutover evaluation** (§8.1).
+- `[DECISION]` row-level lineage (contributing `(registrationid, bbl, role, date)` rows + any
+  identifiers/entity-type) is retained **sufficient to detect available collision *indicators* and estimate
+  residual collision *risk*** — **not** to prove two same-name/same-address parties are distinct when the
+  source has no discriminating identifier. **Absence of a detected contradiction does not establish same
+  identity**, and because C0 has already collapsed the rows, resolution cannot later recover the
+  distinction (an inherited irreversibility);
+- `[DECISION]` a **durable `entity_id` is blocked** on a **positive contradiction** (incompatible
+  identifiers/types among contributing rows); passing these checks **does not make C0 deterministic
+  evidence** of same-identity;
+- `[DECISION]` the eval reports **both** the detected-collision rate **and** the unresolved-C0 ambiguity
+  among multi-row party references (§8.1), and the **severe-error veto applies to C0** (irreversible
+  pre-resolution operation).
 - `[OPEN]` **Out of scope for this migration:** splitting to finer per-occurrence source references (a WoW
   ingestion-grain change). Recorded as an inherited limitation; the governance above bounds its risk.
 
@@ -141,18 +150,21 @@ stale `bbl` yields a **dated** latest-observed claim, not a current one.
 
 ## C7 — Acceptance thresholds (tiered; confidence-bound; power-derived)
 
-Gated by [`eval-protocol.md`](eval-protocol.md) **§8.1**, now made statistically coherent (rev 4):
-- **Gates are on one-sided 95% confidence bounds, not point estimates**; **sample size is power-derived**
-  per gated population (a fixed ~100 is descriptive only — certifying 0.5%/99% needs ≈598/≈299 determinate).
+Gated by [`eval-protocol.md`](eval-protocol.md) **§8.1**, now statistically coherent (rev 5):
+- **Gates are on one-sided 95% confidence bounds** (method fixed: **Clopper–Pearson exact** for gates,
+  Wilson for descriptive only; `3/n` is planning-only), **power-derived** per gated population, with a
+  **census** for populations smaller than the required n (not "permanently uncertifiable").
 - **Tiered by consequence.** The **Track-A internal cutover** (reversible, no public exposure, replacing an
-  uncertified legacy layer) uses a proportionate gate — **severe-error veto** + **relative loss `L(v2) ≤
-  L(legacy)`** (`L = 5·FM + 1·FS`) + honestly-bounded descriptive metrics (incl. worst-case
-  `INDETERMINATE`-as-error). The **full certification** (deterministic precision LB ≥ 99%, probabilistic
-  ≥ 95%, component FM UB ≤ 2%, severe UB ≤ 0.5%, coverage ≥ 80%/mechanism, power-derived n) gates
-  **production / public exposure** (deferred with Track B).
-- `[RATIFY]` numeric values are frozen at sign-off before any Phase-2 result is seen; the run manifest
-  **pins the §8.1 revision hash**. "Severe" is consequence-based (living-person / large-bridge / allegation
-  transfer), distinct from ordinary false merge.
+  uncertified legacy layer) uses a proportionate gate — **severe-error veto** + a **paired noninferiority
+  test** (upper 95% bound of the **deployment-weighted** `L(v2) − L(legacy)`, `L = 5·FM + 1·FS`, paired
+  bootstrap, ≤ preregistered margin `δ`) + honestly-bounded descriptive metrics (incl.
+  worst-case `INDETERMINATE`-as-error). The **full certification** (deterministic precision LB ≥ 99%,
+  probabilistic ≥ 95%, component FM UB ≤ 2%, severe UB ≤ 0.5%, coverage ≥ 80%/mechanism, power-derived n)
+  gates **production / public exposure**; an **underpowered protected stratum blocks production** of the
+  affected mechanism (Track-A: reported inconclusive, not a blocker).
+- `[RATIFY]` values (incl. `δ`) frozen at sign-off before any Phase-2 result; the run manifest **pins the
+  §8.1 revision hash**. "Severe" is consequence-based (living-person / large-bridge / allegation transfer),
+  distinct from ordinary false merge.
 
 ## C8 — Synchronized legacy/v2 build
 
