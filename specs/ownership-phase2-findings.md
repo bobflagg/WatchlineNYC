@@ -54,3 +54,34 @@ identifier-conflict + institution-guard tests.
 **Blocking:** the resolver should not be run *for the cutover comparison* until R1/R2 is decided — the
 current output over-splits 859 real owner merges. Everything else in Phase 2 (graph read, party-reference
 keying, parallel materialization) can proceed.
+
+### F1 RESOLUTION — R3 (neither R1 nor R2), 2026-09-07
+
+Review rejected both R1 and R2 and diagnosed the real error: **`registered-llc` was misclassified as an
+identity edge.** It links **co-officers — distinct people — of one LLC**, i.e. an owner *association*, not
+aliases of one party. Merging them into `ResolvedEntityV2` violates the invariant regardless of constraint
+scope. The 859 "over-splits" were the C3 constraints *correctly* preventing distinct people from being
+collapsed. **The fix is the edge taxonomy, not the constraints.**
+
+**R3 (adopted):**
+- **Remove owner-level `registered-llc` (name-only) from identity resolution** → it joins the substantive
+  relationship layer (C4), alongside deeds, as an owner-association.
+- **`registered-llc-id`** stays deterministic identity **only for LLC-reference ↔ LLC-reference** (same
+  legal entity by jurisdiction + id), **never person↔person** (not present in the graph yet).
+- **Audit `curated-same-owner`** by endpoint semantics: keep as identity only where a seed means "these two
+  references are the **same person / legal entity**"; a "same owner / shared control" seed is a
+  *relationship*, not identity. *(Action: review `CURATED_OWNERS` — Croman/Rashad = same-person fragments ✓;
+  confirm Kadden is same-person, not co-owners.)*
+- **Retain** C3's person and entity-type cannot-links (they were correct).
+
+**Re-diagnostic after R3 (live, read-only):** identity edges = 10,933 (`splink-fellegi-sunter` 10,744 +
+`curated-same-owner` 189); `registered-llc` (2,270) excluded → relationship layer. **ResolvedEntityV2 =
+5,886 components, 0 adjudications, 0 dropped** (the cannot-links now have only clean same-party input, so
+they fire zero times — correct defense-in-depth). 3 components have a deterministic core (durable-`entity_id`
+eligible) — the curated seeds; the rest are probabilistic (`resolution_id` only) until a DOS-id join
+activates `registered-llc-id`.
+
+**Takeaway (reviewer):** the parallel build proved the "identity-only" legacy input still carried
+owner-association edges. Correct response = fix the taxonomy, not loosen identity. Implemented in
+`resolved_entity.py` (identity methods = fellegi + curated only; `registered-llc`/deed rejected fail-closed);
+contracts C2/C4 updated accordingly.

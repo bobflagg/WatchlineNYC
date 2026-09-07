@@ -1,6 +1,12 @@
-# Option B migration — Phase 1 contracts (rev 6)
+# Option B migration — Phase 1 contracts (rev 7)
 
-**Status: Part A + B1 SIGNED OFF (2026-09-07); Phase 2 approved to begin. B2 (production) deferred.**
+**Status: Part A + B1 SIGNED OFF (2026-09-07); Phase 2 in progress. B2 (production) deferred.**
+
+*rev 6 → rev 7 (Phase-2 finding F1/R3): `registered-llc` (name-only) is **removed from identity** — it
+links co-officers (distinct people) of one LLC = an owner-association, not same-party identity — and moves
+to the C4 relationship layer with deeds. Identity input = `splink-fellegi-sunter` + audited
+`curated-same-owner` (+ `registered-llc-id` when a DOS join exists). C3's person/entity-type cannot-links
+are **retained** (they correctly rejected the non-identity edges). See `ownership-phase2-findings.md` F1.*
 
 *rev 5 → rev 6 (post-sign-off corrections): loss formula made explicit with deployment weights
 `L = 5·w_M·FM_cond + w_S·FS_cond`; production certification **gates each mechanism independently** (no
@@ -78,17 +84,20 @@ governed as **Level-0 identity resolution**, not treated as neutral provenance:
 
 ## C2 — Identity provenance allowlist (fail-closed)
 
+Only assertions meaning **"these two references denote the same real party"** are admitted (F1/R3).
+
 | Method | Class | Admit | Note |
 |---|---|---|---|
-| `curated-same-owner` | deterministic | ✅ | auditable/privileged, not exempt from C3 hard constraints |
-| `registered-llc-id` | deterministic | ✅ | identifier **+ jurisdiction** (e.g. DOS entity id); establishes durable core |
-| `registered-llc-name` | **probabilistic** | ✅ | normalized-name hypothesis (**today's `registered-llc` is this**); high-precision but **cannot** establish a durable core, sits in the probabilistic conflict path |
-| `splink-fellegi-sunter` (pinned) | probabilistic | ✅ | same-*reference* hypothesis |
-| `acris-deed`, `acris-deed-linked-successor` | relationship | ❌ | never in resolution |
+| `curated-same-owner` | deterministic | ✅ *(audited)* | admit **only** seeds meaning same person/legal entity; a "same-owner / shared-control" seed is a **relationship** (C4). Not exempt from C3 constraints |
+| `registered-llc-id` | deterministic | ✅ | same **legal entity** by identifier **+ jurisdiction**, **LLC-reference ↔ LLC-reference only** (never person↔person); durable core; not in the graph yet |
+| `splink-fellegi-sunter` (pinned) | probabilistic | ✅ | same-**person** hypothesis |
+| **`registered-llc` (name-only)** | **owner-association** | ❌ | links **co-officers (distinct people)** of one LLC — association, **not identity** (F1/R3) → **relationship layer, C4** |
+| `acris-deed`, `acris-deed-linked-successor` | relationship | ❌ | never in resolution → C4 |
 | unknown | — | ❌ | build fails loudly |
 
-`[DECISION]` Migrate `llc_edges` to emit **`registered-llc-name`** now (it is name-only); `registered-llc-id`
-activates with the `[OPEN]` DOS-entity-id join. One method name never covers both deterministic and weak.
+`[DECISION]` (F1/R3) `registered-llc` (name-only) is **removed from identity** → C4; the identity input is
+`splink-fellegi-sunter` + audited `curated-same-owner` only. `registered-llc-id` activates with the
+`[OPEN]` DOS-entity-id join, LLC-reference-scoped. *(Supersedes the earlier `registered-llc-name` split.)*
 
 ## C3 — Component resolution: deterministic constrained clustering
 
@@ -97,8 +106,8 @@ a canonical edge order** — a global optimizer is unnecessary (components max 3
 satisfaction, not optimality, is required).
 
 **Soft should-link** = allowlisted identity edges, **precedence** `curated-same-owner (3) >
-registered-llc-id (2.5) > registered-llc-name (1.5) > splink-fellegi-sunter (1)`; within a tier by score.
-`cluster_gated` pre-vetoes still drop first-name / common-name+address edges.
+registered-llc-id (2.5) > splink-fellegi-sunter (1)` (F1/R3: `registered-llc` name-only is not identity);
+within a tier by score. `cluster_gated` pre-vetoes still drop first-name / common-name+address edges.
 **Deterministic methods = {`curated-same-owner`, `registered-llc-id`} only.**
 
 **Hard cannot-link** (per-reference attributes): entity-type mismatch (person/entity/institution);
@@ -111,22 +120,31 @@ surname disagreement (persons); conflicting stable identifiers.
    the edge (recorded) — the partition is the union-find result, a real partition.
 3. **Irreconcilable *deterministic* conflict:** a skipped **deterministic** edge (`curated` /
    `registered-llc-id`) → components stay separate **and** the conflict goes to an **adjudication queue**
-   (not silently dropped). A skipped **probabilistic** edge (`registered-llc-name`, `fellegi-sunter`) is
-   just dropped with provenance.
+   (not silently dropped). A skipped **probabilistic** edge (`fellegi-sunter`) is dropped with provenance.
 4. **Output:** every reference gets a `resolution_id`; singletons included.
 
 **Tests before build:** permutation invariance (shuffled input ⇒ identical partition + adjudication set);
 each constraint type; a deterministic-conflict case; and that adding/removing any `acris-deed` edge changes
 nothing.
 
-## C4 — Conveyance-event representation (Phase-3 target)
+## C4 — Substantive relationship layer (Phase-3 target)
 
-Canonical already exists: `(:Building)-[:HAS_EVENT]->(:Event {event_type:'DeedTransfer', source_name:'ACRIS',
-event_id, source_record_id, event_date})<-[:PARTY_TO {role}]-(:Actor)`. `co_grantee_on_deed` /
-`conveyance_party` between resolved components (`resolution_id`, deduped) is a **derived view** w/
-contributing `event_id`s, roles, dates, method (held vs linked-successor, distinct). Never `co-title`.
-`[DECISION]` event canonical; `[OPEN]` derived-view storage (default: materialized edge w/ provenance).
-BBL is the property unit (multi-BIN-per-BBL = documented limitation).
+Holds the owner-**association** signals that are **not** identity (deeds **and**, per F1/R3, the name-only
+`registered-llc`). Endpoints are resolved components (`resolution_id`), deduped; **endpoints are never
+merged**.
+
+- **Conveyance events (canonical, already in the graph):** `(:Building)-[:HAS_EVENT]->(:Event
+  {event_type:'DeedTransfer', source_name:'ACRIS', event_id, source_record_id, event_date})<-[:PARTY_TO
+  {role}]-(:Actor)`. `co_grantee_on_deed` / `conveyance_party` is a **derived view** over these w/
+  contributing `event_id`s, roles, dates, method (held vs linked-successor, distinct). Never `co-title`.
+- **Reported-owner-entity association (from `registered-llc`, F1/R3):** two references share a DOF owner
+  entity. Model as `associated_via_reported_owner_entity` between resolved components now; the fuller form
+  is an explicit legal entity — `(Person)-[:REPORTED_IN_ROLE {role,date,source}]->(LegalEntity)` and
+  `(LegalEntity)-[:REPORTED_FOR]->(Building)` — once the owner entity is independently resolved
+  (`registered-llc-id`). **Endpoints are associated, not merged.**
+
+Both feed the eventual **common-control admissibility rule** (Phase 6), never identity. `[DECISION]` events
+canonical; `[OPEN]` derived-view storage. BBL is the property unit (multi-BIN = documented limitation).
 
 ## C5 — Party → building projection (source-qualified, no "current")
 

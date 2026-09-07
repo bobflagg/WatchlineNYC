@@ -44,7 +44,7 @@ def test_entity_type_cannot_link_blocks_probabilistic_merge():
 def test_surname_disagreement_blocks_persons():
     refs = [_ref("s", entity_type="person", surname="SMITH"),
             _ref("j", entity_type="person", surname="JONES")]
-    out = resolve(refs, [{"a": "s", "b": "j", "method": "registered-llc-name"}])
+    out = resolve(refs, [{"a": "s", "b": "j", "method": "splink-fellegi-sunter", "score": 0.9}])
     assert out["partition"]["s"] != out["partition"]["j"]
     assert out["dropped"][0]["conflict"] == "surname"
 
@@ -72,7 +72,9 @@ def test_unknown_value_is_permissive():
 
 def test_deed_and_unknown_methods_are_rejected():
     refs = [_ref("a"), _ref("b")]
-    for bad in ("acris-deed", "acris-deed-linked-successor", "connected-by-address", "whatever"):
+    # registered-llc-name is now an owner-ASSOCIATION (R3), not identity — rejected like deeds.
+    for bad in ("acris-deed", "acris-deed-linked-successor", "registered-llc-name",
+                "connected-by-address", "whatever"):
         with pytest.raises(ValueError):
             resolve(refs, [{"a": "a", "b": "b", "method": bad}])
 
@@ -109,7 +111,7 @@ def test_permutation_invariance():
     refs = [_ref(c, entity_type="person", surname={"a": "X", "b": "X", "c": "Y", "d": "X"}[c])
             for c in ("a", "b", "c", "d")]
     edges = [
-        {"a": "a", "b": "b", "method": "registered-llc-name", "score": 0.9},
+        {"a": "a", "b": "b", "method": "registered-llc-id", "score": 0.9},      # deterministic
         {"a": "b", "b": "d", "method": "curated-same-owner"},
         {"a": "b", "b": "c", "method": "splink-fellegi-sunter", "score": 0.8},  # X vs Y surname → blocked
         {"a": "a", "b": "d", "method": "splink-fellegi-sunter", "score": 0.7},

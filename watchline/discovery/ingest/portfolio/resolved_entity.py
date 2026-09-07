@@ -22,11 +22,18 @@ import re
 from collections import defaultdict
 
 # C2 allowlist + C3 precedence. Deterministic methods sort strictly above probabilistic ones.
+# ONLY assertions meaning "these two references denote the SAME real party" belong here (F1/R3):
+#   - splink-fellegi-sunter : same PERSON (probabilistic)
+#   - curated-same-owner    : human-verified same party — AUDITED so each seed means same-person/entity,
+#                             never "co-owners / shared control" (those are relationships, C4)
+#   - registered-llc-id     : same LEGAL ENTITY by jurisdiction + entity id — LLC-reference to
+#                             LLC-reference only, never person-to-person (not present in the graph yet)
+# `registered-llc` (name-only) is EXCLUDED — it links co-officers (distinct people) of one LLC = an
+# owner-ASSOCIATION, not identity; it moves to the substantive relationship layer (C4), like deeds.
 PRECEDENCE: dict[str, float] = {
-    "curated-same-owner": 3.0,     # human-verified          (deterministic)
-    "registered-llc-id": 2.5,      # legal id + jurisdiction (deterministic)
-    "registered-llc-name": 1.5,    # normalized-name match   (probabilistic; today's registered-llc)
-    "splink-fellegi-sunter": 1.0,  # probabilistic same-reference
+    "curated-same-owner": 3.0,     # human-verified same party (deterministic)
+    "registered-llc-id": 2.5,      # same legal entity, id+jurisdiction (deterministic; not yet in graph)
+    "splink-fellegi-sunter": 1.0,  # probabilistic same person
 }
 DETERMINISTIC: frozenset[str] = frozenset({"curated-same-owner", "registered-llc-id"})
 
@@ -124,14 +131,11 @@ def resolve(references: list[dict], edges: list[dict]) -> dict:
 
 # --- graph read (read-only; feeds `resolve`) ----------------------------------------------------
 
-# Map the graph's CONNECTED_BY_SPLINK method strings to the C2 contract vocabulary. `registered-llc`
-# in the live graph is name-only (no DOS id+jurisdiction), so it maps to the PROBABILISTIC
-# `registered-llc-name` (C2). `registered-llc-id` activates only when a DOS-entity-id join exists.
-_METHOD_MAP = {
-    "curated-same-owner": "curated-same-owner",
-    "registered-llc": "registered-llc-name",
-    "splink-fellegi-sunter": "splink-fellegi-sunter",
-}
+# Graph CONNECTED_BY_SPLINK methods that are TRUE identity assertions (F1/R3). `registered-llc` (name-only)
+# is deliberately absent — it is an owner-association (co-officers of one LLC), routed to the relationship
+# layer (C4), not identity. Only these are read into resolution:
+_IDENTITY_METHODS = ("curated-same-owner", "splink-fellegi-sunter")
+_METHOD_MAP = {m: m for m in _IDENTITY_METHODS}
 
 # Entity-type classification from the party name (C3 cannot-link input). Institution first, then
 # corporate markers, else a natural person. Mirrors the exclusion vocabulary used elsewhere.
@@ -164,10 +168,12 @@ def surname(name: str | None, etype: str | None) -> str | None:
     return toks[-1] if toks else None
 
 
-_Q_ID_EDGES = ("MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord) WHERE a.nodeid < b.nodeid "
-               "RETURN a.nodeid AS a, b.nodeid AS b, coalesce(r.method,'') AS method, "
-               "coalesce(r.weight, 0) AS score")
-_Q_ID_NODES = ("MATCH (a:Landlord)-[:CONNECTED_BY_SPLINK]-() "
+# Only true-identity methods are read (R3): registered-llc / deed are excluded from resolution.
+_Q_ID_EDGES = ("MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(b:Landlord) "
+               "WHERE a.nodeid < b.nodeid AND coalesce(r.method,'') IN $methods "
+               "RETURN a.nodeid AS a, b.nodeid AS b, r.method AS method, coalesce(r.weight, 0) AS score")
+_Q_ID_NODES = ("MATCH (a:Landlord)-[r:CONNECTED_BY_SPLINK]-(:Landlord) "
+               "WHERE coalesce(r.method,'') IN $methods "
                "RETURN DISTINCT a.nodeid AS id, a.name AS name")
 
 
@@ -179,9 +185,10 @@ def read_inputs(driver, *, database: str) -> tuple[list[dict], list[dict]]:
     unit). Only identity edges are read — `CONNECTED_BY_DEED` is never touched. `identifier` is `None`
     until the DOS-entity-id join exists.
     """
+    methods = list(_IDENTITY_METHODS)
     with driver.session(database=database) as s:
-        nodes = [{"id": r["id"], "name": r["name"]} for r in s.run(_Q_ID_NODES)]
-        raw_edges = [dict(r) for r in s.run(_Q_ID_EDGES)]
+        nodes = [{"id": r["id"], "name": r["name"]} for r in s.run(_Q_ID_NODES, methods=methods)]
+        raw_edges = [dict(r) for r in s.run(_Q_ID_EDGES, methods=methods)]
     references = []
     for n in nodes:
         et = entity_type(n["name"])
