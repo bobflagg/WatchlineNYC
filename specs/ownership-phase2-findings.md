@@ -229,6 +229,38 @@ projection), but it is a genuine identity-layer node-quality gap distinct from t
 population before deciding scope: count officers whose HPD head-officer footprint spans > K distinct owners of
 record.
 
+**Second instance (CUT-0007) — a larger, private-side aggregator officer.** `LARRY HIRSCHFIELD` is HeadOfficer
+on **105 of 106** buildings across the pair (types: 105 HeadOfficer, 4 Officer, 1 Agent, 1 IndividualOwner —
+so he is formally the *head officer*, functionally a managing agent) spanning **~24+ distinct owners of record**
+(Pacific Village LP, 27 Bed Stuy / Vision / FT Greene TB / Nia Homes / Mount Morris HDFCs, plus market LLCs and
+trusts), from one office at 1675 Broadway. Confirms the pattern is not limited to City-program signatories
+(Davola): it also arises for private managing agents/operators over mixed affordable + market stock. Reinforces
+that the aggregator-officer mask should key on **owner-of-record spread**, not on institutional/nonprofit
+content (Hirschfield's footprint is mixed).
+
+## F7 — Adjudication labels can't express "same party, but a non-owner agent to exclude"
+
+CUT-0007 also exposed a gap in the **adjudication frame itself** (not the pipeline). Entities A/B are
+`LARRY HIRSCHFIELD` (79) and `LARRY HIRSCFIELD` (27) — the **same person split by a one-letter name typo**
+(same office, HeadOfficer role, overlapping managed entities). So the correct *identity* call is **SAME** (a
+textbook typo-heal the resolver should make, and v2 merging them is a correct decision). **But** that party is
+an aggregator officer (F6), so the node should be **excluded from ownership attribution**. The tool's three
+labels — `SAME` / `DIFFERENT` / `INDETERMINATE` — cannot carry both facts at once:
+- `DIFFERENT` is **wrong** (they are the same person) and would score a *correct* v2 typo-merge as a false
+  merge, corrupting the gate.
+- `INDETERMINATE` loses the (certain) identity signal and also under-credits a correct v2 decision.
+- `SAME` is right for identity but silently treats an agent as an owner unless the exclusion is captured
+  elsewhere (currently only free-text rationale).
+
+**Implication.** The adjudication frame needs an **agent/exclude disposition orthogonal to the identity
+label** — e.g. an `exclude_reason ∈ {agent, institutional, coop_condo, …}` flag recorded alongside
+`SAME`/`DIFFERENT`, so "same party **and** exclude from ownership" is expressible without forcing the reviewer
+to encode role as an identity vote. Until then: **record such pairs `SAME` with the agent/exclusion noted in
+the rationale** (do not vote `DIFFERENT`), and treat the exclusion as an F5/F6 projection concern at scoring.
+Scoring should also be aware that some `SAME` pairs are agent nodes destined for exclusion, so their identity
+correctness and their ownership-attribution exclusion are counted separately. Not a cutover blocker, but it
+should be resolved before the frame is scored so agent typo-heals aren't mislabeled.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
@@ -237,4 +269,5 @@ invariant holds on persisted data. Phase-2 reads/pure/materialization units comp
 co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 numbers + these shadow
 results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity-id join once the frame is
 adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit/HDFC/institutional
-owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker).
+owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker); add
+an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring.
