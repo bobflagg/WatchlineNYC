@@ -188,10 +188,46 @@ grantees) that never contributes to identity or ownership attribution, and **(b)
 `institutional_dominated` **target-exclusion flag** for agency/nonprofit *owners* — with private LIHTC
 operators explicitly kept.
 
+**Instance (CUT-0005) — a City *program* node in the graph.** Adjudication surfaced an entity literally
+named `CITY OF NY DAMP/TIL` (the City's Division of Alternative Management Programs / Tenant Interim Lease),
+plus TPT-program intermediary HDFCs (Neighborhood Restore, Restoring Communities, Neighborhood Renewal,
+Preserving City Neighborhoods — the City's asset-management pipeline for ex-*in rem* buildings). These are
+governmental/program nodes, not owners; the `institutional_dominated` classifier's deterministic list must
+include program markers (`DAMP`, `TIL`, `NEIGHBORHOOD RESTORE`, and the TPT-HDFC family) — a node whose own
+name is a City program is the easiest possible exclusion.
+
 **Status:** logged as a follow-up; **not a cutover blocker** (co-op/condo exclusion already covers the
 largest axis, and the flag is additive/presentation-time), but it should land before any outward-facing
 attribution surfaces these entities as landlords. Relates to F2 (exclusion belongs at projection) and F4
 (the HDFC that triggered it).
+
+## F6 — The aggregator problem also comes through shared *officers*, not just shared addresses
+
+The pipeline masks aggregator *addresses* (a business address shared by many unrelated owners, degree > 25 —
+`aggregator_audit.py` / the `MAX_ADDR_DEGREE` mask) because they over-merge distinct parties into one
+`Portfolio`/node. **CUT-0005 shows the same failure through a shared *officer*.** Entity A = `SALVATORE
+D'AVOLA` is a single HPD HeadOfficer glued across **27 buildings owned by ~15 different parties** — five
+different program HDFCs (Restoring Communities, Neighborhood Renewal, Neighborhood Restore, Preserving City
+Neighborhoods), the City, two LLCs, and ~13 individual homeowners. Davola is a nonprofit/TPT-program
+signatory (an *agent*), not an operator, so the node is not one owner — it is an aggregator officer.
+
+**Contrast with the coherent-operator cases** (CUT-0002/0003): Frank Lang, Michael Weiss, Ryan Webler were
+also one-officer-across-N-buildings, but their buildings resolved to a *single* operator each (St. Nicks,
+WMW), so the node was legitimate. The discriminator is exactly the **per-side owner-of-record spread**: a
+coherent operator's buildings share one (or few) owners of record; an aggregator officer's span many. (The
+owner-review panel now shows this directly via per-side building-share on shared names — a shared owner that
+is a *minority* on a large side, like Restoring Communities HDFC at 5/27, is the tell.)
+
+**Implication for node construction (Track A identity layer).** Identity/`ResolvedEntityV2` is built from
+`CONNECTED_BY_SPLINK` over `landlords_with_connections`, whose nodes are keyed off HPD contacts — so a
+professional/program officer like Davola can seed a node spanning many unrelated owners, the officer analogue
+of the aggregator address. The fix mirrors the address mask: detect an **aggregator officer** (an
+individual/officer who is the registered head officer across N buildings resolving to many distinct owners of
+record) and mask it from node construction, or split such a node by owner of record. **Not yet built, and
+not a cutover blocker** (these program nodes are also caught by the F5 institutional exclusion at
+projection), but it is a genuine identity-layer node-quality gap distinct from the address mask. Measure the
+population before deciding scope: count officers whose HPD head-officer footprint spans > K distinct owners of
+record.
 
 ## Materialization + status
 
@@ -201,4 +237,4 @@ invariant holds on persisted data. Phase-2 reads/pure/materialization units comp
 co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 numbers + these shadow
 results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity-id join once the frame is
 adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit/HDFC/institutional
-owners (F5, not a blocker).
+owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker).
