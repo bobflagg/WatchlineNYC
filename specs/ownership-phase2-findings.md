@@ -165,6 +165,29 @@ partly a small curated nonprofit list; scope it precisely so it flags mission ow
 private LLC that merely uses a charitable-sounding name. This keeps the identity layer clean and puts the
 "who counts as an accountability target" policy where it belongs — at projection, reversible and auditable.
 
+**Nuance — separate a *financier/agency signal* from a *mission owner*, and neither from a private operator**
+(sharpened adjudicating CUT-0002/CUT-0003). Two different jobs get conflated under one "institutional" label:
+
+- **Governmental financier / agency as a co-occurrence *signal*** — e.g. `NYC HOUSING DEVELOPMENT CORP`
+  (HDC) appearing as PLUTO owner, or `NEW YORK CITY` / `COMMISSIONER OF FINANCE` as an *in rem* deed grantee.
+  These attach to a huge, unrelated swath of financed/foreclosed buildings, so they generate **spurious
+  cross-entity links** (they were the *only* A–B tie in CUT-0002's 1983 in rem deed and CUT-0003's shared
+  HDC PLUTO owner — both DIFFERENT). The classifier must **discount these as identity/ownership signals**
+  (never merge on them), independent of the exclusion flag.
+- **Nonprofit / mission owner as an accountability *target*** — e.g. St. Nicks / Brooklyn Neighborhood HDFC.
+  A valid entity; **flag it out** of accountability attribution (the `institutional_dominated` flag above).
+- **Private affordable-housing operator — do NOT exclude.** A private LIHTC developer (CUT-0003 B: Ryan
+  Webler / WMW Realty Management, project LLCs like Bedford Courts III LIHTC at 3092 Hull Ave) is a
+  **legitimate accountability target** even though its buildings are HDC-financed and affordable. "Appears
+  under HDC financing / is affordable housing" is **not** grounds to exclude — otherwise the flag drops real
+  private operators. Exclusion must key on *who the owner is* (agency/nonprofit), not on the presence of a
+  financing or affordability marker.
+
+So the fix is really two mechanisms: **(a)** an agency/financier **signal denylist** (HDC, City, in rem
+grantees) that never contributes to identity or ownership attribution, and **(b)** the
+`institutional_dominated` **target-exclusion flag** for agency/nonprofit *owners* — with private LIHTC
+operators explicitly kept.
+
 **Status:** logged as a follow-up; **not a cutover blocker** (co-op/condo exclusion already covers the
 largest axis, and the flag is additive/presentation-time), but it should land before any outward-facing
 attribution surfaces these entities as landlords. Relates to F2 (exclusion belongs at projection) and F4
