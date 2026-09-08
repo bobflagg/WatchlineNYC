@@ -88,6 +88,25 @@ DOS/HPD by design, so a rule that demanded cross-source corroboration for every 
 confirm them; C2 credits them, the hard gate keeps them honest, and §5's strict number quarantines
 them for skeptics.
 
+**Worked validation — check 3 catches a partition between partners (CUT-0006, adjudication).** A 2010
+deed (`2010041200399001`, $2.73M) co-conveyed an entity-A building (`4161860058`) and an entity-B
+building (`4161880066`) to one LLC, `BEACH FAR ROCKAWAY PARTNERS LLC` — a textbook co-conveyance bridge
+between the two node groups (`URI DREIFUS` / `SAM FARBER`). But in 2015 that same LLC (grantor on both)
+split them into per-building successors — `4161860058` → `BEACH 114TH PARTNERS LLC` (sole head officer
+**Dreifus**), `4161880066` → `BEACH 116TH PARTNERS LLC` (sole head officer **Farber**), for real money
+($1.1M / $2.7M). So it reads through the checks as: **entity identity** — one identifiable grantee, but a
+*two-person partnership*; **successor reality** — both successors are single-purpose ✅; **restructuring
+vs. sale** — ❌, the split **partitioned the joint asset between two different partners** (each took one
+building into his own sole LLC), a division between distinct parties, not one owner reorganizing shells it
+still controls. Check 3 fails → a deed-only `SAME` is recorded `INDETERMINATE`, and the substantive call
+is `DIFFERENT`: Dreifus and Farber are distinct people whose *former* co-ownership (an **association**, not
+identity — Option B / R3) has dissolved into separate current ownership; the shared office
+(207 Rockaway Turnpike) is an association signal, not identity. This is the mirror of the *valid*
+linked-successor case (156-06 → CHERRY 168, where one owner spun buildings into shells it retained): the
+grantor-chain and single-purpose successors look identical, and **check 3 is the sole discriminator** —
+same-owner restructuring (recover as `SAME`) vs. partition/sale between parties (reject). The gate works
+as designed.
+
 ## 4. Annotation process
 
 - **2 annotators**, independent, **blind** to which system (WatchlineNYC / WoW) produced any
