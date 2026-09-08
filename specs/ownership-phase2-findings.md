@@ -238,6 +238,23 @@ trusts), from one office at 1675 Broadway. Confirms the pattern is not limited t
 that the aggregator-officer mask should key on **owner-of-record spread**, not on institutional/nonprofit
 content (Hirschfield's footprint is mixed).
 
+**Critical caveat — the mask must NOT fire on a shell-LLC owner (the veil-pierce win itself).** CUT-0008 is
+the trap: `SAM WURTZBERGER` (107) / `SAM WURZBERGER` (21) is one person (a one-letter typo), HeadOfficer +
+Agent on **all 128** buildings from one office (381 South Fifth St) — footprint spanning **58 distinct owners
+of record over 59 deeded buildings**. A naive "officer spans > K distinct owners" rule would flag him as an
+aggregator officer — but those 58 "owners" are his **own single-purpose shell LLCs** (address-named: 224
+Moffat LLC, 256 Jefferson YMJ LLC, 1200 Decatur Street LLC, …) plus a family member (Miriam Wurzberger). He is
+a **real 128-building Williamsburg owner using shells** — the Croman/Escobar veil-pierce pattern the resolver
+exists to consolidate. Masking him would destroy the flagship win. So the detector **cannot key on
+distinct-owner count alone**: it must distinguish *"many single-purpose shells of one owner"* (KEEP — the
+owning LLCs themselves collapse to one owner-group / share the officer as their only principal / are
+address-named single-purpose) from *"many independently-identified owners"* (MASK — the owning entities have
+their own distinct identities, e.g. named HDFCs/LPs like Hirschfield's). This is exactly the operator-vs-
+aggregator test `aggregator_audit.py` already applies to high-degree **addresses** (filers resolving to ≤2
+owner-groups = operator → keep; spanning many = aggregator → mask); the officer mask needs the identical
+second-order check. **Without it, F6 would mask the resolution's best cases** — so the discriminator, not the
+count, is the finding.
+
 ## F7 — Adjudication labels can't express "same party, but a non-owner agent to exclude"
 
 CUT-0007 also exposed a gap in the **adjudication frame itself** (not the pipeline). Entities A/B are
