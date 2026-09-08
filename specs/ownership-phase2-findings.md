@@ -141,6 +141,35 @@ demoted by R3). See F1 → R3 above.
 owner-of-record, split by individual keying, bridged only by a deed) and report them separately in the
 gate write-up; treat the tally as the sizing input for the `registered-llc-id` decision.
 
+## F5 — Projection layer excludes only co-op/condo; nonprofit/HDFC/institutional is an unfilled gap
+
+Surfaced alongside F4. The C5 projection (`resolved_projection.py`) applies exactly **one** exclusion —
+co-op/condo — via `Building.coop_condo`, producing `building_count` (rental-only) and the
+`coop_condo_dominated` flag (>50%). There is **no** nonprofit / HDFC / institutional exclusion, even though
+we have repeatedly found that contamination axis:
+
+- **HDFC** — nonprofit affordable-housing owner of record (F4: Brooklyn Neighborhood HDFC / St. Nicks).
+- **Institutional** — e.g. a large cluster that resolved to Columbia University.
+- **Nonprofit** — e.g. MHANY / affordable-housing sponsors.
+
+These are **valid resolved entities** — identity must keep them (dropping would re-conflate "is this one
+entity?" with "should we surface it?", the F2 mistake). But they are **not private-landlord accountability
+targets**, so presenting them as big "landlord portfolios" misleads the tool's consumers exactly as a
+co-op/condo board would.
+
+**Proposed fix (not yet built):** an additive **`institutional_dominated`** flag on `:ResolvedEntityV2`
+(and/or a rental-style attribution split), same shape as `coop_condo_dominated` — **flag, don't drop**,
+computed at C5 over an owner/`Building`-level classifier. Detection is partly deterministic (owner-of-record
+name patterns: `HDFC` / `HOUSING DEVELOPMENT FUND`, `CITY OF NEW YORK`, `NYCHA`, named universities) and
+partly a small curated nonprofit list; scope it precisely so it flags mission owners without catching a
+private LLC that merely uses a charitable-sounding name. This keeps the identity layer clean and puts the
+"who counts as an accountability target" policy where it belongs — at projection, reversible and auditable.
+
+**Status:** logged as a follow-up; **not a cutover blocker** (co-op/condo exclusion already covers the
+largest axis, and the flag is additive/presentation-time), but it should land before any outward-facing
+attribution surfaces these entities as landlords. Relates to F2 (exclusion belongs at projection) and F4
+(the HDFC that triggered it).
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
@@ -148,4 +177,5 @@ memberships (all with `party_reference_id` = C1 lineage); legacy `OwnerGroup` (6
 invariant holds on persisted data. Phase-2 reads/pure/materialization units complete. **Remaining:** apply
 co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 numbers + these shadow
 results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity-id join once the frame is
-adjudicated (F4).
+adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit/HDFC/institutional
+owners (F5, not a blocker).
