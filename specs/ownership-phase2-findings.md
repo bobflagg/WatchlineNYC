@@ -255,6 +255,28 @@ owner-groups = operator → keep; spanning many = aggregator → mask); the offi
 second-order check. **Without it, F6 would mask the resolution's best cases** — so the discriminator, not the
 count, is the finding.
 
+**Combined instance + a negative result on count-based flagging (CUT-0009).** CUT-0009 pairs
+`JACQUELINE TOM` (35, an aggregator officer — HeadOfficer across ~16 *independent* nonprofit HDFCs: NSA,
+Newset, 1415 Wythe, Cluster II, 68-19 Woodhaven, 644 Riverside, Brookset, New Hull St, St. John's Place, …)
+with `EMILY LEHMAN` (2, St. John's Place Family Center only) — glued by a **shared nonprofit-services office
+(247 West 37th St)**, a shared managing agent (Urban Resource Institute), and one overlapping HDFC
+(St. John's Place, a minority 1/35 on A vs 2/2 on B). It stacks all three exclusion axes: aggregator address
++ aggregator officer + nonprofit — the hardest confusion for a reviewer, because the overlap panel fires on
+both a shared owner name and a shared address, yet the truth is DIFFERENT. Attempting an **aggregator-address
+degree flag** for the owner-review panel, a count-based rule was measured and **rejected — it cannot
+discriminate**: distinct owners-of-record at 247 W 37th (shared office) = 27, but the Wurtzberger shell
+office (CUT-0008, one owner) = **46** and St. Nicks' HQ (CUT-0001, a **SAME** case) = 38; distinct
+head-officer *people* = 247→**4** (one pro heads most, so it *under*-counts the real shared office), St.
+Nicks→12, Wurtzberger→3. So a "many owners → aggregator" address flag would misfire on the shell-LLC owner
+**and would have flagged CUT-0001's 2 Kingsland, wrongly pushing a correct SAME toward DIFFERENT**; a "many
+people" flag misses 247 and flags St. Nicks. Separating a shared office from a one-owner-shell office by
+counting is the same impossibility as the officer mask above — it needs owner-group resolution the standalone
+owner-review tool lacks. **Resolution:** no count-based address flag in the tool; a static caveat instead
+(*a shared address is ownership evidence only when the owners also match*), leaning on the owner overlap +
+per-side building-shares as the real discriminator (owner-review commit `57ad1a8`). Consequence for the mask
+in the pipeline (which *does* have the KG): the address-degree mask must stay owner-**group**-based
+(`aggregator_audit.py`), never a raw name/person count — the counts above are the proof.
+
 ## F7 — Adjudication labels can't express "same party, but a non-owner agent to exclude"
 
 CUT-0007 also exposed a gap in the **adjudication frame itself** (not the pipeline). Entities A/B are
