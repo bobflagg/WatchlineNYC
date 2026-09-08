@@ -105,10 +105,47 @@ attribute contradiction to auto-detect; the genuine same-name/same-address diffe
 **retain lineage** (`read_contact_lineage`, demonstrated) + bound the population + **human-sample** the
 residual ambiguity via the eval `§8.1` C0 protected stratum. Absence of a contradiction ≠ same identity.
 
+## F4 — Adjudication surfaces the Option-B recall cost: a same-legal-entity split only a deed proves
+
+Surfaced while adjudicating the cutover frame (pair **CUT-0001**, St. Nicks Alliance / Brooklyn
+Neighborhood HDFC). The two node groups anchor on different individuals (Frank Lang vs. Michael Rochford),
+but **both** carry the same two GP officers (roles swapped between the groups) **and** the same
+`CorporateOwner` of record, `BROOKLYN NEIGHBORHOOD HDFC`, at 2 Kingsland Ave. Ground truth is **SAME**,
+proved at T1 by a single deed: **doc `2013070700015001`** (CRFN `2013000371119`, 2013) co-conveys
+`3030310013/14/15` (18/20/22 Stagg St — entity A) **and** `3028350002` (512 Morgan Ave — entity B) to one
+grantee, *Brooklyn Neighborhood Housing Dev Fund Corporation*. One corporation holds title across both
+groups — not distinct per-project HDFCs under a shared sponsor.
+
+**Why this matters for the cutover.** The signal that proves SAME is a **deed co-conveyance** — which
+Option B (correctly) classifies as a **relationship**, not identity. So v2's identity-only layer **splits**
+this pair while legacy `OwnerGroup` (which unions `CONNECTED_BY_DEED` into identity) **merges** it. This is
+therefore an **S1 split where v2 is wrong and legacy was right** → it scores as a **v2 false-split** (S1 +
+gold SAME ⇒ v2 takes the `FS` penalty) against the §8.1 noninferiority test. The admissible path for v2 to
+recover the merge is **`registered-llc-id`** (same DOS-registered corporation as owner of record — the
+"same legal entity" identity meaning we allow), which **is not built yet** (only `registered-llc-name`,
+demoted by R3). See F1 → R3 above.
+
+**Two implications, both to weigh when reading the gate result:**
+1. **Concrete argument to prioritize the `registered-llc-id` / DOS-entity-id join** — it recovers
+   legitimate same-legal-entity merges like this one *without* reintroducing the co-officer conflation R3
+   removed. The count of SAME calls of this shape in the 449-pair frame measures how much recall the join
+   buys back — i.e. how much of any noninferiority gap is attributable to a not-yet-built admissible method
+   rather than to the Option-B design.
+2. **Weigh against exclusion.** These are nonprofit HDFC affordable-housing buildings that are flagged /
+   excluded at the C5 projection anyway (F2). So the *downstream* cost of v2 splitting them may be small
+   even though it registers as a false-split in the raw gate. When interpreting the noninferiority result,
+   separate recall loss on **excludable nonprofits/HDFCs** from recall loss on **real accountability
+   targets** — the gate's paired loss does not make that distinction on its own.
+
+**Action:** when adjudication completes, tally S1-split SAME calls of this shape (shared HDFC/entity
+owner-of-record, split by individual keying, bridged only by a deed) and report them separately in the
+gate write-up; treat the tally as the sizing input for the `registered-llc-id` decision.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
 memberships (all with `party_reference_id` = C1 lineage); legacy `OwnerGroup` (6,540) untouched; shadow
 invariant holds on persisted data. Phase-2 reads/pure/materialization units complete. **Remaining:** apply
 co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 numbers + these shadow
-results); curated audit (Kadden).
+results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity-id join once the frame is
+adjudicated (F4).
