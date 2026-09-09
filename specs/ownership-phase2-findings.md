@@ -300,6 +300,39 @@ Scoring should also be aware that some `SAME` pairs are agent nodes destined for
 correctness and their ownership-attribution exclusion are counted separately. Not a cutover blocker, but it
 should be resolved before the frame is scored so agent typo-heals aren't mislabeled.
 
+## F8 — Cross-mechanism transitive over-merge validated live (OG-110); + a correlated-pairs scoring caveat
+
+Tracing why CUT-0011 (`ALEX LASZLO` 19 / `EPHRAIM FRUCHTHANDLER` 14) was in the frame despite an **empty
+records panel** (no shared deed, owner-of-record, officer, or address) surfaced the cleanest Option-B
+validation so far. Both nodes sit in one legacy **`OwnerGroup` OG-110** — a 14-member blob spanning six
+unrelated surnames (Feldman, Laszlo, Fruchthandler, Morgenstern, Bharat, Yu). The connecting path is a
+**cross-mechanism chain through a third party**:
+
+> `ALEX LASZLO` —[CONNECTED_BY_SPLINK `registered-llc`]→ `SONNY BHARAT` —[CONNECTED_BY_DEED `acris-deed`]→ `EPHRAIM FRUCHTHANDLER`
+
+Both hops are **relationship** (association) edges — Laszlo/Bharat co-own a registered LLC (co-owners =
+distinct people, the F1/R3 case), Bharat/Fruchthandler co-conveyed a deed — neither is same-party identity.
+Legacy `OwnerGroup` unions `CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED`, so it chained two *different* association
+mechanisms through the bridge node Bharat into one 14-way group: the `deed_bridged` cross-mechanism
+transitivity risk, caught live.
+
+**v2 breaks it cleanly** (materialized run `REV2-20260907T230254Z`): Laszlo → `RE-3378` (4 members),
+Fruchthandler → `RE-34289` (2 members, a *different* entity), and **Sonny Bharat → no `ResolvedEntityV2` at
+all** (his only edges were relationship edges, so he forms no identity entity with anyone). Option B (identity
+= fellegi + audited-curated only; `registered-llc-name` and deed demoted to the relationship layer per R3)
+removes both hops from identity → the chain collapses → the unrelated owners separate and the bridge dissolves.
+**v2 correct, legacy wrong** — a substantive precision gain, exactly what the cutover gate should credit. This
+confirms the S1 split stratum is catching *real* legacy over-merges (cross-mechanism transitive chains), not
+only typos/nonprofits. It also explains the empty panel: the bridge is a *third party* (Bharat) not in the
+pair, so the A↔B records overlap is genuinely nil — the tool is correct; the connection lives in the graph.
+
+**Correlated-pairs scoring caveat (for `score.py`).** Both CUT-0010 (Laszlo–Morgenstern) and CUT-0011
+(Laszlo–Fruchthandler) are drawn from the **same blob, OG-110** — two pairs testing one spurious legacy group,
+so they are **not independent observations**. The §8.1 paired bootstrap must resample the S1 stratum at the
+**split-group level** (cluster bootstrap), not the pair level, or one large over-merged blob will be
+double-counted as independent evidence and shrink the S1 variance artificially. Fold into the gate before
+scoring; it also argues for reporting S1 results per split-group, not just pooled over pairs.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
@@ -309,4 +342,5 @@ co-op/condo at C5 projection (F2); the Track-A cutover (gated on ratified §8.1 
 results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity-id join once the frame is
 adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit/HDFC/institutional
 owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker); add
-an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring.
+an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring;
+cluster-bootstrap the S1 stratum at the split-group level, not the pair level (F8), before scoring.
