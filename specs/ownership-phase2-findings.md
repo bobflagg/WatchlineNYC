@@ -457,15 +457,17 @@ Option B / R3, not identity). `classify` now (i) drops DOF placeholder owners (`
 OWNER" etc., which had inflated CUT-0064/0109 degree to ~7,650), and (ii) demotes a pair to routine
 (`same-llc-jv-no-office`) when its only private shared owner is a **single LLC of citywide degree ≤ 4 with no
 shared office** (query `_S1_SHARED_OFFICE` + `_OWNER_DEGREE`); a shared office, >1 shared LLC, a larger/dominant
-owner, or a person-owner keeps it promoted. Live: 40→**23** (17 demoted as JV, the placeholder/financier ones
-folded into `same-llc-noise`). The 23 survivors carry a real "one operation" signal (shared office, multiple
+owner, or a person-owner keeps it promoted. Live: 40→**24** (16 demoted as JV, the placeholder/financier ones
+folded into `same-llc-noise`). One JV-guard exception — an **eponymous owner** (the LLC carries an anchor's
+own surname, e.g. CUT-0052 anchor *Parlanti* + `PARLANTI GROUP LLC`) is that person's entity, an identity link
+not a stranger JV, so it is reclaimed (`eponymous-owner`); surgical (CUT-0052 only, no false reclaims). The 23 survivors carry a real "one operation" signal (shared office, multiple
 LLCs, a person owner-of-record, or a larger holder to judge — e.g. the OLIT servicer trust, Brooklyn Housing
 Preservation LP, the MTEK triangle). Lead-side adjudication of the 34 (coverage + citywide degree + shared
 office, not a full per-pair deed read): ~13 SAME (fragmented one-operation splits — the F1/F4 recall the
-cutover trades away), ~15 DIFFERENT (JV / servicer / incidental), ~6 needing the panel. Residual recall cost:
-a genuine *small* single-office-less operation (e.g. CUT-0052, an eponymous "PARLANTI GROUP LLC") is demoted
-with the JVs — acceptable, since all 449 remain in the blind review queue regardless. Artifact stays
-uncommitted (blinding).
+cutover trades away), ~15 DIFFERENT (JV / servicer / incidental), ~6 needing the panel. The one recall tail the JV rule
+would have cut — a genuine *small* single-office-less operation under an eponymous LLC (CUT-0052) — is
+reclaimed by the eponymous-owner guard above; any remaining tail stays in the blind review queue regardless
+(all 449). Artifact stays uncommitted (blinding).
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 

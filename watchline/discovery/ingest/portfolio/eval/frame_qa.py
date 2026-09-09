@@ -25,7 +25,8 @@ Buckets, by descending priority:
     `same-llc-noise` — the F5 discount + placeholder drop (a shared HDFC is a real owner and stays); (c) a
     SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office — a two-party JV / single
     co-owned asset (common control, not identity), tagged `same-llc-jv-no-office`. A shared office, >1 shared
-    LLC, a large/dominant owner, or a person-owner keeps it promoted.
+    LLC, a large/dominant owner, a person-owner, or an EPONYMOUS owner (the LLC carries an anchor's own
+    surname — that person's entity, tagged `eponymous-owner`) keeps it promoted.
   * **routine_blob_split** — S1 split of dissimilar-surname nodes connected only via relationship edges
     (registered-llc/deed), often transitive through a bridge: the OG-110/OG-1073 pattern, expected DIFFERENT.
   * **routine_merge** — S2 retained merge, surname-consistent, held by an identity method: expected SAME.
@@ -81,6 +82,14 @@ def _placeholder(owner: str) -> bool:
 # A single shared owner LLC on no more than this many buildings citywide, with NO shared office, is a
 # two-party JV / single co-owned asset (association, not identity) — not a fragmented one-operation split.
 JV_DEGREE_MAX = 4
+
+
+def _eponymous(owner: str, *names: str) -> bool:
+    """True if the owner LLC name carries an anchor's surname as a whole token (>=4 chars): the LLC is that
+    person's OWN named entity (e.g. anchor 'Josephine Parlanti' + owner 'PARLANTI GROUP LLC'), so a
+    cross-node building in it is an identity link, not a stranger JV — it should not be demoted as one."""
+    toks = {t for t in "".join(c if c.isalnum() else " " for c in (owner or "").upper()).split() if len(t) >= 4}
+    return any(_surname(n) in toks for n in names if len(_surname(n)) >= 4)
 
 
 def _norm(s: str) -> str:
@@ -164,13 +173,17 @@ def classify(f: dict) -> dict:
             # neither and stays promoted.
             return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-noise"]}
         degs = f.get("shared_owner_degrees") or {}
-        if len(private) == 1 and not f.get("shared_office") and (degs.get(private[0]) or 999) <= JV_DEGREE_MAX:
+        eponymous = len(private) == 1 and _eponymous(private[0], f.get("a_name", ""), f.get("b_name", ""))
+        if (len(private) == 1 and not f.get("shared_office")
+                and (degs.get(private[0]) or 999) <= JV_DEGREE_MAX and not eponymous):
             # A SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office across two
             # otherwise-separate portfolios is a two-party JV / one co-owned asset — common control, not
             # identity (Option B / R3). Pervasive overlap (a shared office, >1 shared LLC, a dominant/large
-            # owner, or a person-owner) would have kept it promoted; this is the isolated-JV signature.
+            # owner, or a person-owner) keeps it promoted; an EPONYMOUS owner (the LLC carries an anchor's
+            # own surname — CUT-0052 PARLANTI GROUP) is that person's entity, an identity link not a JV.
             return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-jv-no-office"]}
-        return {"bucket": "same_llc_split", "priority": 2, "flags": ["same-registered-llc-direct"]}
+        flags = ["same-registered-llc-direct"] + (["eponymous-owner"] if eponymous else [])
+        return {"bucket": "same_llc_split", "priority": 2, "flags": flags}
     return {"bucket": "routine_blob_split", "priority": 0,
             "flags": ["transitive-bridge"] if (f.get("path_hops") or 0) >= 2 else []}
 

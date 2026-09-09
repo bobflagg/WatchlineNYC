@@ -136,6 +136,28 @@ def test_s1_single_large_holder_no_office_stays_promoted():
     assert out["bucket"] == "same_llc_split"
 
 
+def test_s1_eponymous_small_llc_no_office_is_reclaimed():
+    # CUT-0052: shared owner "PARLANTI GROUP LLC" carries anchor A's surname -> it's Parlanti's own entity, an
+    # identity link, NOT a stranger JV. Reclaimed from the JV demotion (kept as same_llc_split), even though a
+    # single small LLC with no shared office would otherwise be demoted.
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "a_name": "JOSEPHINE PARLANTI", "b_name": "MARIA SANTOMAURO",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": False, "shared_llc_owners": ["PARLANTI GROUP LLC"],
+                    "shared_owner_degrees": {"PARLANTI GROUP LLC": 2}})
+    assert out["bucket"] == "same_llc_split" and "eponymous-owner" in out["flags"]
+
+
+def test_s1_noneponymous_small_llc_no_office_still_jv():
+    # Guard: a same-length owner name that does NOT carry either surname is still a JV (no false reclaim).
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "a_name": "JOSH HUBI", "b_name": "SEFIK GUNES",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": False, "shared_llc_owners": ["SHALOM ALEICHEM LLC"],
+                    "shared_owner_degrees": {"SHALOM ALEICHEM LLC": 3}})
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-office"]
+
+
 def test_s1_placeholder_only_owner_is_noise():
     # A DOF placeholder ("UNAVAILABLE OWNER") is not a real shared owner -> routine (same-llc-noise).
     out = classify({"stratum": "S1_split", "surname_relation": "different",
