@@ -107,6 +107,50 @@ grantor-chain and single-purpose successors look identical, and **check 3 is the
 same-owner restructuring (recover as `SAME`) vs. partition/sale between parties (reject). The gate works
 as designed.
 
+### 3.1 Shared owner-of-record: coverage triages, the C2 gate decides
+
+A shared **current owner of record** (the latest-deed grantee — or PLUTO `ownername` where the latest deed
+confirms it, never where it contradicts it) on *both* sides is the panel's strongest same-owner signal — but
+"shared" is not "same owner" until you read **how much of each side it covers**. Coverage is the
+operationalization of *the* owner vs *an* owner:
+
+- **Incidental** — a minority share on either side (CUT-0028: `HOMES FOR THE HOMELESS INSTITUTE, INC.` at
+  **1/33 ↔ 1/11**). Two entities that each merely *contain* a building some third party owns are not thereby
+  the same owner. → `DIFFERENT` on this signal (still weigh any other link).
+- **Dominant-both** — the plurality/majority current owner of record on *both* sides: only here is the shared
+  owner *the* owner of both portfolios → a **candidate** `SAME`, routed through the C2 hard gate (§3).
+- **Asymmetric** (dominant one side, a sliver the other) — *not* `SAME`: side A *is* that owner; side B merely
+  holds one of their buildings.
+
+**Coverage is a triage band, never the criterion — do not set a bright-line percentage as the ownership
+test.** A fixed cutoff fails four ways, each visible in CUT-0028:
+
+1. **The denominator is the entity under test.** Coverage = shared-owner buildings / *this entity's building
+   count*, and that count is the resolution being adjudicated. Thresholding a ratio whose denominator is the
+   defendant is quietly circular.
+2. **Small N breaks the percentage.** `2/3` reads "67%" on three buildings; ownership is not more true because
+   a portfolio is small. Under ~5 buildings a side, read the records, not the ratio.
+3. **It cannot see the institutional/umbrella confound.** 73% coverage is identical whether the shared owner
+   is one real operator or a nonprofit/HDFC **sponsor** holding title over operationally-distinct buildings
+   (phase-2 findings F5). The number can't separate them; the nature of the owner can.
+4. **It discards corroboration.** A dominant shared owner-of-record *also* backed by a shared head officer or
+   business address is a far safer `SAME` than one standing alone; collapsing to a scalar throws that away.
+
+**The decision instrument is the existing C2 gate, not a number.** A high-coverage shared owner-of-record is a
+same-source (ACRIS / PLUTO) claim, so a `SAME` on it is **C2** and takes the three mandatory checks of §3
+(entity identity / successor reality / restructuring-vs-sale) **plus** an institutional/umbrella read: is this
+a genuine common owner, or a sponsor/pass-through whose shared title is an *association* across distinct
+operators (Option B / R3)? An institutional-dominated owner (F5) does not by itself defeat `SAME`, but the
+merged thing is then "same owner *of record*," which may not be the accountability grouping — flag it; and a
+pure umbrella with **no other** shared identity signal is `INDETERMINATE`, not `SAME`.
+
+**Why this is not a threshold in disguise.** "Dominant/plurality" is deliberately a band the annotator reads
+*with* the corroborating records, and the binding decision is the gate — the same discipline every other
+`SAME` gets. The band only decides whether a pair is worth gating; it never stands in for the gate. Coverage
+tells you where to look; the primary records and the three checks decide what you found. *(Panel support for
+reading currency and per-side coverage on this line — "current &lt;date&gt; $&lt;amt&gt;" and the PLUTO-vs-deed
+caveat — is owner-review `e6d5e8c`; see phase-2 findings F11.)*
+
 ## 4. Annotation process
 
 - **2 annotators**, independent, **blind** to which system (WatchlineNYC / WoW) produced any
