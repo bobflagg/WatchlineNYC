@@ -97,11 +97,11 @@ def test_s1_all_identity_path_but_split_is_red_flag():
 
 def test_s1_cross_boundary_registered_llc_is_same_llc_review():
     # CUT-0029: dissimilar-surnamed co-principals of ONE owning LLC, whose entities are joined by a registered-
-    # llc edge crossing the A/B boundary — a likely SAME false-split promoted out of routine for review. Note
-    # the shortestPath is 2 hops (splink+llc between arbitrary reps); the cross-boundary flag is what catches it.
+    # llc edge crossing the A/B boundary AND a private shared owner — a likely SAME false-split promoted for
+    # review. Note the shortestPath is 2 hops (splink+llc between arbitrary reps); the cross-boundary flag catches it.
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "path_methods": ["splink-fellegi-sunter", "registered-llc"], "path_hops": 2,
-                    "cross_registered_llc": True})
+                    "cross_registered_llc": True, "shared_llc_owners": ["FRONTIER REALTY, LLC"]})
     assert out["bucket"] == "same_llc_split" and out["priority"] == 2
     assert out["flags"] == ["same-registered-llc-direct"]
 
@@ -120,3 +120,37 @@ def test_s1_cross_boundary_llc_same_surname_still_name_similar():
     out = classify({"stratum": "S1_split", "surname_relation": "same",
                     "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True})
     assert out["bucket"] == "name_similar_split"
+
+
+def test_s1_cross_boundary_llc_financier_only_owner_is_dropped():
+    # CUT-0002/0003: the only shared registered owner is a City-finance vehicle (NYC HDC) — co-occurrence
+    # noise, not a private same-owner. Dropped to routine with the financier-noise flag (the F5 discount).
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1,
+                    "cross_registered_llc": True, "shared_llc_owners": ["NYC HOUSING DEVELOPMENT CORP."]})
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-financier-noise"]
+
+
+def test_s1_cross_boundary_llc_shared_hdfc_is_kept():
+    # CUT-0001: a shared HDFC is a genuine nonprofit owner (F5 keeps it substantive), NOT a financier — stays
+    # promoted for review even though its name contains HOUSING DEVELOPMENT (FUND, not the HDC finance agency).
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_llc_owners": ["BROOKLYN NEIGHBORHOOD HOUSING DEV FUND CORPORATION"]})
+    assert out["bucket"] == "same_llc_split"
+
+
+def test_s1_cross_boundary_llc_mixed_owners_is_kept():
+    # A private LLC shared alongside a financier owner still flags — not EVERY shared owner is noise.
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_llc_owners": ["CITY OF NEW YORK", "212-214 REALTY CO. LLC"]})
+    assert out["bucket"] == "same_llc_split"
+
+
+def test_financier_classifier_hdc_yes_hdfc_no_equityfund_yes():
+    from watchline.discovery.ingest.portfolio.eval.frame_qa import _financier
+    assert _financier("NYC HOUSING DEVELOPMENT CORP.") is True
+    assert _financier("NEW YORK EQUITY FUND 2005 LLC") is True
+    assert _financier("BROOKLYN NEIGHBORHOOD HOUSING DEV FUND CORPORATION") is False   # HDFC, not HDC
+    assert _financier("212-214 REALTY CO. LLC") is False

@@ -441,12 +441,18 @@ the edge: CUT-0029's own path is 2 hops, `splink`+`llc`), and **NOT** a transiti
 a *third* entity (the OG-110/OG-1073 blobs, which have no direct A↔B edge). **Live re-run** (2026-09-09,
 run `REV2-20260907T230254Z`): 43 pairs moved out of `routine_blob_split` (82→39) into `same_llc_split` —
 CUT-0029 caught; OG-110 (CUT-0011) and OG-1073 (CUT-0013/0014) correctly stayed routine (`cross_llc=False`).
-The S1 needs-judgment surface thus grows **27+24=51 → 94** (8 of the 43 already adjudicated). The bucket is
-deliberately **recall-biased** — it surfaces *every* same-registered-LLC candidate for the §3.1 single-entity
-+ coverage + F5-institutional check, so a share adjudicate DIFFERENT (an incidental one-LLC overlap, or an
-institutional/nonprofit shared owner — e.g. the Frank Lang CUT-0001/2/3 and Speliotis/MHANY CUT-0091 pairs).
-That is correct behavior for a candidate surface, not a defect; tightening it (coverage/institutional filters
-needing the shared-LLC name, not yet fetched) is a possible follow-up. Artifact stays uncommitted (blinding).
+The S1 needs-judgment surface thus grows **27+24=51 → 94** (8 of the 43 already adjudicated). **Institutional
+filter (added, tightening 43→40):** the override now also recovers the *shared DOF owner name(s)* between the
+two entities (query `_S1_SHARED_OWNERS`) and drops a pair to routine (`same-llc-financier-noise`) when its
+only shared owner is a financier / government / LIHTC-investor vehicle — the F5 discount (`_financier`:
+NYC HDC "HOUSING DEVELOPMENT CORP", NYCHA, City, state, dormitory authority, dept, "EQUITY FUND"). This is
+needed because the registered-llc edge carries no name and `llc_edges`' own exclude list misses HDC and equity
+funds. Live: 3 pairs dropped — CUT-0002/0003 (NYC HDC) and CUT-0091 (NEW YORK EQUITY FUND 2005 LLC). A shared
+**HDFC** is deliberately *kept* (a real nonprofit owner — CUT-0001, an actual SAME), as are private LLCs and
+any pair sharing at least one non-financier owner. Only 3 of 43 were financier-only, so the override was not
+badly polluted to begin with. Remaining recall-bias is intentional: a share will still adjudicate DIFFERENT
+on §3.1 coverage (an incidental one-private-LLC overlap), which the reviewer, not the triage, decides.
+Artifact stays uncommitted (blinding).
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 

@@ -16,10 +16,13 @@ Buckets, by descending priority:
     that a *direct identity* edge connects. Trace these by hand.
   * **name_similar_split** — S1 split of same/typo-surname nodes: a possible real same-owner v2 wrongly split
     (the F4 `registered-llc-id` recall misses, or a typo/HDFC that should be SAME). Needs careful review.
-  * **same_llc_split** — S1 split whose two nodes are joined by a *direct* (1-hop) `registered-llc` edge:
-    dissimilar-surnamed co-principals of the SAME owning LLC (CUT-0029), a likely SAME false-split the surname
-    heuristic would otherwise bury in routine_blob_split. Needs review. (A *multi-hop* registered-llc path is
-    transitive over-connection — the OG-110 blob — and stays routine_blob_split.)
+  * **same_llc_split** — S1 split whose two entities share a `registered-llc` edge across the A/B boundary AND
+    a *private* (non-financier) DOF owner of record: dissimilar-surnamed co-principals of the SAME owning LLC
+    (CUT-0029), a likely SAME false-split the surname heuristic would otherwise bury in routine_blob_split.
+    Needs review. (A *transitive* registered-llc path through a third entity — the OG-110 blob — has no direct
+    cross-boundary edge and stays routine; a cross-boundary edge whose only shared owner is a financier /
+    government / LIHTC-investor vehicle (City, NYC HDC, NY Equity Fund) is co-occurrence noise and also stays
+    routine, tagged `same-llc-financier-noise` — the F5 discount. A shared HDFC is a real owner and stays.)
   * **routine_blob_split** — S1 split of dissimilar-surname nodes connected only via relationship edges
     (registered-llc/deed), often transitive through a bridge: the OG-110/OG-1073 pattern, expected DIFFERENT.
   * **routine_merge** — S2 retained merge, surname-consistent, held by an identity method: expected SAME.
@@ -38,6 +41,28 @@ _TYPO_RATIO = 0.85     # normalized-surname similarity at/above this (but not eq
 # common-surnamed; only member count separates the risky merges. `surname_freq` is kept as context.
 COMMON_SURNAME_MIN = 50    # freq at/above this = "common surname" — reported as context, not a flag
 LARGE_MERGE_MIN = 5        # v2-entity member count at/above this -> a larger (higher-FM-surface) merge
+
+
+# A shared registered owner that is a FINANCIER / government / pass-through vehicle, not the private
+# beneficial owner — co-occurrence noise that must NOT read as a same-owner partner-split (mirrors the F5
+# discount / fingerprint._FINANCIER_CATEGORIES). NB **HDFC** ("HOUSING DEVELOPMENT FUND") is deliberately
+# NOT here — a shared HDFC is a genuine nonprofit owner (CUT-0001), kept for review; only City-finance,
+# agency, and LIHTC-investor vehicles are dropped. Substrings are unambiguous-government only (no bare
+# "NEW YORK CITY", which a private "…NY CITY REALTY LLC" would trip); the HDC pattern is "DEVELOPMENT CORP",
+# which does not match HDFC's "DEVELOPMENT FUND CORP".
+_FINANCIER_OWNER = (
+    "HOUSING DEVELOPMENT CORP", "HOUSING DEV CORP",     # NYC HDC (city finance agency)
+    "NYCHA", "HOUSING AUTHORITY",
+    "CITY OF NEW YORK", "COMMISSIONER OF FINANCE",
+    "STATE OF NEW YORK", "DORMITORY AUTHORITY", "DEPARTMENT OF",
+    "EQUITY FUND",                                      # LIHTC syndicator / passive investor vehicle
+)
+
+
+def _financier(owner: str) -> bool:
+    """True if a shared registered-owner name is a financier/government/pass-through (co-occurrence noise)."""
+    u = (owner or "").upper()
+    return any(p in u for p in _FINANCIER_OWNER)
 
 
 def _norm(s: str) -> str:
@@ -112,6 +137,12 @@ def classify(f: dict) -> dict:
     # A-llc-X-llc-B through a THIRD entity (the OG-110 blob), which has no direct A<->B edge and stays routine.
     # See phase-2 findings F10 / eval-protocol §3.1.
     if f.get("cross_registered_llc"):
+        owners = f.get("shared_llc_owners") or []
+        if owners and all(_financier(o) for o in owners):
+            # The only shared registered owner is a financier / government / LIHTC-investor pass-through
+            # (City, NYC HDC, NY Equity Fund) — co-occurrence noise, not a private same-owner. Drop to
+            # routine (the F5 discount). A shared HDFC / private LLC would NOT be financier and stays promoted.
+            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-financier-noise"]}
         return {"bucket": "same_llc_split", "priority": 2, "flags": ["same-registered-llc-direct"]}
     return {"bucket": "routine_blob_split", "priority": 0,
             "flags": ["transitive-bridge"] if (f.get("path_hops") or 0) >= 2 else []}
@@ -159,6 +190,25 @@ WHERE r.method = 'registered-llc'
 RETURN pr.pair_id AS pair_id, count(r) > 0 AS cross_llc
 """
 
+# The DOF owner-of-record name(s) shared between the two entities' buildings — recovered to apply the
+# financier/institutional filter (`_financier`) the edge alone can't carry (the registered-llc edge stores
+# no name, and llc_edges' own exclude list misses HDC / equity funds). Shared directly (not transitively),
+# so it also confirms the same-owning-entity reading. OPTIONAL so every pair returns a row.
+_S1_SHARED_OWNERS = """
+UNWIND $pairs AS pr
+MATCH (:ResolvedEntityV2 {resolution_id: pr.a})<-[:IN_RESOLVED_ENTITY_V2]-(la:Landlord)
+UNWIND la.bbls AS ab
+WITH pr, collect(DISTINCT ab) AS abbls
+MATCH (:ResolvedEntityV2 {resolution_id: pr.b})<-[:IN_RESOLVED_ENTITY_V2]-(lb:Landlord)
+UNWIND lb.bbls AS bb
+WITH pr, abbls, collect(DISTINCT bb) AS bbbls
+OPTIONAL MATCH (ba:Building) WHERE ba.bbl IN abbls AND ba.dof_ownername IS NOT NULL
+WITH pr, bbbls, collect(DISTINCT toUpper(ba.dof_ownername)) AS aown
+OPTIONAL MATCH (bb:Building) WHERE bb.bbl IN bbbls AND bb.dof_ownername IS NOT NULL
+WITH pr, aown, collect(DISTINCT toUpper(bb.dof_ownername)) AS bown
+RETURN pr.pair_id AS pair_id, [x IN aown WHERE x IN bown] AS shared_owners
+"""
+
 # Population surname frequency (distinct landlord nodes per surname) — for common-name detection.
 _SURNAME_FREQ = """
 MATCH (l:Landlord)
@@ -181,10 +231,13 @@ def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
     pairs = [{"pair_id": r["pair_id"], "a": r["a_rid"], "b": r["b_rid"]} for r in s1]
     paths = {r["pair_id"]: r for r in _run(driver, database, _S1_PATHS, pairs=pairs)} if pairs else {}
     xllc = {r["pair_id"]: r["cross_llc"] for r in _run(driver, database, _S1_CROSS_LLC, pairs=pairs)} if pairs else {}
+    sown = {r["pair_id"]: (r["shared_owners"] or [])
+            for r in _run(driver, database, _S1_SHARED_OWNERS, pairs=pairs)} if pairs else {}
     rids = sorted({r["resolution_id"] for r in s2 if r.get("resolution_id")})
     prof = {r["rid"]: r for r in _run(driver, database, _S2_PROFILE, rids=rids)} if rids else {}
     freq = {r["surname"]: r["n"] for r in _run(driver, database, _SURNAME_FREQ)} if s2 else {}
-    return {"og": og, "paths": paths, "cross_llc": xllc, "prof": prof, "surname_freq": freq}
+    return {"og": og, "paths": paths, "cross_llc": xllc, "shared_owners": sown,
+            "prof": prof, "surname_freq": freq}
 
 
 def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]:
@@ -202,7 +255,8 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
             f.update({"owner_group_id": k.get("owner_group_id"),
                       "blob_size": og.get("size"), "blob_surnames": og.get("surnames"),
                       "path_methods": path.get("methods") or [], "path_hops": path.get("hops"),
-                      "cross_registered_llc": bool(graph.get("cross_llc", {}).get(k["pair_id"]))})
+                      "cross_registered_llc": bool(graph.get("cross_llc", {}).get(k["pair_id"])),
+                      "shared_llc_owners": graph.get("shared_owners", {}).get(k["pair_id"], [])})
         else:
             p = graph["prof"].get(k.get("resolution_id"), {})
             freq = graph.get("surname_freq", {})
