@@ -122,6 +122,29 @@ operationalization of *the* owner vs *an* owner:
 - **Asymmetric** (dominant one side, a sliver the other) — *not* `SAME`: side A *is* that owner; side B merely
   holds one of their buildings.
 
+**First, one owning *entity* on both sides — not two co-principals sharing a *person*.** Before coverage even
+applies, confirm the shared owner of record is a *single legal entity appearing on both sides*, not two
+distinct owning entities linked only by a shared individual. The two look alike and adjudicate opposite:
+
+- **Same owning entity on both sides → `SAME`** (identity of the owner). CUT-0029: `212-214 REALTY CO. LLC` is
+  the current owner of record on a building in *each* node; the two adjacent lots carry *identical* ownership —
+  same LLC, same manager (Sackman Enterprises), same principals (Alan Sackman, James Hefelfinger, Carter
+  Sackman) — and split into the person-anchored nodes `ALAN SACKMAN` vs `JAMES HEFELFINGER` **only because the
+  HPD HeadOfficer slot alternated between the two partners of that one LLC.** A single owning entity on both
+  sides is `SAME`; that its members are two distinct people is a red herring (every family partnership has ≥2
+  principals). This is a person-anchoring recall miss — the `registered-llc` signal that would recover it is
+  R3-excluded from identity (F1/F4).
+- **Two distinct owning entities linked by a shared person → `DIFFERENT`** (association / common control).
+  CUT-0006: Dreifus and Farber's former joint LLC *partitioned* into two **separate sole LLCs** (Beach 114th /
+  Beach 116th); the current owners of record are distinct entities, bridged only by the two men's prior
+  co-investment and a shared office. Co-owners / co-officers / shared-agent linking *distinct* owning entities
+  is association (Option B / R3) → `DIFFERENT`.
+
+The discriminator is **the owner-of-record entity, not the people**: is the *same* LLC/corp the current
+grantee on both sides (→ `SAME`), or do the two sides hold title in *different* entities that merely share a
+principal or an office (→ `DIFFERENT`)? Coverage then applies to the former case — a single shared owning
+entity — to separate *the* owner from an incidental one.
+
 **Coverage is a triage band, never the criterion — do not set a bright-line percentage as the ownership
 test.** A fixed cutoff fails four ways, each visible in CUT-0028:
 

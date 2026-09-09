@@ -420,6 +420,20 @@ routine and 0 are anomalies. Three results worth keeping:
 `CONNECTED_BY_SPLINK`); the true canary is an entity with **no identity edge at all**. Lesson mirrors F6/F9:
 edge *presence* ≠ edge *dependence* — check identity-connectivity, not method membership.
 
+*Blind spot found in adjudication (CUT-0029):* the `routine_blob_split` bucket assumes **dissimilar surname →
+expected DIFFERENT** (a transitive/relationship split the frame treats as routine). But two **differently-named
+partners** who co-own through the *same* LLC break that assumption: `ALAN SACKMAN` ↔ `JAMES HEFELFINGER` are
+dissimilar surnames, yet both nodes are the *same owner* — `212-214 REALTY CO. LLC` (and Frontier / East West
+Renovating) is the current owner of record on **both** sides, the two adjacent lots differing only in which
+partner fills the HPD HeadOfficer slot. Adjudicated `SAME` (a person-anchoring recall miss, the F1/F4 cost),
+so `frame_qa` mis-bucketed it as routine-DIFFERENT. The surname-dissimilarity heuristic is a triage prior, not
+ground truth: a same-owning-entity check (same registered LLC / grantee on both sides) should override the
+"dissimilar surname" routing before a blob split is called routine. Not a scoring bug — the frame-QA artifact
+is blinding-side and never reaches the reviewer — but it means the **27+24 "needs judgment" set understates
+the S1 false-split surface**: partner-split pairs hide inside the 82 routine blobs. The adjudication-side rule
+is now written into eval-protocol §3.1 (single owning entity on both sides → SAME, vs. distinct entities
+sharing a person → DIFFERENT).
+
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 
 Surfaced adjudicating **CUT-0028**: two person-named v2 entities — CATHERINE YU (33 bldgs) ↔ JAMES
