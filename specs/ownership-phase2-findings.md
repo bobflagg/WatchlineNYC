@@ -326,12 +326,15 @@ confirms the S1 split stratum is catching *real* legacy over-merges (cross-mecha
 only typos/nonprofits. It also explains the empty panel: the bridge is a *third party* (Bharat) not in the
 pair, so the A↔B records overlap is genuinely nil — the tool is correct; the connection lives in the graph.
 
-**Correlated-pairs scoring caveat (for `score.py`).** Both CUT-0010 (Laszlo–Morgenstern) and CUT-0011
-(Laszlo–Fruchthandler) are drawn from the **same blob, OG-110** — two pairs testing one spurious legacy group,
-so they are **not independent observations**. The §8.1 paired bootstrap must resample the S1 stratum at the
-**split-group level** (cluster bootstrap), not the pair level, or one large over-merged blob will be
-double-counted as independent evidence and shrink the S1 variance artificially. Fold into the gate before
-scoring; it also argues for reporting S1 results per split-group, not just pooled over pairs.
+**Correlated-pairs scoring caveat (for `score.py`).** **Three** frame pairs so far are drawn from the **same
+blob, OG-110** — CUT-0010 (Laszlo–Morgenstern), CUT-0011 (Laszlo–Fruchthandler), and CUT-0012
+(Morgenstern–Fruchthandler, linked by a $141.5M bulk co-investment deed) — i.e. three pairs testing one
+spurious legacy group, so they are **not independent observations** (and they nearly form the complete graph
+over a few of OG-110's members, the hallmark of pairs drawn within one cluster). The §8.1 paired bootstrap
+must resample the S1 stratum at the **split-group level** (cluster bootstrap), not the pair level, or one large
+over-merged blob will be double-counted as independent evidence and shrink the S1 variance artificially. Fold
+into the gate before scoring; it also argues for reporting S1 results per split-group, not just pooled over
+pairs.
 
 ## Materialization + status
 
