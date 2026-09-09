@@ -326,15 +326,19 @@ confirms the S1 split stratum is catching *real* legacy over-merges (cross-mecha
 only typos/nonprofits. It also explains the empty panel: the bridge is a *third party* (Bharat) not in the
 pair, so the A↔B records overlap is genuinely nil — the tool is correct; the connection lives in the graph.
 
-**Correlated-pairs scoring caveat (for `score.py`).** **Three** frame pairs so far are drawn from the **same
-blob, OG-110** — CUT-0010 (Laszlo–Morgenstern), CUT-0011 (Laszlo–Fruchthandler), and CUT-0012
-(Morgenstern–Fruchthandler, linked by a $141.5M bulk co-investment deed) — i.e. three pairs testing one
-spurious legacy group, so they are **not independent observations** (and they nearly form the complete graph
-over a few of OG-110's members, the hallmark of pairs drawn within one cluster). The §8.1 paired bootstrap
-must resample the S1 stratum at the **split-group level** (cluster bootstrap), not the pair level, or one large
-over-merged blob will be double-counted as independent evidence and shrink the S1 variance artificially. Fold
-into the gate before scoring; it also argues for reporting S1 results per split-group, not just pooled over
-pairs.
+**Correlated-pairs scoring caveat (for `score.py`), measured across the 449-pair frame.** OG-110 generates
+**three** pairs — CUT-0010 (Laszlo–Morgenstern), CUT-0011 (Laszlo–Fruchthandler), CUT-0012
+(Morgenstern–Fruchthandler, linked by a $141.5M bulk co-investment deed) — but it is not special. Counting
+the key's `owner_group_id` over all **109 S1 pairs**: they come from **79 split owner-groups** (the census),
+of which **15 groups contribute 3 pairs each** (the frame's `max_pairs=3` per-group cap) and **64 contribute
+1 pair each** — so **45 / 109 S1 pairs (41%) are correlated** within a multi-pair group, only 64 independent
+singletons. These pairs nearly form the complete graph over a few members of each such blob — the hallmark of
+pairs drawn within one cluster — so they are **not independent observations**. **S2 is clean**: the 340
+retained-merge pairs come from **340 distinct v2 entities (one pair each)** — fully independent, no clustering
+needed. **Consequence:** the §8.1 paired bootstrap must **cluster-bootstrap the S1 stratum at the split-group
+level (resample the 79 groups, not the 109 pairs)** — otherwise the 15 triple-pair blobs are counted as 45
+independent observations instead of 15 clusters, shrinking S1 variance artificially; **S2 may resample at the
+pair level**. It also argues for reporting S1 per split-group (79 rows), not pooled over 109 pairs.
 
 ## Materialization + status
 
