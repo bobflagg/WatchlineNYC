@@ -28,6 +28,12 @@ from difflib import SequenceMatcher
 
 _IDENTITY_METHODS = frozenset({"splink-fellegi-sunter", "curated-same-owner"})
 _TYPO_RATIO = 0.85     # normalized-surname similarity at/above this (but not equal) reads as a typo variant
+# S2 false-merge candidates: a NON-curated retained merge with many members. Member count is the FM surface
+# (each extra member is another merge decision that could be wrong). NB common-surname is NOT a useful
+# discriminator in this population — the median surname frequency is ~268, so nearly every merge is
+# common-surnamed; only member count separates the risky merges. `surname_freq` is kept as context.
+COMMON_SURNAME_MIN = 50    # freq at/above this = "common surname" — reported as context, not a flag
+LARGE_MERGE_MIN = 5        # v2-entity member count at/above this -> a larger (higher-FM-surface) merge
 
 
 def _norm(s: str) -> str:
@@ -69,11 +75,18 @@ def classify(f: dict) -> dict:
         if (f.get("entity_member_count") or 1) > 1 and not identity_present:
             return {"bucket": "RED_FLAG_MERGE", "priority": 3,
                     "flags": ["merge-not-identity-connected:" + (",".join(sorted(methods)) or "none")]}
+        curated = "curated-same-owner" in methods
         # Suspicious-but-not-a-breach: an uncurated entity spanning surnames, or dissimilar anchor names.
-        if (f.get("entity_surname_count") or 1) > 1 and "curated-same-owner" not in methods:
+        if (f.get("entity_surname_count") or 1) > 1 and not curated:
             flags.append("merge-spans-surnames")
         if rel == "different":
             flags.append("merge-dissimilar-anchor-names")
+        # False-MERGE candidates (symmetric to name_similar_split's false-splits): a NON-curated merge with
+        # many members is where a retained merge is most likely wrong — the FM side the gate estimates.
+        # Curated merges are audited, so exempt. (common-surname is context only — see LARGE_MERGE_MIN note.)
+        if not curated and (f.get("entity_member_count") or 1) >= LARGE_MERGE_MIN:
+            common = f" common-surname:{f.get('surname_freq')}" if f.get("common_surname") else ""
+            flags.append(f"large-merge:{f.get('entity_member_count')}{common}")
         if flags:
             return {"bucket": "review_merge", "priority": 2, "flags": flags}
         return {"bucket": "routine_merge", "priority": 1, "flags": []}
@@ -116,8 +129,16 @@ UNWIND $rids AS rid
 MATCH (e:ResolvedEntityV2 {resolution_id: rid})<-[:IN_RESOLVED_ENTITY_V2]-(l:Landlord)
 OPTIONAL MATCH (l)-[r:CONNECTED_BY_SPLINK]-(:Landlord)-[:IN_RESOLVED_ENTITY_V2]->(e)
 RETURN rid AS rid, count(DISTINCT l) AS members,
-       count(DISTINCT toUpper(split(l.name,' ')[-1])) AS surnames,
+       count(DISTINCT toUpper(split(l.name,' ')[-1])) AS surname_count,
+       collect(DISTINCT toUpper(split(l.name,' ')[-1])) AS surnames,
        collect(DISTINCT r.method) AS methods
+"""
+
+# Population surname frequency (distinct landlord nodes per surname) — for common-name detection.
+_SURNAME_FREQ = """
+MATCH (l:Landlord)
+WITH toUpper(split(l.name,' ')[-1]) AS surname, count(DISTINCT l) AS n
+WHERE surname <> '' RETURN surname, n
 """
 
 
@@ -136,7 +157,8 @@ def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
     paths = {r["pair_id"]: r for r in _run(driver, database, _S1_PATHS, pairs=pairs)} if pairs else {}
     rids = sorted({r["resolution_id"] for r in s2 if r.get("resolution_id")})
     prof = {r["rid"]: r for r in _run(driver, database, _S2_PROFILE, rids=rids)} if rids else {}
-    return {"og": og, "paths": paths, "prof": prof}
+    freq = {r["surname"]: r["n"] for r in _run(driver, database, _SURNAME_FREQ)} if s2 else {}
+    return {"og": og, "paths": paths, "prof": prof, "surname_freq": freq}
 
 
 def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]:
@@ -156,9 +178,12 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
                       "path_methods": path.get("methods") or [], "path_hops": path.get("hops")})
         else:
             p = graph["prof"].get(k.get("resolution_id"), {})
+            freq = graph.get("surname_freq", {})
+            surname_freq = max((freq.get(s, 0) for s in (p.get("surnames") or [])), default=0)
             f.update({"resolution_id": k.get("resolution_id"), "entity_member_count": p.get("members"),
-                      "entity_surname_count": p.get("surnames"),
-                      "entity_methods": [m for m in (p.get("methods") or []) if m]})
+                      "entity_surname_count": p.get("surname_count"),
+                      "entity_methods": [m for m in (p.get("methods") or []) if m],
+                      "surname_freq": surname_freq, "common_surname": surname_freq > COMMON_SURNAME_MIN})
         f.update(classify(f))
         out.append(f)
     return out

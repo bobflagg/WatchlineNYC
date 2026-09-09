@@ -34,6 +34,32 @@ def test_s2_merge_dissimilar_names_is_review_not_breach():
     assert "merge-dissimilar-anchor-names" in out["flags"] and "merge-spans-surnames" in out["flags"]
 
 
+def test_s2_common_surname_alone_is_NOT_flagged():
+    # Common surname is the norm in this population (median freq ~268), so a small merge is not flagged
+    # on common-surname alone — only member count discriminates.
+    out = classify({"stratum": "S2_retained_merge", "surname_relation": "same", "entity_member_count": 3,
+                    "entity_surname_count": 1, "entity_methods": ["splink-fellegi-sunter"],
+                    "common_surname": True, "surname_freq": 268})
+    assert out["bucket"] == "routine_merge" and out["flags"] == []
+
+
+def test_s2_large_merge_is_fm_candidate():
+    out = classify({"stratum": "S2_retained_merge", "surname_relation": "same", "entity_member_count": 9,
+                    "entity_surname_count": 1, "entity_methods": ["splink-fellegi-sunter"],
+                    "common_surname": True, "surname_freq": 500})
+    assert out["bucket"] == "review_merge" and out["priority"] == 2
+    assert any(fl.startswith("large-merge") for fl in out["flags"])
+    assert "common-surname:500" in out["flags"][0]           # common-surname rides along as context
+
+
+def test_curated_common_surname_merge_is_exempt():
+    # Curated (audited) merges are exempt from the FM-candidate flags even if large/common.
+    out = classify({"stratum": "S2_retained_merge", "surname_relation": "same", "entity_member_count": 12,
+                    "entity_surname_count": 1, "entity_methods": ["splink-fellegi-sunter", "curated-same-owner"],
+                    "common_surname": True, "surname_freq": 300})
+    assert out["bucket"] == "routine_merge" and out["flags"] == []
+
+
 def test_s2_clean_merge_is_routine():
     out = classify({"stratum": "S2_retained_merge", "surname_relation": "same", "entity_member_count": 2,
                     "entity_surname_count": 1, "entity_methods": ["splink-fellegi-sunter"]})
