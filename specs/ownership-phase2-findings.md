@@ -450,9 +450,22 @@ needed because the registered-llc edge carries no name and `llc_edges`' own excl
 funds. Live: 3 pairs dropped — CUT-0002/0003 (NYC HDC) and CUT-0091 (NEW YORK EQUITY FUND 2005 LLC). A shared
 **HDFC** is deliberately *kept* (a real nonprofit owner — CUT-0001, an actual SAME), as are private LLCs and
 any pair sharing at least one non-financier owner. Only 3 of 43 were financier-only, so the override was not
-badly polluted to begin with. Remaining recall-bias is intentional: a share will still adjudicate DIFFERENT
-on §3.1 coverage (an incidental one-private-LLC overlap), which the reviewer, not the triage, decides.
-Artifact stays uncommitted (blinding).
+badly polluted to begin with. **JV + placeholder refinement (tightening 40→23):** adjudicating the 34 new
+`same_llc_split` pairs showed the residual over-inclusion was *two-party JVs* — a single small owning LLC that
+both operators co-own on one asset while running otherwise-separate portfolios (co-ownership = common control,
+Option B / R3, not identity). `classify` now (i) drops DOF placeholder owners (`_placeholder`: "UNAVAILABLE
+OWNER" etc., which had inflated CUT-0064/0109 degree to ~7,650), and (ii) demotes a pair to routine
+(`same-llc-jv-no-office`) when its only private shared owner is a **single LLC of citywide degree ≤ 4 with no
+shared office** (query `_S1_SHARED_OFFICE` + `_OWNER_DEGREE`); a shared office, >1 shared LLC, a larger/dominant
+owner, or a person-owner keeps it promoted. Live: 40→**23** (17 demoted as JV, the placeholder/financier ones
+folded into `same-llc-noise`). The 23 survivors carry a real "one operation" signal (shared office, multiple
+LLCs, a person owner-of-record, or a larger holder to judge — e.g. the OLIT servicer trust, Brooklyn Housing
+Preservation LP, the MTEK triangle). Lead-side adjudication of the 34 (coverage + citywide degree + shared
+office, not a full per-pair deed read): ~13 SAME (fragmented one-operation splits — the F1/F4 recall the
+cutover trades away), ~15 DIFFERENT (JV / servicer / incidental), ~6 needing the panel. Residual recall cost:
+a genuine *small* single-office-less operation (e.g. CUT-0052, an eponymous "PARLANTI GROUP LLC") is demoted
+with the JVs — acceptable, since all 449 remain in the blind review queue regardless. Artifact stays
+uncommitted (blinding).
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 

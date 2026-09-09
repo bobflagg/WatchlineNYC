@@ -19,10 +19,13 @@ Buckets, by descending priority:
   * **same_llc_split** — S1 split whose two entities share a `registered-llc` edge across the A/B boundary AND
     a *private* (non-financier) DOF owner of record: dissimilar-surnamed co-principals of the SAME owning LLC
     (CUT-0029), a likely SAME false-split the surname heuristic would otherwise bury in routine_blob_split.
-    Needs review. (A *transitive* registered-llc path through a third entity — the OG-110 blob — has no direct
-    cross-boundary edge and stays routine; a cross-boundary edge whose only shared owner is a financier /
-    government / LIHTC-investor vehicle (City, NYC HDC, NY Equity Fund) is co-occurrence noise and also stays
-    routine, tagged `same-llc-financier-noise` — the F5 discount. A shared HDFC is a real owner and stays.)
+    Needs review. Three things demote a cross-boundary edge back to routine: (a) a *transitive* path through a
+    third entity — the OG-110 blob — which has no direct cross-boundary edge; (b) the only shared owner being a
+    DOF placeholder or a financier / government / LIHTC-investor vehicle (City, NYC HDC, NY Equity Fund), tagged
+    `same-llc-noise` — the F5 discount + placeholder drop (a shared HDFC is a real owner and stays); (c) a
+    SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office — a two-party JV / single
+    co-owned asset (common control, not identity), tagged `same-llc-jv-no-office`. A shared office, >1 shared
+    LLC, a large/dominant owner, or a person-owner keeps it promoted.
   * **routine_blob_split** — S1 split of dissimilar-surname nodes connected only via relationship edges
     (registered-llc/deed), often transitive through a bridge: the OG-110/OG-1073 pattern, expected DIFFERENT.
   * **routine_merge** — S2 retained merge, surname-consistent, held by an identity method: expected SAME.
@@ -63,6 +66,21 @@ def _financier(owner: str) -> bool:
     """True if a shared registered-owner name is a financier/government/pass-through (co-occurrence noise)."""
     u = (owner or "").upper()
     return any(p in u for p in _FINANCIER_OWNER)
+
+
+# DOF placeholder / non-owner strings that carry no beneficial owner — must not read as a shared owner.
+_PLACEHOLDER_OWNER = ("UNAVAILABLE", "UNKNOWN", "NO OWNER", "OWNER UNKNOWN", "SEE ", "N/A")
+
+
+def _placeholder(owner: str) -> bool:
+    """True if `owner` is a DOF placeholder (blank / 'UNAVAILABLE OWNER' / etc.), not a real entity."""
+    u = (owner or "").strip().upper()
+    return not u or any(p in u for p in _PLACEHOLDER_OWNER)
+
+
+# A single shared owner LLC on no more than this many buildings citywide, with NO shared office, is a
+# two-party JV / single co-owned asset (association, not identity) — not a fragmented one-operation split.
+JV_DEGREE_MAX = 4
 
 
 def _norm(s: str) -> str:
@@ -137,12 +155,21 @@ def classify(f: dict) -> dict:
     # A-llc-X-llc-B through a THIRD entity (the OG-110 blob), which has no direct A<->B edge and stays routine.
     # See phase-2 findings F10 / eval-protocol §3.1.
     if f.get("cross_registered_llc"):
-        owners = f.get("shared_llc_owners") or []
-        if owners and all(_financier(o) for o in owners):
-            # The only shared registered owner is a financier / government / LIHTC-investor pass-through
-            # (City, NYC HDC, NY Equity Fund) — co-occurrence noise, not a private same-owner. Drop to
-            # routine (the F5 discount). A shared HDFC / private LLC would NOT be financier and stays promoted.
-            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-financier-noise"]}
+        raw = f.get("shared_llc_owners") or []
+        private = [o for o in raw if not _placeholder(o) and not _financier(o)]
+        if not private:
+            # Every shared registered owner is a DOF placeholder ("UNAVAILABLE OWNER") or a financier /
+            # government / LIHTC-investor pass-through (City, NYC HDC, NY Equity Fund) — co-occurrence noise,
+            # not a private same-owner (the F5 discount + placeholder drop). A shared HDFC / private LLC is
+            # neither and stays promoted.
+            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-noise"]}
+        degs = f.get("shared_owner_degrees") or {}
+        if len(private) == 1 and not f.get("shared_office") and (degs.get(private[0]) or 999) <= JV_DEGREE_MAX:
+            # A SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office across two
+            # otherwise-separate portfolios is a two-party JV / one co-owned asset — common control, not
+            # identity (Option B / R3). Pervasive overlap (a shared office, >1 shared LLC, a dominant/large
+            # owner, or a person-owner) would have kept it promoted; this is the isolated-JV signature.
+            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-jv-no-office"]}
         return {"bucket": "same_llc_split", "priority": 2, "flags": ["same-registered-llc-direct"]}
     return {"bucket": "routine_blob_split", "priority": 0,
             "flags": ["transitive-bridge"] if (f.get("path_hops") or 0) >= 2 else []}
@@ -209,6 +236,27 @@ WITH pr, aown, collect(DISTINCT toUpper(bb.dof_ownername)) AS bown
 RETURN pr.pair_id AS pair_id, [x IN aown WHERE x IN bown] AS shared_owners
 """
 
+# Do the two entities' landlords share a business address (same office)? A strong "one operation" tell that
+# separates a fragmented single owner (keep as same_llc_split) from a two-party JV (a single shared LLC, no
+# shared office -> demote). Exact bizaddr match is conservative (format drift misses some real shared offices,
+# which then stay promoted for review — the safe direction).
+_S1_SHARED_OFFICE = """
+UNWIND $pairs AS pr
+MATCH (:ResolvedEntityV2 {resolution_id: pr.a})<-[:IN_RESOLVED_ENTITY_V2]-(la:Landlord)
+WITH pr, collect(DISTINCT toUpper(coalesce(la.bizaddr, ''))) AS aad
+MATCH (:ResolvedEntityV2 {resolution_id: pr.b})<-[:IN_RESOLVED_ENTITY_V2]-(lb:Landlord)
+WITH pr, aad, collect(DISTINCT toUpper(coalesce(lb.bizaddr, ''))) AS bad
+RETURN pr.pair_id AS pair_id, size([x IN aad WHERE x IN bad AND x <> '']) > 0 AS shared_office
+"""
+
+# Citywide degree of an owner name (distinct buildings it is DOF owner of) — a single-purpose LLC sits low,
+# a placeholder / large holder sits high. Feeds the JV-degree test.
+_OWNER_DEGREE = """
+UNWIND $names AS nm
+OPTIONAL MATCH (g:Building) WHERE toUpper(g.dof_ownername) = nm
+RETURN nm AS name, count(DISTINCT g) AS deg
+"""
+
 # Population surname frequency (distinct landlord nodes per surname) — for common-name detection.
 _SURNAME_FREQ = """
 MATCH (l:Landlord)
@@ -233,11 +281,15 @@ def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
     xllc = {r["pair_id"]: r["cross_llc"] for r in _run(driver, database, _S1_CROSS_LLC, pairs=pairs)} if pairs else {}
     sown = {r["pair_id"]: (r["shared_owners"] or [])
             for r in _run(driver, database, _S1_SHARED_OWNERS, pairs=pairs)} if pairs else {}
+    soff = {r["pair_id"]: bool(r["shared_office"])
+            for r in _run(driver, database, _S1_SHARED_OFFICE, pairs=pairs)} if pairs else {}
+    names = sorted({n for owners in sown.values() for n in owners})
+    odeg = {r["name"]: r["deg"] for r in _run(driver, database, _OWNER_DEGREE, names=names)} if names else {}
     rids = sorted({r["resolution_id"] for r in s2 if r.get("resolution_id")})
     prof = {r["rid"]: r for r in _run(driver, database, _S2_PROFILE, rids=rids)} if rids else {}
     freq = {r["surname"]: r["n"] for r in _run(driver, database, _SURNAME_FREQ)} if s2 else {}
     return {"og": og, "paths": paths, "cross_llc": xllc, "shared_owners": sown,
-            "prof": prof, "surname_freq": freq}
+            "shared_office": soff, "owner_degree": odeg, "prof": prof, "surname_freq": freq}
 
 
 def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]:
@@ -256,7 +308,9 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
                       "blob_size": og.get("size"), "blob_surnames": og.get("surnames"),
                       "path_methods": path.get("methods") or [], "path_hops": path.get("hops"),
                       "cross_registered_llc": bool(graph.get("cross_llc", {}).get(k["pair_id"])),
-                      "shared_llc_owners": graph.get("shared_owners", {}).get(k["pair_id"], [])})
+                      "shared_llc_owners": (so := graph.get("shared_owners", {}).get(k["pair_id"], [])),
+                      "shared_office": graph.get("shared_office", {}).get(k["pair_id"], False),
+                      "shared_owner_degrees": {n: graph.get("owner_degree", {}).get(n) for n in so}})
         else:
             p = graph["prof"].get(k.get("resolution_id"), {})
             freq = graph.get("surname_freq", {})

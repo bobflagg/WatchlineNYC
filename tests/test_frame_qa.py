@@ -96,14 +96,52 @@ def test_s1_all_identity_path_but_split_is_red_flag():
 
 
 def test_s1_cross_boundary_registered_llc_is_same_llc_review():
-    # CUT-0029: dissimilar-surnamed co-principals of ONE owning LLC, whose entities are joined by a registered-
-    # llc edge crossing the A/B boundary AND a private shared owner — a likely SAME false-split promoted for
-    # review. Note the shortestPath is 2 hops (splink+llc between arbitrary reps); the cross-boundary flag catches it.
+    # CUT-0029: co-principals of ONE operation split across nodes — pervasive overlap (multiple shared owning
+    # LLCs) keeps it promoted for review. Note the shortestPath is 2 hops; the cross-boundary flag catches it.
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "path_methods": ["splink-fellegi-sunter", "registered-llc"], "path_hops": 2,
-                    "cross_registered_llc": True, "shared_llc_owners": ["FRONTIER REALTY, LLC"]})
-    assert out["bucket"] == "same_llc_split" and out["priority"] == 2
+                    "cross_registered_llc": True, "shared_office": False,
+                    "shared_llc_owners": ["FRONTIER REALTY, LLC", "212-214 REALTY CO. LLC",
+                                          "EAST WEST RENOVATING CO, LLC"]})
+    assert out["bucket"] == "same_llc_split" and out["priority"] == 2   # >1 shared LLC -> not a JV
     assert out["flags"] == ["same-registered-llc-direct"]
+
+
+def test_s1_single_small_llc_no_office_is_jv_routine():
+    # A single small owner LLC (deg<=4) with NO shared office across two separate portfolios = a two-party JV
+    # (common control, not identity) -> demoted to routine.
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": False, "shared_llc_owners": ["BATHGATE LLC"],
+                    "shared_owner_degrees": {"BATHGATE LLC": 2}})
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-office"]
+
+
+def test_s1_single_small_llc_with_shared_office_stays_promoted():
+    # Same single small LLC but WITH a shared office = one operation, not a JV -> stays same_llc_split.
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": True, "shared_llc_owners": ["405-409 GV LLC"],
+                    "shared_owner_degrees": {"405-409 GV LLC": 2}})
+    assert out["bucket"] == "same_llc_split"
+
+
+def test_s1_single_large_holder_no_office_stays_promoted():
+    # A single shared owner above the JV degree cap (a bigger holder / servicer, e.g. OLIT trust) is NOT an
+    # isolated small JV -> stays promoted for the reviewer to judge, even without a shared office.
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": False, "shared_llc_owners": ["MTEK NYC LLC"],
+                    "shared_owner_degrees": {"MTEK NYC LLC": 11}})
+    assert out["bucket"] == "same_llc_split"
+
+
+def test_s1_placeholder_only_owner_is_noise():
+    # A DOF placeholder ("UNAVAILABLE OWNER") is not a real shared owner -> routine (same-llc-noise).
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": False, "shared_llc_owners": ["UNAVAILABLE OWNER"]})
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-noise"]
 
 
 def test_s1_transitive_llc_chain_without_cross_edge_stays_routine():
@@ -128,7 +166,7 @@ def test_s1_cross_boundary_llc_financier_only_owner_is_dropped():
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "path_methods": ["registered-llc"], "path_hops": 1,
                     "cross_registered_llc": True, "shared_llc_owners": ["NYC HOUSING DEVELOPMENT CORP."]})
-    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-financier-noise"]
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-noise"]
 
 
 def test_s1_cross_boundary_llc_shared_hdfc_is_kept():
