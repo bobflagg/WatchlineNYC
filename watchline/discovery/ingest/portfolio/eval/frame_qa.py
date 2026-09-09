@@ -16,6 +16,10 @@ Buckets, by descending priority:
     that a *direct identity* edge connects. Trace these by hand.
   * **name_similar_split** — S1 split of same/typo-surname nodes: a possible real same-owner v2 wrongly split
     (the F4 `registered-llc-id` recall misses, or a typo/HDFC that should be SAME). Needs careful review.
+  * **same_llc_split** — S1 split whose two nodes are joined by a *direct* (1-hop) `registered-llc` edge:
+    dissimilar-surnamed co-principals of the SAME owning LLC (CUT-0029), a likely SAME false-split the surname
+    heuristic would otherwise bury in routine_blob_split. Needs review. (A *multi-hop* registered-llc path is
+    transitive over-connection — the OG-110 blob — and stays routine_blob_split.)
   * **routine_blob_split** — S1 split of dissimilar-surname nodes connected only via relationship edges
     (registered-llc/deed), often transitive through a bridge: the OG-110/OG-1073 pattern, expected DIFFERENT.
   * **routine_merge** — S2 retained merge, surname-consistent, held by an identity method: expected SAME.
@@ -99,6 +103,14 @@ def classify(f: dict) -> dict:
     if methods and not has_relationship:
         # an all-identity path between two nodes v2 put in *different* entities — shouldn't happen cleanly.
         return {"bucket": "RED_FLAG_SPLIT", "priority": 3, "flags": ["direct-identity-path-but-split"]}
+    # Same-registered-LLC override (partner-split blind spot). A DIRECT registered-llc edge (hops==1) means
+    # both nodes are the SAME owning entity's buildings — differently-named co-principals of one LLC (CUT-0029:
+    # Sackman/Hefelfinger both on 212-214 Realty), a likely SAME false-split. Dissimilar surnames would else
+    # route this to routine_blob_split=expected-DIFFERENT, hiding it. Promote to review. A MULTI-hop path
+    # through registered-llc is transitive over-connection (the OG-110 blob) and correctly stays routine —
+    # the direct-vs-transitive split is the discriminator (see phase-2 findings F10 / eval-protocol §3.1).
+    if f.get("path_hops") == 1 and methods == {"registered-llc"}:
+        return {"bucket": "same_llc_split", "priority": 2, "flags": ["same-registered-llc-direct"]}
     return {"bucket": "routine_blob_split", "priority": 0,
             "flags": ["transitive-bridge"] if (f.get("path_hops") or 0) >= 2 else []}
 

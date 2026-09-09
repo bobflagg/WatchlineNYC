@@ -430,9 +430,13 @@ so `frame_qa` mis-bucketed it as routine-DIFFERENT. The surname-dissimilarity he
 ground truth: a same-owning-entity check (same registered LLC / grantee on both sides) should override the
 "dissimilar surname" routing before a blob split is called routine. Not a scoring bug — the frame-QA artifact
 is blinding-side and never reaches the reviewer — but it means the **27+24 "needs judgment" set understates
-the S1 false-split surface**: partner-split pairs hide inside the 82 routine blobs. The adjudication-side rule
-is now written into eval-protocol §3.1 (single owning entity on both sides → SAME, vs. distinct entities
-sharing a person → DIFFERENT).
+the S1 false-split surface**: partner-split pairs hide inside the 82 routine blobs. Two fixes landed:
+(1) the adjudication-side rule is written into eval-protocol §3.1 (single owning entity on both sides → SAME,
+vs. distinct entities sharing a person → DIFFERENT); (2) `frame_qa.classify` now promotes a split whose two
+nodes are joined by a **direct (1-hop) `registered-llc` edge** into a new `same_llc_split` review bucket
+(priority 2) — the same-owning-entity override — while a *multi-hop* registered-llc path (the transitive
+OG-110 blob) correctly stays routine; the direct-vs-transitive hop count is the discriminator. Re-running
+`frame_qa` against the graph moves the hidden partner-splits out of the 82 routine blobs into `same_llc_split`.
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 
