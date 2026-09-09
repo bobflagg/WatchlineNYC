@@ -23,10 +23,12 @@ Buckets, by descending priority:
     third entity — the OG-110 blob — which has no direct cross-boundary edge; (b) the only shared owner being a
     DOF placeholder or a financier / government / LIHTC-investor vehicle (City, NYC HDC, NY Equity Fund), tagged
     `same-llc-noise` — the F5 discount + placeholder drop (a shared HDFC is a real owner and stays); (c) a
-    SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office — a two-party JV / single
-    co-owned asset (common control, not identity), tagged `same-llc-jv-no-office`. A shared office, >1 shared
-    LLC, a large/dominant owner, a person-owner, or an EPONYMOUS owner (the LLC carries an anchor's own
-    surname — that person's entity, tagged `eponymous-owner`) keeps it promoted.
+    SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared owner-PRINCIPAL — a two-party
+    JV / single co-owned asset (common control, not identity), tagged `same-llc-jv-no-principal`. A shared
+    owner-principal (an HPD person-officer on both sides — the reliable "one operation" tell), >1 shared LLC,
+    a large/dominant owner, or an EPONYMOUS owner (the LLC carries an anchor's own surname — that person's
+    entity, tagged `eponymous-owner`) keeps it promoted. NB a shared *office* is NOT the keep-signal — it is
+    often the managing agent's office (management nexus, not shared ownership); kept only as context.
   * **routine_blob_split** — S1 split of dissimilar-surname nodes connected only via relationship edges
     (registered-llc/deed), often transitive through a bridge: the OG-110/OG-1073 pattern, expected DIFFERENT.
   * **routine_merge** — S2 retained merge, surname-consistent, held by an identity method: expected SAME.
@@ -174,14 +176,16 @@ def classify(f: dict) -> dict:
             return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-noise"]}
         degs = f.get("shared_owner_degrees") or {}
         eponymous = len(private) == 1 and _eponymous(private[0], f.get("a_name", ""), f.get("b_name", ""))
-        if (len(private) == 1 and not f.get("shared_office")
+        if (len(private) == 1 and not f.get("shared_principal")
                 and (degs.get(private[0]) or 999) <= JV_DEGREE_MAX and not eponymous):
-            # A SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared office across two
-            # otherwise-separate portfolios is a two-party JV / one co-owned asset — common control, not
-            # identity (Option B / R3). Pervasive overlap (a shared office, >1 shared LLC, a dominant/large
-            # owner, or a person-owner) keeps it promoted; an EPONYMOUS owner (the LLC carries an anchor's
-            # own surname — CUT-0052 PARLANTI GROUP) is that person's entity, an identity link not a JV.
-            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-jv-no-office"]}
+            # A SINGLE small owner LLC (<=JV_DEGREE_MAX buildings citywide) with NO shared owner-PRINCIPAL
+            # (no HPD person-officer on both sides) across two otherwise-separate portfolios is a two-party
+            # JV / one co-owned asset — common control, not identity (Option B / R3). The keep-signal is a
+            # shared owner-principal (the reliable "one operation" tell), NOT a shared office — adjudicating
+            # the batch showed a shared *office* is often the MANAGING AGENT's office (CUT-0047/0071/0103,
+            # management nexus, no shared owner), which over-kept. >1 shared LLC, a dominant/large owner, or
+            # an EPONYMOUS owner (the LLC carries an anchor's own surname — CUT-0052) also keep it promoted.
+            return {"bucket": "routine_blob_split", "priority": 0, "flags": ["same-llc-jv-no-principal"]}
         flags = ["same-registered-llc-direct"] + (["eponymous-owner"] if eponymous else [])
         return {"bucket": "same_llc_split", "priority": 2, "flags": flags}
     return {"bucket": "routine_blob_split", "priority": 0,
@@ -249,10 +253,10 @@ WITH pr, aown, collect(DISTINCT toUpper(bb.dof_ownername)) AS bown
 RETURN pr.pair_id AS pair_id, [x IN aown WHERE x IN bown] AS shared_owners
 """
 
-# Do the two entities' landlords share a business address (same office)? A strong "one operation" tell that
-# separates a fragmented single owner (keep as same_llc_split) from a two-party JV (a single shared LLC, no
-# shared office -> demote). Exact bizaddr match is conservative (format drift misses some real shared offices,
-# which then stay promoted for review — the safe direction).
+# Do the two entities' landlords share a business address? Kept as CONTEXT only — NOT a keep-signal for the
+# JV rule: adjudication showed a shared office is often the managing AGENT's office (management nexus, not
+# shared ownership), which over-kept management pairs. The reliable keep-signal is a shared owner-principal
+# (`_SHARED_PRINCIPAL_SQL`). Exact bizaddr match is conservative (format drift misses some).
 _S1_SHARED_OFFICE = """
 UNWIND $pairs AS pr
 MATCH (:ResolvedEntityV2 {resolution_id: pr.a})<-[:IN_RESOLVED_ENTITY_V2]-(la:Landlord)
@@ -270,6 +274,46 @@ OPTIONAL MATCH (g:Building) WHERE toUpper(g.dof_ownername) = nm
 RETURN nm AS name, count(DISTINCT g) AS deg
 """
 
+# Per-side building lists (for the Postgres shared-owner-principal lookup, which needs bbls).
+_S1_BBLS = """
+UNWIND $pairs AS pr
+MATCH (:ResolvedEntityV2 {resolution_id: pr.a})<-[:IN_RESOLVED_ENTITY_V2]-(la:Landlord) UNWIND la.bbls AS ab
+WITH pr, collect(DISTINCT ab) AS a_bbls
+MATCH (:ResolvedEntityV2 {resolution_id: pr.b})<-[:IN_RESOLVED_ENTITY_V2]-(lb:Landlord) UNWIND lb.bbls AS bb
+RETURN pr.pair_id AS pair_id, a_bbls, collect(DISTINCT bb) AS b_bbls
+"""
+
+# Does an HPD PERSON principal (head officer / officer / owner — not a corp) appear on BOTH sides? The
+# reliable "one operation" signal that separates a fragmented single owner (SAME) from a two-party JV or a
+# shared managing-agent office (DIFFERENT). Lives in Postgres (hpd_contacts), not the graph.
+_SHARED_PRINCIPAL_SQL = """
+WITH pb AS (SELECT * FROM unnest(%s::text[], %s::text[], %s::text[]) AS t(pair, side, bbl)),
+prin AS (
+  SELECT pb.pair, pb.side, upper(btrim(cc.firstname || ' ' || cc.lastname)) AS nm
+  FROM pb JOIN hpd_registrations r ON r.bbl = pb.bbl
+          JOIN hpd_contacts cc ON cc.registrationid = r.registrationid
+  WHERE cc.type IN ('HeadOfficer', 'Officer', 'IndividualOwner', 'Shareholder')
+    AND cc.corporationname IS NULL AND cc.lastname IS NOT NULL AND btrim(cc.lastname) <> '')
+SELECT DISTINCT a.pair
+FROM (SELECT DISTINCT pair, nm FROM prin WHERE side = 'A') a
+JOIN (SELECT DISTINCT pair, nm FROM prin WHERE side = 'B') b ON a.pair = b.pair AND a.nm = b.nm
+"""
+
+
+def _pg_shared_principal(pg, bbl_rows: list[dict]) -> dict[str, bool]:
+    """{pair_id: True} for pairs whose two sides share an HPD person-principal (Postgres). Empty if no pg."""
+    pairs, sides, bbls = [], [], []
+    for r in bbl_rows:
+        for b in (r.get("a_bbls") or []):
+            pairs.append(r["pair_id"]); sides.append("A"); bbls.append(str(b))
+        for b in (r.get("b_bbls") or []):
+            pairs.append(r["pair_id"]); sides.append("B"); bbls.append(str(b))
+    if not pairs:
+        return {}
+    with pg.cursor() as cur:
+        cur.execute(_SHARED_PRINCIPAL_SQL, (pairs, sides, bbls))
+        return {row[0]: True for row in cur.fetchall()}
+
 # Population surname frequency (distinct landlord nodes per surname) — for common-name detection.
 _SURNAME_FREQ = """
 MATCH (l:Landlord)
@@ -283,8 +327,10 @@ def _run(driver, database, query, **params):
         return [r.data() for r in s.run(query, **params)]
 
 
-def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
-    """Fetch per-pair graph facts keyed by pair_id (S1 path/blob) and per-entity facts (S2)."""
+def read_graph_facts(driver, *, database: str, key_rows: list[dict], pg=None) -> dict:
+    """Fetch per-pair graph facts keyed by pair_id (S1 path/blob) and per-entity facts (S2). `pg` (a psycopg2
+    connection) enables the shared-owner-principal lookup that the JV rule keys on; without it that fact is
+    absent and the JV rule falls back to eponymy / multi-owner / degree only."""
     s1 = [r for r in key_rows if r["stratum"] == "S1_split"]
     s2 = [r for r in key_rows if r["stratum"] == "S2_retained_merge"]
     gids = sorted({r["owner_group_id"] for r in s1 if r.get("owner_group_id")})
@@ -298,11 +344,19 @@ def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
             for r in _run(driver, database, _S1_SHARED_OFFICE, pairs=pairs)} if pairs else {}
     names = sorted({n for owners in sown.values() for n in owners})
     odeg = {r["name"]: r["deg"] for r in _run(driver, database, _OWNER_DEGREE, names=names)} if names else {}
+    # Shared owner-principal (Postgres) — only needed for the cross-llc candidates the JV rule evaluates.
+    sprin: dict[str, bool] = {}
+    if pg is not None:
+        cross = [p for p in pairs if xllc.get(p["pair_id"])]
+        if cross:
+            bbl_rows = _run(driver, database, _S1_BBLS, pairs=cross)
+            sprin = _pg_shared_principal(pg, bbl_rows)
     rids = sorted({r["resolution_id"] for r in s2 if r.get("resolution_id")})
     prof = {r["rid"]: r for r in _run(driver, database, _S2_PROFILE, rids=rids)} if rids else {}
     freq = {r["surname"]: r["n"] for r in _run(driver, database, _SURNAME_FREQ)} if s2 else {}
     return {"og": og, "paths": paths, "cross_llc": xllc, "shared_owners": sown,
-            "shared_office": soff, "owner_degree": odeg, "prof": prof, "surname_freq": freq}
+            "shared_office": soff, "owner_degree": odeg, "shared_principal": sprin,
+            "prof": prof, "surname_freq": freq}
 
 
 def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]:
@@ -323,6 +377,7 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
                       "cross_registered_llc": bool(graph.get("cross_llc", {}).get(k["pair_id"])),
                       "shared_llc_owners": (so := graph.get("shared_owners", {}).get(k["pair_id"], [])),
                       "shared_office": graph.get("shared_office", {}).get(k["pair_id"], False),
+                      "shared_principal": bool(graph.get("shared_principal", {}).get(k["pair_id"], False)),
                       "shared_owner_degrees": {n: graph.get("owner_degree", {}).get(n) for n in so}})
         else:
             p = graph["prof"].get(k.get("resolution_id"), {})
@@ -337,10 +392,11 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
     return out
 
 
-def build(driver, *, database: str, key_path: str, queue_path: str, out_path: str) -> dict:
+def build(driver, *, database: str, key_path: str, queue_path: str, out_path: str, pg=None) -> dict:
     key_rows = [json.loads(l) for l in open(key_path) if l.strip()]
     queue_by_id = {q["pair_id"]: q for q in (json.loads(l) for l in open(queue_path) if l.strip())}
-    facts = assemble(key_rows, queue_by_id, read_graph_facts(driver, database=database, key_rows=key_rows))
+    facts = assemble(key_rows, queue_by_id,
+                     read_graph_facts(driver, database=database, key_rows=key_rows, pg=pg))
     facts.sort(key=lambda x: (-x["priority"], x["bucket"], x["pair_id"]))
     with open(out_path, "w") as fh:
         for f in facts:
@@ -354,15 +410,19 @@ def build(driver, *, database: str, key_path: str, queue_path: str, out_path: st
 
 if __name__ == "__main__":
     import argparse
-    from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE
+    from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE, pg_conn
     ap = argparse.ArgumentParser(description="Lead-facing cutover-frame triage (NOT for the blind reviewer).")
     ap.add_argument("--dir", default="eval_out/cutover")
+    ap.add_argument("--no-pg", action="store_true", help="skip the Postgres shared-principal lookup")
     args = ap.parse_args()
     drv = neo4j_driver()
+    pg = None if args.no_pg else pg_conn()
     try:
         rep = build(drv, database=NEO4J_DISCOVERY_DATABASE,
                     key_path=f"{args.dir}/cutover_key.jsonl", queue_path=f"{args.dir}/review_queue.jsonl",
-                    out_path=f"{args.dir}/frame_qa.jsonl")
+                    out_path=f"{args.dir}/frame_qa.jsonl", pg=pg)
     finally:
         drv.close()
+        if pg is not None:
+            pg.close()
     print(json.dumps(rep, indent=2))

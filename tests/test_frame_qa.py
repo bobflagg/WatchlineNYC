@@ -107,23 +107,34 @@ def test_s1_cross_boundary_registered_llc_is_same_llc_review():
     assert out["flags"] == ["same-registered-llc-direct"]
 
 
-def test_s1_single_small_llc_no_office_is_jv_routine():
-    # A single small owner LLC (deg<=4) with NO shared office across two separate portfolios = a two-party JV
-    # (common control, not identity) -> demoted to routine.
+def test_s1_single_small_llc_no_principal_is_jv_routine():
+    # A single small owner LLC (deg<=4) with NO shared owner-principal across two separate portfolios = a
+    # two-party JV (common control, not identity) -> demoted to routine.
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
-                    "shared_office": False, "shared_llc_owners": ["BATHGATE LLC"],
+                    "shared_principal": False, "shared_llc_owners": ["BATHGATE LLC"],
                     "shared_owner_degrees": {"BATHGATE LLC": 2}})
-    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-office"]
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-principal"]
 
 
-def test_s1_single_small_llc_with_shared_office_stays_promoted():
-    # Same single small LLC but WITH a shared office = one operation, not a JV -> stays same_llc_split.
+def test_s1_single_small_llc_with_shared_principal_stays_promoted():
+    # Same single small LLC but WITH a shared owner-principal (an HPD person-officer on both sides) = one
+    # operation, not a JV -> stays same_llc_split (CUT-0039/0084/0104).
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
-                    "shared_office": True, "shared_llc_owners": ["405-409 GV LLC"],
+                    "shared_principal": True, "shared_llc_owners": ["405-409 GV LLC"],
                     "shared_owner_degrees": {"405-409 GV LLC": 2}})
     assert out["bucket"] == "same_llc_split"
+
+
+def test_s1_single_small_llc_shared_office_but_no_principal_still_jv():
+    # The correction: a shared OFFICE (often the managing agent's) is NOT enough — no shared owner-principal
+    # -> still a JV -> routine (CUT-0047/0071/0103, management nexus).
+    out = classify({"stratum": "S1_split", "surname_relation": "different",
+                    "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
+                    "shared_office": True, "shared_principal": False, "shared_llc_owners": ["405-409 GV LLC"],
+                    "shared_owner_degrees": {"405-409 GV LLC": 2}})
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-principal"]
 
 
 def test_s1_single_large_holder_no_office_stays_promoted():
@@ -153,9 +164,9 @@ def test_s1_noneponymous_small_llc_no_office_still_jv():
     out = classify({"stratum": "S1_split", "surname_relation": "different",
                     "a_name": "JOSH HUBI", "b_name": "SEFIK GUNES",
                     "path_methods": ["registered-llc"], "path_hops": 1, "cross_registered_llc": True,
-                    "shared_office": False, "shared_llc_owners": ["SHALOM ALEICHEM LLC"],
+                    "shared_principal": False, "shared_llc_owners": ["SHALOM ALEICHEM LLC"],
                     "shared_owner_degrees": {"SHALOM ALEICHEM LLC": 3}})
-    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-office"]
+    assert out["bucket"] == "routine_blob_split" and out["flags"] == ["same-llc-jv-no-principal"]
 
 
 def test_s1_placeholder_only_owner_is_noise():

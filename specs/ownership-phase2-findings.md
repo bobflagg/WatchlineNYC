@@ -467,7 +467,23 @@ office, not a full per-pair deed read): ~13 SAME (fragmented one-operation split
 cutover trades away), ~15 DIFFERENT (JV / servicer / incidental), ~6 needing the panel. The one recall tail the JV rule
 would have cut — a genuine *small* single-office-less operation under an eponymous LLC (CUT-0052) — is
 reclaimed by the eponymous-owner guard above; any remaining tail stays in the blind review queue regardless
-(all 449). Artifact stays uncommitted (blinding).
+(all 449).
+
+**Full adjudication of the 24 survivors (co-principal verified) + the shared-owner-principal refinement.**
+Adjudicating all 24 from primary records — the decisive test being a **shared owner-principal** (an HPD
+person-officer on *both* sides = one operation) — gave **13 SAME / 11 DIFFERENT**, and exposed that the JV
+rule's `shared_office` keep-signal was wrong: a shared *office* is often the **managing agent's** office
+(CUT-0047/0071/0103 — management nexus, no shared owner), which over-kept, while CUT-0087's SAME was
+under-called from coverage. So the JV keep-signal was changed from `shared_office` to **`shared_principal`**
+(a new Postgres lookup, `_SHARED_PRINCIPAL_SQL` over `hpd_contacts`, wired into `frame_qa` via `pg_conn`;
+`--no-pg` falls back to eponymy/degree/multi-owner). `shared_office` is retained as context only. Live re-run:
+**24 → 21** — demoted the 4 agent-office/no-principal pairs (0047/0071/0093/0103, matching the DIFFERENT
+verdicts) *and* **reclaimed CUT-0068**, a real shared-principal operation the office-rule had wrongly cut
+(a recall fix, not just tightening). Flag renamed `same-llc-jv-no-principal`. The 13 SAME are the F1/F4 recall
+the cutover trades away (verified, on the memory tally); the DIFFERENTs are management nexus / two-party JV /
+servicer (OLIT reverse-mortgage trust) / co-investor (MTEK). Lesson: **owner-principal overlap is the SAME
+signal; shared office or shared agent is management → points DIFFERENT** — the project's core
+ownership-vs-management line, now enforced by the triage. Artifact stays uncommitted (blinding).
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 
