@@ -383,12 +383,14 @@ adjudicating (that would make the gate circular; the artifact is not committed f
 
 | bucket | n | reading |
 |---|---|---|
-| `name_similar_split` | **27** | S1 splits of same/typo-surname nodes — the only pairs needing careful judgment |
+| `name_similar_split` | **27** | S1 splits of same/typo-surname nodes — false-**split** candidates (recall misses) |
+| `review_merge` | **24** | S2 large non-curated merges — false-**merge** candidates (the FM surface) |
 | `routine_blob_split` | 82 | S1 dissimilar-surname transitive/relationship splits — expected DIFFERENT |
-| `routine_merge` | 340 | S2 surname-consistent identity merges — expected SAME |
+| `routine_merge` | 316 | S2 surname-consistent identity merges (≤4 members, or curated) — expected SAME |
 | `RED_FLAG_*` | **0** | no invariant breach anywhere in the frame |
 
-Two results worth keeping:
+So **51 pairs (27 + 24) need careful judgment**, symmetric on both error directions; the other 398 are
+routine and 0 are anomalies. Three results worth keeping:
 - **0 red flags** extends the one-shot structural invariant test (`verify_membership_identity_only`) to a
   **per-pair check across the whole frame**: no v2 entity in any of the 449 pairs is held together by a
   non-identity edge, and no uncurated entity spans surnames. Strong standing confirmation of the Option-B
@@ -398,8 +400,13 @@ Two results worth keeping:
   Valiotis [0022], Manocherian [0100]; identical-name splits the common-name veto produced — CUT-0043/0079/
   0096/0099/0106; and same-surname/different-first-name family cases — Zachariadis [0004], Franciosa [0045]).
   Each is either a real recall miss (→ prioritize `registered-llc-id`, F4) or a correct split of distinct
-  same-surname people (→ credits the first-name/common-name veto). Adjudicating **these 27 blind** is where
-  the real signal is; the other 422 are routine.
+  same-surname people (→ credits the first-name/common-name veto).
+- **The 24 `review_merge` pairs are the symmetric false-MERGE set** — the FM side the S2 stratum actually
+  estimates. Calibration matters here: **common surname is not a discriminator in this population** (median
+  surname frequency ≈ 268, so flagging on it hit 221/340 — useless); **member count is** — 257 of 340
+  entities are 2-member (a single merge decision, low risk), so the 24 non-curated merges with ≥5 members
+  are where a retained merge is most likely wrong. Curated (audited) merges are exempt. Adjudicating **these
+  51 (27 + 24) blind** is where the real signal is; the other 398 are routine.
 
 *A methodological note the tool also corrected in-flight:* the first classifier over-flagged 25 merges on
 `registered-llc` edges that merely **co-exist** with the identity edges (the pipeline writes all methods as
@@ -418,4 +425,5 @@ owners (F5, not a blocker); measure/mask aggregator *officers* in node construct
 an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring;
 cluster-bootstrap the S1 stratum at the split-group level, not the pair level (F8), before scoring; parity pass
 so the review panel mirrors the pipeline's deterministic edge exclusions (F9, mega-deed cap done, `7972dbf`);
-adjudicate the 27 `name_similar_split` pairs with special care as the F4 recall-miss set (F10, `frame_qa.py`).
+adjudicate the 51 flagged pairs with special care (27 `name_similar_split` false-split / F4 recall-miss set +
+24 `review_merge` false-merge candidates) — the rest routine, 0 anomalies (F10, `frame_qa.py`).
