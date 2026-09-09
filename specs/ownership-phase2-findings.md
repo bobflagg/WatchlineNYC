@@ -326,6 +326,18 @@ confirms the S1 split stratum is catching *real* legacy over-merges (cross-mecha
 only typos/nonprofits. It also explains the empty panel: the bridge is a *third party* (Bharat) not in the
 pair, so the A↔B records overlap is genuinely nil — the tool is correct; the connection lives in the graph.
 
+**Second blob confirms the class (OG-1073, CUT-0013).** `ERIC MOORE` (13 nodes) / `KARLA BALLARD` (6) sit in
+one legacy `OwnerGroup` OG-1073 — a 37-member / 12-surname common-name blob (Khair, Smith, Graham, Torres,
+Johnson, Ross, …; the "Eric Moore" common-name over-merge from the vetting notes). The Moore↔Ballard path is
+a **registered-llc-only** variant of the same pattern: `ERIC MOORE` —[`registered-llc`]→ `SIDNEI JOHNSON`
+—[`registered-llc`]→ `KARLA BALLARD` (with `splink-fellegi-sunter` holding each name's own nodes together).
+Both bridge hops are co-ownership (relationship) edges through the intermediary Johnson; v2 keeps the identity
+(`splink`) edges and drops the `registered-llc` hops → Moore → `RE-34571`, Ballard → `RE-63177` (separate).
+So it is the *class* of relationship-edge transitivity that legacy over-merges, not any single mechanism
+(OG-110 = registered-llc + deed; OG-1073 = registered-llc ×2). Note the shared conveyance deeds here were
+**pure noise** (30 historical 2,200–2,437-parcel assemblage deeds, Great Eastern / Tidewater) — never the
+linkage; see F9.
+
 **Correlated-pairs scoring caveat (for `score.py`), measured across the 449-pair frame.** OG-110 generates
 **three** pairs — CUT-0010 (Laszlo–Morgenstern), CUT-0011 (Laszlo–Fruchthandler), CUT-0012
 (Morgenstern–Fruchthandler, linked by a $141.5M bulk co-investment deed) — but it is not special. Counting
@@ -340,6 +352,27 @@ level (resample the 79 groups, not the 109 pairs)** — otherwise the 15 triple-
 independent observations instead of 15 clusters, shrinking S1 variance artificially; **S2 may resample at the
 pair level**. It also argues for reporting S1 per split-group (79 rows), not pooled over 109 pairs.
 
+## F9 — The blinded review panel must MIRROR the pipeline's deed exclusions, or it over-signals
+
+The standalone owner-review panel computes its own records overlay (owner/officer/address/deed) directly from
+justfixwow — it has no access to the KG's edge logic. So it can **display as "signal" exactly the records the
+pipeline already excludes**. CUT-0013 is the clean example: Moore↔Ballard "share" **~30 conveyance deeds**,
+*all* 1916–1924 historical land assemblages ($0, 2,200–2,437 parcels each, Great Eastern Waterfront /
+Tidewater). The pipeline's `deed_edges.py` caps co-conveyance at **2–25 parcels**, so none of these ever
+created a `CONNECTED_BY_DEED` edge — but the panel rendered them as **substantive** shared deeds (the grantees
+aren't financiers, and the panel had no parcel-count signal), over-signaling SAME on pure noise.
+
+**Fix (owner-review `7972dbf`):** fetch `n_parcels` per deed and discount any deed over `MEGA_PARCEL_MAX = 25`
+as bulk/assemblage — the panel now mirrors the pipeline's own cap. This is the second instance of the same
+class as the F6 **negative result on count-based address flags**: a blinded standalone tool must not
+*re-derive* KG-based judgments (owner-group resolution), but it **must replicate the pipeline's deterministic
+exclusions** (2–25 parcel deed cap; institutional/financier grantees; aggregator-address mask where a global
+degree is available). **Parity principle:** any deterministic filter the pipeline applies before forming an
+edge should be applied by the panel before showing that record as a signal — otherwise the panel and the
+system disagree about what counts, and the reviewer is handed noise the system already ignored. Not a cutover
+blocker (the pipeline was always correct; only the panel over-showed), but worth a parity pass over the other
+edge builders before the frame is adjudicated at scale.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
@@ -350,4 +383,5 @@ results); curated audit (Kadden); size/decide the `registered-llc-id` DOS-entity
 adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit/HDFC/institutional
 owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker); add
 an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring;
-cluster-bootstrap the S1 stratum at the split-group level, not the pair level (F8), before scoring.
+cluster-bootstrap the S1 stratum at the split-group level, not the pair level (F8), before scoring; parity pass
+so the review panel mirrors the pipeline's deterministic edge exclusions (F9, mega-deed cap done, `7972dbf`).
