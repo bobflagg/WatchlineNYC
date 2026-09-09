@@ -373,6 +373,39 @@ system disagree about what counts, and the reviewer is handed noise the system a
 blocker (the pipeline was always correct; only the panel over-showed), but worth a parity pass over the other
 edge builders before the frame is adjudicated at scale.
 
+## F10 — Frame-QA triage: the whole frame characterized; 27 pairs need real judgment, 0 anomalies
+
+Built a **lead-facing** triage (`eval/frame_qa.py`, 9 hermetic tests) that classifies every one of the 449
+pairs from `cutover_key.jsonl` + `review_queue.jsonl` + the graph — automating the OG-110/OG-1073 traces done
+by hand. **Blinding boundary:** it derives from v2's own decision, so it is WatchlineNYC-side and emits
+`eval_out/cutover/frame_qa.jsonl` — it must **never** be imported into owner-review or consulted while
+adjudicating (that would make the gate circular; the artifact is not committed for the same reason). Live run:
+
+| bucket | n | reading |
+|---|---|---|
+| `name_similar_split` | **27** | S1 splits of same/typo-surname nodes — the only pairs needing careful judgment |
+| `routine_blob_split` | 82 | S1 dissimilar-surname transitive/relationship splits — expected DIFFERENT |
+| `routine_merge` | 340 | S2 surname-consistent identity merges — expected SAME |
+| `RED_FLAG_*` | **0** | no invariant breach anywhere in the frame |
+
+Two results worth keeping:
+- **0 red flags** extends the one-shot structural invariant test (`verify_membership_identity_only`) to a
+  **per-pair check across the whole frame**: no v2 entity in any of the 449 pairs is held together by a
+  non-identity edge, and no uncurated entity spans surnames. Strong standing confirmation of the Option-B
+  invariant on the actual eval population.
+- **The 27 `name_similar_split` pairs are the concrete F4 sizing set** — the split decisions that *might* be
+  same-owner recall misses (typos like Hirschfield/Hirscfield [CUT-0007], Wurtzberger/Wurzberger [0008],
+  Valiotis [0022], Manocherian [0100]; identical-name splits the common-name veto produced — CUT-0043/0079/
+  0096/0099/0106; and same-surname/different-first-name family cases — Zachariadis [0004], Franciosa [0045]).
+  Each is either a real recall miss (→ prioritize `registered-llc-id`, F4) or a correct split of distinct
+  same-surname people (→ credits the first-name/common-name veto). Adjudicating **these 27 blind** is where
+  the real signal is; the other 422 are routine.
+
+*A methodological note the tool also corrected in-flight:* the first classifier over-flagged 25 merges on
+`registered-llc` edges that merely **co-exist** with the identity edges (the pipeline writes all methods as
+`CONNECTED_BY_SPLINK`); the true canary is an entity with **no identity edge at all**. Lesson mirrors F6/F9:
+edge *presence* ≠ edge *dependence* — check identity-connectivity, not method membership.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
@@ -384,4 +417,5 @@ adjudicated (F4); add an `institutional_dominated` projection flag for nonprofit
 owners (F5, not a blocker); measure/mask aggregator *officers* in node construction (F6, not a blocker); add
 an agent/exclude disposition to the adjudication frame, orthogonal to the identity label (F7), before scoring;
 cluster-bootstrap the S1 stratum at the split-group level, not the pair level (F8), before scoring; parity pass
-so the review panel mirrors the pipeline's deterministic edge exclusions (F9, mega-deed cap done, `7972dbf`).
+so the review panel mirrors the pipeline's deterministic edge exclusions (F9, mega-deed cap done, `7972dbf`);
+adjudicate the 27 `name_similar_split` pairs with special care as the F4 recall-miss set (F10, `frame_qa.py`).
