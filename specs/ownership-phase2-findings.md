@@ -420,6 +420,39 @@ routine and 0 are anomalies. Three results worth keeping:
 `CONNECTED_BY_SPLINK`); the true canary is an entity with **no identity edge at all**. Lesson mirrors F6/F9:
 edge *presence* ≠ edge *dependence* — check identity-connectivity, not method membership.
 
+## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
+
+Surfaced adjudicating **CUT-0028**: two person-named v2 entities — CATHERINE YU (33 bldgs) ↔ JAMES
+HEFELFINGER (11) — whose *only* overlap was **HOMES FOR THE HOMELESS INSTITUTE, INC.** as shared
+owner-of-record on one adjacent-lot building each (523 / 521 West 49th St), bridged by 2013 `$10` HDFC→HTHI
+deeds. The panel's shared owner/principal line read "PLUTO owner, owner of record" with **no indication of
+which deed made HTHI current, or when** — so confirming currency meant re-reading the ACRIS chain by hand.
+
+**The hazard that bit the hand-check.** ACRIS legacy `FT_` deeds carry `docdate = NULL` with only
+`recordedfiled` set. A naive `ORDER BY docdate` (NULLs sorted to one end) mis-ranks them. Re-deriving the
+chain, I sorted by `docdate` and read the null-dated **1968–1980** FT_ deeds (Domb/Amorgos/Farhadian…) as
+*post-2013* conveyances, and wrongly called HTHI a **stale/superseded** owner with divergent current owners.
+The true chain is `1968–1980 private → 1982 City → 1992 HDFC → 2013 HTHI ($10, current)`. Note `deeds.py`
+already orders `COALESCE(docdate, recordedfiled) DESC NULLS LAST` — **the panel's own latest-deed selection
+was correct; the by-hand recheck was not.** The verdict is still **DIFFERENT**, but on the correct grounds:
+HTHI is a *real, current* owner (F5 — kept substantive, not noise) that covers only **1/33 and 1/11** with no
+shared operator/agent/address — **incidental minority co-ownership** (the BAANI / CUT-0015 pattern), not
+staleness. Two entities each containing one building a third party owns are not thereby the same owner.
+
+**The gap and the fix (owner-review `e6d5e8c`).** The panel left *currency* implicit and did not reconcile
+PLUTO ownername against the latest deed grantee (the CLAUDE.md "recorded owner vs apparent controller —
+surface the disagreement" principle). `fingerprint.py` now records `owner_deed_by_norm` — the most-recent deed
+backing each owner-of-record claim, ranked by a **null-safe key (`_dkey`) so an undated `FT_` deed can never
+outrank a dated one** — and `overlap()` attaches per-side `a_owner_deed`/`b_owner_deed` (date + amount) and
+`a_pluto_only`/`b_pluto_only`. The panel renders **"owner of record · current 2013-07-01 $10"** inline and an
+amber **"PLUTO only — not confirmed by deed"** caveat when a recorded owner has no deed backing (silent when,
+as for HTHI, the deed confirms it — no false alarm). +2 hermetic tests (19/19).
+
+**Lesson (mirrors F9's parity principle, applied to *currency* not *exclusions*):** make the deed that backs
+an ownership claim legible *on the panel*, so a reviewer trusts the panel's correct latest-deed logic instead
+of re-deriving it by hand and tripping over the null-`docdate` hazard. Additive and blinding-safe — no label,
+score, or stratum; still pure over the same primary records. Not a cutover blocker.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
