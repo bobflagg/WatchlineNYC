@@ -399,8 +399,15 @@ routine and 0 are anomalies. Three results worth keeping:
   same-owner recall misses (typos like Hirschfield/Hirscfield [CUT-0007], Wurtzberger/Wurzberger [0008],
   Valiotis [0022], Manocherian [0100]; identical-name splits the common-name veto produced — CUT-0043/0079/
   0096/0099/0106; and same-surname/different-first-name family cases — Zachariadis [0004], Franciosa [0045]).
-  Each is either a real recall miss (→ prioritize `registered-llc-id`, F4) or a correct split of distinct
-  same-surname people (→ credits the first-name/common-name veto).
+  Each is either a real recall miss or a correct split of distinct same-surname people (→ credits the
+  first-name/common-name veto). **The recall misses split by *mechanism*, and the fix differs:** a **typo
+  miss** (same person, mis-spelled name) is a resolver/blocking-tuning fix, *not* the `registered-llc-id`
+  join; a **same-legal-entity miss** (differently-named parties, one owning corp) is the F4 DOS-id case. Size
+  them separately. **Adjudicated tally (running):** confirmed same-owner **typo recall misses** — CUT-0022
+  `EFSTATHIOS`/`EFSTAHIOS VALIOTIS` (a 2-bldg fragment split off the 64-bldg Alma Realty node; same office
+  31-10 37th Ave, agent Nicholas Conway, ALMA owning LLCs — one person), joining CUT-0008 (Wurtzberger) and
+  CUT-0007 (Hirschfield, but agent-excluded per F6/F7). These size the **typo-recovery** lever, distinct from
+  F4's `registered-llc-id`.
 - **The 24 `review_merge` pairs are the symmetric false-MERGE set** — the FM side the S2 stratum actually
   estimates. Calibration matters here: **common surname is not a discriminator in this population** (median
   surname frequency ≈ 268, so flagging on it hit 221/340 — useless); **member count is** — 257 of 340
