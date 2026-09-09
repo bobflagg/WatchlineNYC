@@ -103,13 +103,15 @@ def classify(f: dict) -> dict:
     if methods and not has_relationship:
         # an all-identity path between two nodes v2 put in *different* entities — shouldn't happen cleanly.
         return {"bucket": "RED_FLAG_SPLIT", "priority": 3, "flags": ["direct-identity-path-but-split"]}
-    # Same-registered-LLC override (partner-split blind spot). A DIRECT registered-llc edge (hops==1) means
-    # both nodes are the SAME owning entity's buildings — differently-named co-principals of one LLC (CUT-0029:
-    # Sackman/Hefelfinger both on 212-214 Realty), a likely SAME false-split. Dissimilar surnames would else
-    # route this to routine_blob_split=expected-DIFFERENT, hiding it. Promote to review. A MULTI-hop path
-    # through registered-llc is transitive over-connection (the OG-110 blob) and correctly stays routine —
-    # the direct-vs-transitive split is the discriminator (see phase-2 findings F10 / eval-protocol §3.1).
-    if f.get("path_hops") == 1 and methods == {"registered-llc"}:
+    # Same-registered-LLC override (partner-split blind spot). A registered-llc edge crossing the A/B entity
+    # boundary DIRECTLY means both entities own buildings registered to the SAME owning LLC — differently-named
+    # co-principals of one LLC (CUT-0029: Sackman/Hefelfinger both on 212-214 Realty), a likely SAME
+    # false-split. Dissimilar surnames would else route this to routine_blob_split=expected-DIFFERENT, hiding
+    # it. Promote to review. Crucially this is a DIRECT cross-boundary edge, NOT the shortestPath hop count
+    # (which runs between arbitrary entity reps and buries the edge one hop in) — and NOT a transitive chain
+    # A-llc-X-llc-B through a THIRD entity (the OG-110 blob), which has no direct A<->B edge and stays routine.
+    # See phase-2 findings F10 / eval-protocol §3.1.
+    if f.get("cross_registered_llc"):
         return {"bucket": "same_llc_split", "priority": 2, "flags": ["same-registered-llc-direct"]}
     return {"bucket": "routine_blob_split", "priority": 0,
             "flags": ["transitive-bridge"] if (f.get("path_hops") or 0) >= 2 else []}
@@ -146,6 +148,17 @@ RETURN rid AS rid, count(DISTINCT l) AS members,
        collect(DISTINCT r.method) AS methods
 """
 
+# Does a registered-llc edge DIRECTLY cross the A/B entity boundary? (both entities own a building registered
+# to the same owning LLC = partner-split, vs. a transitive chain through a third entity = OG-110 blob). This
+# is the real same-owning-entity signal — independent of which reps shortestPath happened to pick.
+_S1_CROSS_LLC = """
+UNWIND $pairs AS pr
+OPTIONAL MATCH (:ResolvedEntityV2 {resolution_id: pr.a})<-[:IN_RESOLVED_ENTITY_V2]-(la:Landlord)
+      -[r:CONNECTED_BY_SPLINK]-(lb:Landlord)-[:IN_RESOLVED_ENTITY_V2]->(:ResolvedEntityV2 {resolution_id: pr.b})
+WHERE r.method = 'registered-llc'
+RETURN pr.pair_id AS pair_id, count(r) > 0 AS cross_llc
+"""
+
 # Population surname frequency (distinct landlord nodes per surname) — for common-name detection.
 _SURNAME_FREQ = """
 MATCH (l:Landlord)
@@ -167,10 +180,11 @@ def read_graph_facts(driver, *, database: str, key_rows: list[dict]) -> dict:
     og = {r["gid"]: r for r in _run(driver, database, _OG_STATS, gids=gids)} if gids else {}
     pairs = [{"pair_id": r["pair_id"], "a": r["a_rid"], "b": r["b_rid"]} for r in s1]
     paths = {r["pair_id"]: r for r in _run(driver, database, _S1_PATHS, pairs=pairs)} if pairs else {}
+    xllc = {r["pair_id"]: r["cross_llc"] for r in _run(driver, database, _S1_CROSS_LLC, pairs=pairs)} if pairs else {}
     rids = sorted({r["resolution_id"] for r in s2 if r.get("resolution_id")})
     prof = {r["rid"]: r for r in _run(driver, database, _S2_PROFILE, rids=rids)} if rids else {}
     freq = {r["surname"]: r["n"] for r in _run(driver, database, _SURNAME_FREQ)} if s2 else {}
-    return {"og": og, "paths": paths, "prof": prof, "surname_freq": freq}
+    return {"og": og, "paths": paths, "cross_llc": xllc, "prof": prof, "surname_freq": freq}
 
 
 def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]:
@@ -187,7 +201,8 @@ def assemble(key_rows: list[dict], queue_by_id: dict, graph: dict) -> list[dict]
             path = graph["paths"].get(k["pair_id"], {})
             f.update({"owner_group_id": k.get("owner_group_id"),
                       "blob_size": og.get("size"), "blob_surnames": og.get("surnames"),
-                      "path_methods": path.get("methods") or [], "path_hops": path.get("hops")})
+                      "path_methods": path.get("methods") or [], "path_hops": path.get("hops"),
+                      "cross_registered_llc": bool(graph.get("cross_llc", {}).get(k["pair_id"]))})
         else:
             p = graph["prof"].get(k.get("resolution_id"), {})
             freq = graph.get("surname_freq", {})

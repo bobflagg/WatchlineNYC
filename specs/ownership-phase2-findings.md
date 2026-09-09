@@ -432,11 +432,21 @@ ground truth: a same-owning-entity check (same registered LLC / grantee on both 
 is blinding-side and never reaches the reviewer — but it means the **27+24 "needs judgment" set understates
 the S1 false-split surface**: partner-split pairs hide inside the 82 routine blobs. Two fixes landed:
 (1) the adjudication-side rule is written into eval-protocol §3.1 (single owning entity on both sides → SAME,
-vs. distinct entities sharing a person → DIFFERENT); (2) `frame_qa.classify` now promotes a split whose two
-nodes are joined by a **direct (1-hop) `registered-llc` edge** into a new `same_llc_split` review bucket
-(priority 2) — the same-owning-entity override — while a *multi-hop* registered-llc path (the transitive
-OG-110 blob) correctly stays routine; the direct-vs-transitive hop count is the discriminator. Re-running
-`frame_qa` against the graph moves the hidden partner-splits out of the 82 routine blobs into `same_llc_split`.
+vs. distinct entities sharing a person → DIFFERENT); (2) `frame_qa.classify` promotes a split whose two
+entities are joined by a **`registered-llc` edge crossing the A/B boundary directly** into a new
+`same_llc_split` review bucket (priority 2) — the same-owning-entity override. The discriminator is a *direct
+cross-boundary* edge (both entities own a building registered to the same LLC), computed by a dedicated query
+(`_S1_CROSS_LLC`) — **NOT** the shortestPath hop count (which runs between arbitrary entity reps and buries
+the edge: CUT-0029's own path is 2 hops, `splink`+`llc`), and **NOT** a transitive chain A–llc–X–llc–B through
+a *third* entity (the OG-110/OG-1073 blobs, which have no direct A↔B edge). **Live re-run** (2026-09-09,
+run `REV2-20260907T230254Z`): 43 pairs moved out of `routine_blob_split` (82→39) into `same_llc_split` —
+CUT-0029 caught; OG-110 (CUT-0011) and OG-1073 (CUT-0013/0014) correctly stayed routine (`cross_llc=False`).
+The S1 needs-judgment surface thus grows **27+24=51 → 94** (8 of the 43 already adjudicated). The bucket is
+deliberately **recall-biased** — it surfaces *every* same-registered-LLC candidate for the §3.1 single-entity
++ coverage + F5-institutional check, so a share adjudicate DIFFERENT (an incidental one-LLC overlap, or an
+institutional/nonprofit shared owner — e.g. the Frank Lang CUT-0001/2/3 and Speliotis/MHANY CUT-0091 pairs).
+That is correct behavior for a candidate surface, not a defect; tightening it (coverage/institutional filters
+needing the shared-LLC name, not yet fetched) is a possible follow-up. Artifact stays uncommitted (blinding).
 
 ## F11 — The panel asserted "owner of record" without currency, inviting a stale/current misread (null-`docdate` hazard)
 
