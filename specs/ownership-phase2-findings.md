@@ -518,6 +518,48 @@ an ownership claim legible *on the panel*, so a reviewer trusts the panel's corr
 of re-deriving it by hand and tripping over the null-`docdate` hazard. Additive and blinding-safe — no label,
 score, or stratum; still pure over the same primary records. Not a cutover blocker.
 
+## F12 — The aggregator-OFFICER exclusion: owner-diversity fails, out-of-state address works (Eric Moore)
+
+Adjudicating `review_merge` surfaced **ERIC MOORE** (RE-34571) as a false merge: 210 NYC buildings under
+one "Eric Moore" HeadOfficer name, all registered from **out-of-state corporate offices** (Temecula CA /
+Dallas TX). This is the F6/F7 class — a shared *signer* (national SFR/REO servicer officer) that Splink
+resolves as a single NYC owner. It needs an exclusion analogous to the aggregator-**address** mask
+(`aggregator_audit.py`), but on the **officer** dimension.
+
+**The obvious discriminator fails.** The aggregator-address mask keys on *owner diversity* (how many distinct
+owners the filers span). Applied to officers it does **not** separate an aggregator from a real owner, because
+a genuine owner running **one shell LLC per building** has the same profile:
+
+| officer | buildings | distinct owner-LLCs | owners/bldg | states |
+|---|---|---|---|---|
+| ERIC MOORE (aggregator) | 210 | 194 | 0.92 | **CA, TX**, NY |
+| MARK SCHARFMAN (real owner) | 136 | 103 | 0.76 | NY |
+| ALBERT DWECK (real owner) | 34 | 31 | 0.91 | NJ, NY |
+
+Scharfman — a verified single owner (CUT-0293, and WoW merges him) — spans 103 owner-of-record LLCs, nearly
+Moore's ratio. **Owner-of-record diversity cannot tell a shell-LLC owner from a signer** — the F6 "mask must
+not fire on shell-LLC owners" caveat, now shown in data.
+
+**The clean discriminator is the out-of-state institutional address.** A person registering NYC buildings *at
+scale* from a far corporate address (not the NY/NJ/CT/PA metro) is a national signer, not a local owner:
+Moore = CA/TX (flag), Scharfman = NY (keep), Dweck = NJ (metro, keep). At **≥20 buildings and ≥60% far-state**
+registrations, only **8 officers** flag population-wide — all clearly institutional, and several tie straight
+back to adjudicated DIFFERENTs: Eric Moore, **Teresa Boudreaux** (the OLIT servicer trust, CUT-0056),
+**Charles Gendron** (CUT-0085), Karla Ballard, Stanley Werb, Jacob Sacks, Matthew Lawrence, Sidnei Johnson.
+No real NYC owner appears — a small, human-verifiable set, exactly like the 73 aggregator addresses.
+
+**Draft (`aggregator_officer_audit.py`, read-only + tests):** a Postgres audit emitting the exclusion
+*candidates* (pure `is_institutional_officer(buildings, pct_far)`; `MIN_BUILDINGS=20`, `FAR_PCT=60`,
+`METRO_STATES=NY/NJ/CT/PA`). It **decides nothing** — like `aggregator_audit`/`curated_owners`, a human
+curates the ~8. **Application (two options, not yet wired):** (a) *pre-resolution mask* — drop the curated
+officers' HPD contacts from `extract()` so their buildings resolve by owner-of-record (registered-llc / deed)
+instead of the shared signer name (the officer analogue of the aggregator-address mask blanking the address);
+or (b) *projection flag* — tag the entity `institutional_officer` and exclude it from accountability targeting
+(additive, mirroring the co-op/condo drop and F5). Recommend (a) with a curated list for precision, since the
+set is tiny and human-verifiable. NB Moore is *mostly* this class; the broader **local** aggregator-officer
+(Hirschfield/McEntee — NY managing agents across many owners) is a distinct sub-problem out-of-state address
+does not catch, and owner-diversity can't safely catch either (Scharfman) — deferred.
+
 ## Materialization + status
 
 Parallel `:ResolvedEntityV2` materialized (run `REV2-20260907T230254Z`): 5,886 entities / 13,756
