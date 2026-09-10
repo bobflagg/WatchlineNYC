@@ -559,10 +559,18 @@ name. Doing it at `extract()` — rather than as a clusterer veto — is essenti
 **reverted**: `feedback_merge` runs after the clusterer with the same un-escalated `(last, first_initial)`
 rarity gate and NO address check, so it re-merged what the veto split — the name-veto approach can't hold a
 common signer. Dropping the identity at extract removes it from the frame `feedback_merge` even sees.)
-Validated: Eric Moore's identities go **13 → 0** in the 145,412-row resolution frame; 39 identities total drop
-across the 8 names — small and targeted; the effect on the live graph awaits the resolution re-run + KG
-rebuild (write-capable). **Review the 8 names before a run of consequence** (the rule is precision-safe — 0
-real owners at ≥20 buildings / ≥60% far-state — but it is a rule, not a curated allowlist). The **local**
+**Out-of-state is necessary but NOT sufficient** (reviewing the 8 caught this): 4 of the 8 are genuine
+out-of-state OWNERS — a Maine LIHTC developer (Gendron), an RI investor (Lawrence), a NH fund "CCM Ventures"
+(Sacks), a NC apartment LLC (Werb) — whose buildings are ordinary owner-LLCs, not servicer-owned. The
+distinguishing signal is the CorporateOwner being a **mortgage servicer / GSE / bank** (Fannie Mae, Selene
+Finance, Shellpoint, Reverse Mortgage Solutions). So the rule (b) requires far-state AND `SERVICER_PCT`
+servicer-owned buildings; it confirms **3** (Moore 59% / Ballard 78% / Boudreaux 100%), sparing the 4 owners
+(and Johnson, out-of-state with servicer corps but <50% servicer-owned — conservatively left out). The
+resolution excludes only the **curated allowlist** (a, `CURATED_SERVICER_OFFICERS = {Moore, Ballard,
+Boudreaux}`) gated by that rule. Validated end-to-end: those 3 drop (Eric Moore **13 → 0** in the 145,412-row
+frame; 24 identities total), the 4 real owners + Johnson are **kept**. Live-graph effect awaits the re-run.
+Lesson (again): the "precision-safe" claim needed the review — out-of-state alone would have wrongly excluded
+4 real owners. The **local**
 aggregator-officer (Hirschfield/McEntee — NY managing agents across many owners) is a distinct sub-problem
 out-of-state address does not catch, and owner-diversity can't safely catch either (Scharfman) — deferred.
 

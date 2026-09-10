@@ -87,11 +87,12 @@ def _resolve(conn, threshold: float):
     against the owner-level gold (P 1.0, 0 cross-surname) for a ~+30pt recall lift."""
     full = ss.extract(conn, "TRUE")
     full = full[full.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
-    # F12 — drop OUT-OF-STATE INSTITUTIONAL officers (national servicer/REO signers, e.g. ERIC MOORE) from
-    # the resolution input entirely, so their buildings resolve by owner-of-record (registered-llc / deed),
-    # NOT by the shared signer name. Done at extract-level, before clustering AND the feedback loop, so the
-    # exclusion is feedback-proof (unlike a clusterer-only veto, which feedback_merge re-merges). See
-    # aggregator_officer_audit / phase-2 findings F12.
+    # F12 — drop CURATED mortgage-servicer / REO signers (out-of-state officers whose buildings are
+    # servicer-owned — Fannie Mae / Selene / Shellpoint / Reverse Mortgage Solutions; e.g. ERIC MOORE) from
+    # the resolution input, so their buildings resolve by owner-of-record (registered-llc / deed), NOT by the
+    # shared signer name. Done at extract-level, before clustering AND the feedback loop, so the exclusion is
+    # feedback-proof (a clusterer-only veto is not — feedback_merge re-merges past it). See
+    # aggregator_officer_audit (curated allowlist gated by the servicer-corp rule) / phase-2 findings F12.
     inst = aoa.excluded_officer_names(conn)
     if inst:
         okey = ((full["first_name"].fillna("").str.strip().str.upper()) + " " +
