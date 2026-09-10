@@ -1,302 +1,864 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WatchlineNYC — NYC Housing Data Coalition</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
-<style>
-  :root{
-    --navy:#0a1629; --navy-2:#12243f; --gold:#c1901f; --gold-soft:#f3e6c4;
-    --ink:#1b2430; --muted:#5c6b80; --faint:#8290a3; --line:#e3e7ee; --bg:#ffffff;
-    --sourced:#1c7c54; --sourced-bg:#e7f4ee; --inferred:#b26a00; --inferred-bg:#fbeede;
-  }
-  .reveal{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-           font-size:30px; color:var(--ink); }
-  .reveal .slides{ text-align:left; }
-  .reveal .slides section{ height:100%; }
-  .reveal h1,.reveal h2,.reveal h3,.reveal h4{ color:var(--navy); font-weight:750; letter-spacing:-.01em; text-transform:none; margin:0 0 .35em; line-height:1.12; }
-  .reveal h1{ font-size:2.15em; } .reveal h2{ font-size:1.5em; } .reveal h3{ font-size:1.02em; color:var(--muted); font-weight:600; }
-  .reveal h2 .em,.reveal h1 .em{ color:var(--gold); font-style:italic; }
-  .reveal p,.reveal li{ line-height:1.4; }
-  .reveal strong{ color:var(--navy); }
-  .reveal em{ color:var(--navy-2); }
-  .reveal a{ color:var(--gold); }
-  .reveal section > *:first-child{ margin-top:0; }
-  .rule{ height:4px; width:74px; background:var(--gold); border:0; margin:.2em 0 .7em; }
-  .lead{ font-size:.9em; color:var(--muted); margin:.1em 0 .8em; }
-  .pull{ border-left:4px solid var(--gold); background:#fbf8f0; padding:.5em .8em; margin:.7em 0; color:var(--navy-2); font-size:.92em; }
-  .src{ color:var(--faint); font-size:.5em; margin-top:1em; display:block; }
-  .kicker{ color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:.12em; font-size:.5em; }
-  /* tables */
-  .reveal table{ border-collapse:collapse; width:100%; font-size:.72em; margin:.4em 0; }
-  .reveal table th{ background:var(--navy); color:#fff; text-align:left; padding:.45em .6em; font-weight:650; }
-  .reveal table td{ border-bottom:1px solid var(--line); padding:.42em .6em; vertical-align:top; }
-  .reveal table tr:nth-child(even) td{ background:#f7f8fa; }
-  .tag{ display:inline-block; font-size:.82em; font-weight:700; padding:.05em .5em; border-radius:4px; }
-  .tag.s{ color:var(--sourced); background:var(--sourced-bg); }
-  .tag.i{ color:var(--inferred); background:var(--inferred-bg); }
-  /* numbers block (slide 6) */
-  .num{ display:flex; gap:.6em; align-items:baseline; margin:.35em 0; }
-  .num .n{ color:var(--gold); font-weight:800; font-size:1.15em; min-width:1.3em; }
-  .num .t{ font-size:.82em; } .num .t b{ color:var(--navy); }
-  .num .cap{ color:var(--faint); font-size:.7em; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
-  /* masks -> owner visual */
-  .masks-wrap{ display:flex; align-items:center; gap:1.1em; margin:.5em 0 .3em; }
-  .masks{ display:grid; grid-template-columns:repeat(4,1fr); gap:.3em; flex:1; }
-  .masks.small{ grid-template-columns:repeat(3,1fr); }
-  .chip{ background:#f2f4f8; border:1px solid var(--line); color:var(--muted); border-radius:5px;
-         padding:.28em .4em; font-size:.42em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .arrow{ color:var(--gold); font-size:1.6em; font-weight:800; }
-  .owner{ background:var(--navy); color:#fff; border-radius:8px; padding:.7em .9em; text-align:center; min-width:4.6em; }
-  .owner .o-name{ font-weight:800; font-size:.7em; } .owner .o-sub{ color:var(--gold-soft); font-size:.44em; margin-top:.2em; }
-  /* pipeline (slide 4) */
-  .pipe{ display:flex; align-items:stretch; gap:.35em; margin:.6em 0; }
-  .pbox{ flex:1; background:#f7f8fa; border:1px solid var(--line); border-top:4px solid var(--gold); border-radius:7px; padding:.6em .55em; }
-  .pbox .pt{ color:var(--navy); font-weight:750; font-size:.62em; } .pbox .pd{ color:var(--muted); font-size:.5em; margin-top:.25em; line-height:1.25; }
-  .parrow{ align-self:center; color:var(--gold); font-weight:800; font-size:.8em; }
-  .aud{ text-align:center; color:var(--muted); font-size:.6em; margin-top:.2em; }
-  /* two-answer cards (slide 5) */
-  .cards{ display:flex; gap:.7em; margin:.5em 0; }
-  .card{ flex:1; border:1px solid var(--line); border-radius:9px; padding:.7em .8em; }
-  .card.s{ border-top:5px solid var(--sourced); } .card.i{ border-top:5px solid var(--inferred); }
-  .card .cl{ font-size:.55em; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
-  .card.s .cl{ color:var(--sourced); } .card.i .cl{ color:var(--inferred); }
-  .card .cv{ font-size:.95em; font-weight:800; color:var(--navy); margin:.2em 0; }
-  .card .cd{ font-size:.6em; color:var(--muted); line-height:1.3; }
-  /* title */
-  #title{ text-align:center; }
-  #title h1{ font-size:2.7em; margin-bottom:.05em; }
-  #title .tag-line{ color:var(--muted); font-size:1.0em; font-weight:500; margin:.1em 0 .8em; }
-  #title .who{ color:var(--navy); font-size:.8em; font-weight:700; margin-top:1.1em; }
-  #title .who small{ display:block; color:var(--gold); font-weight:600; font-size:.8em; font-style:italic; margin-top:.15em; }
-  #title .built{ color:var(--faint); font-size:.6em; margin-top:.5em; }
-  .reveal .slide-number{ background:transparent; color:var(--faint); font-size:14px; }
-  .demo-q{ border-left:4px solid var(--gold); padding:.15em .7em; margin:.55em 0; }
-  .demo-q .q{ color:var(--navy); font-weight:750; font-size:.82em; }
-  .demo-q .a{ color:var(--muted); font-size:.62em; line-height:1.35; margin-top:.15em; }
-  .demo-q .conf{ color:var(--gold); font-weight:700; font-size:.55em; text-transform:uppercase; letter-spacing:.06em; }
-  ul.tight{ margin:.3em 0; } ul.tight li{ margin:.28em 0; font-size:.82em; }
-  .foot-note{ color:var(--faint); font-size:.55em; margin-top:.6em; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WatchlineNYC — NYC Housing Data Coalition</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css">
+  <style>
+    :root {
+      --navy: #0a1629;
+      --navy-2: #12243f;
+      --gold: #c1901f;
+      --gold-soft: #f3e6c4;
+      --ink: #1b2430;
+      --muted: #5c6b80;
+      --faint: #8290a3;
+      --line: #e3e7ee;
+      --bg: #ffffff;
+      --sourced: #1c7c54;
+      --sourced-bg: #e7f4ee;
+      --inferred: #b26a00;
+      --inferred-bg: #fbeede;
+    }
+
+    .reveal {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 30px;
+      color: var(--ink);
+    }
+
+    .reveal .slides {
+      text-align: left;
+    }
+
+    .reveal .slides section {
+      height: 100%;
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3,
+    .reveal h4 {
+      color: var(--navy);
+      font-weight: 750;
+      letter-spacing: -.01em;
+      text-transform: none;
+      margin: 0 0 .35em;
+      line-height: 1.12;
+    }
+
+    .reveal h1 {
+      font-size: 2.15em;
+    }
+
+    .reveal h2 {
+      font-size: 1.5em;
+    }
+
+    .reveal h3 {
+      font-size: 1.02em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .reveal h2 .em,
+    .reveal h1 .em {
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    .reveal p,
+    .reveal li {
+      line-height: 1.4;
+    }
+
+    .reveal strong {
+      color: var(--navy);
+    }
+
+    .reveal em {
+      color: var(--navy-2);
+    }
+
+    .reveal a {
+      color: var(--gold);
+    }
+
+    .reveal section>*:first-child {
+      margin-top: 0;
+    }
+
+    .rule {
+      height: 4px;
+      width: 74px;
+      background: var(--gold);
+      border: 0;
+      margin: .2em 0 .7em;
+    }
+
+    .lead {
+      font-size: .9em;
+      color: var(--muted);
+      margin: .1em 0 .8em;
+    }
+
+    .pull {
+      border-left: 4px solid var(--gold);
+      background: #fbf8f0;
+      padding: .5em .8em;
+      margin: .7em 0;
+      color: var(--navy-2);
+      font-size: .92em;
+    }
+
+    .src {
+      color: var(--faint);
+      font-size: .5em;
+      margin-top: 1em;
+      display: block;
+    }
+
+    .kicker {
+      color: var(--gold);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .5em;
+    }
+
+    /* tables */
+    .reveal table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: .72em;
+      margin: .4em 0;
+    }
+
+    .reveal table th {
+      background: var(--navy);
+      color: #fff;
+      text-align: left;
+      padding: .45em .6em;
+      font-weight: 650;
+    }
+
+    .reveal table td {
+      border-bottom: 1px solid var(--line);
+      padding: .42em .6em;
+      vertical-align: top;
+    }
+
+    .reveal table tr:nth-child(even) td {
+      background: #f7f8fa;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: .82em;
+      font-weight: 700;
+      padding: .05em .5em;
+      border-radius: 4px;
+    }
+
+    .tag.s {
+      color: var(--sourced);
+      background: var(--sourced-bg);
+    }
+
+    .tag.i {
+      color: var(--inferred);
+      background: var(--inferred-bg);
+    }
+
+    /* numbers block (slide 6) */
+    .num {
+      display: flex;
+      gap: .6em;
+      align-items: baseline;
+      margin: .35em 0;
+    }
+
+    .num .n {
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 1.15em;
+      min-width: 1.3em;
+    }
+
+    .num .t {
+      font-size: .82em;
+    }
+
+    .num .t b {
+      color: var(--navy);
+    }
+
+    .num .cap {
+      color: var(--faint);
+      font-size: .7em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* masks -> owner visual */
+    .masks-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1.1em;
+      margin: .5em 0 .3em;
+    }
+
+    .masks {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .3em;
+      flex: 1;
+    }
+
+    .masks.small {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .chip {
+      background: #f2f4f8;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 5px;
+      padding: .28em .4em;
+      font-size: .42em;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .arrow {
+      color: var(--gold);
+      font-size: 1.6em;
+      font-weight: 800;
+    }
+
+    .owner {
+      background: var(--navy);
+      color: #fff;
+      border-radius: 8px;
+      padding: .7em .9em;
+      text-align: center;
+      min-width: 4.6em;
+    }
+
+    .owner .o-name {
+      font-weight: 800;
+      font-size: .7em;
+    }
+
+    .owner .o-sub {
+      color: var(--gold-soft);
+      font-size: .44em;
+      margin-top: .2em;
+    }
+
+    /* pipeline (slide 4) */
+    .pipe {
+      display: flex;
+      align-items: stretch;
+      gap: .35em;
+      margin: .6em 0;
+    }
+
+    .pbox {
+      flex: 1;
+      background: #f7f8fa;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--gold);
+      border-radius: 7px;
+      padding: .6em .55em;
+    }
+
+    .pbox .pt {
+      color: var(--navy);
+      font-weight: 750;
+      font-size: .62em;
+    }
+
+    .pbox .pd {
+      color: var(--muted);
+      font-size: .5em;
+      margin-top: .25em;
+      line-height: 1.25;
+    }
+
+    .parrow {
+      align-self: center;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: .8em;
+    }
+
+    .aud {
+      text-align: center;
+      color: var(--muted);
+      font-size: .6em;
+      margin-top: .2em;
+    }
+
+    /* two-answer cards (slide 5) */
+    .cards {
+      display: flex;
+      gap: .7em;
+      margin: .5em 0;
+    }
+
+    .card {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: .7em .8em;
+    }
+
+    .card.s {
+      border-top: 5px solid var(--sourced);
+    }
+
+    .card.i {
+      border-top: 5px solid var(--inferred);
+    }
+
+    .card .cl {
+      font-size: .55em;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .card.s .cl {
+      color: var(--sourced);
+    }
+
+    .card.i .cl {
+      color: var(--inferred);
+    }
+
+    .card .cv {
+      font-size: .95em;
+      font-weight: 800;
+      color: var(--navy);
+      margin: .2em 0;
+    }
+
+    .card .cd {
+      font-size: .6em;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+
+    /* title */
+    #title {
+      text-align: center;
+    }
+
+    #title h1 {
+      font-size: 2.7em;
+      margin-bottom: .05em;
+    }
+
+    #title .tag-line {
+      color: var(--muted);
+      font-size: 1.0em;
+      font-weight: 500;
+      margin: .1em 0 .8em;
+    }
+
+    #title .who {
+      color: var(--navy);
+      font-size: .8em;
+      font-weight: 700;
+      margin-top: 1.1em;
+    }
+
+    #title .who small {
+      display: block;
+      color: var(--gold);
+      font-weight: 600;
+      font-size: .8em;
+      font-style: italic;
+      margin-top: .15em;
+    }
+
+    #title .built {
+      color: var(--faint);
+      font-size: .6em;
+      margin-top: .5em;
+    }
+
+    .reveal .slide-number {
+      background: transparent;
+      color: var(--faint);
+      font-size: 14px;
+    }
+
+    .demo-q {
+      border-left: 4px solid var(--gold);
+      padding: .15em .7em;
+      margin: .55em 0;
+    }
+
+    .demo-q .q {
+      color: var(--navy);
+      font-weight: 750;
+      font-size: .82em;
+    }
+
+    .demo-q .a {
+      color: var(--muted);
+      font-size: .62em;
+      line-height: 1.35;
+      margin-top: .15em;
+    }
+
+    .demo-q .conf {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: .55em;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    ul.tight {
+      margin: .3em 0;
+    }
+
+    ul.tight li {
+      margin: .28em 0;
+      font-size: .82em;
+    }
+
+    .foot-note {
+      color: var(--faint);
+      font-size: .55em;
+      margin-top: .6em;
+    }
+  </style>
 </head>
+
 <body>
-<div class="reveal"><div class="slides">
+  <div class="reveal">
+    <div class="slides">
 
-<!-- 1 — TITLE -->
-<section id="title" data-auto-animate>
-  <h1>WatchlineNYC</h1>
-  <div class="tag-line">Making NYC landlord ownership legible —<br>conversationally, with its uncertainty labeled</div>
-  <hr class="rule" style="margin-left:auto;margin-right:auto">
-  <div class="who">Robert Flagg — mathematician turned trustworthy-AI engineer
-    <small>I make AI systems trustworthy by grounding them in knowledge graphs</small></div>
-  <div class="built">An independent sabbatical project, built on JustFix's <strong>Who Owns What</strong></div>
-  <aside class="notes">(~25s) I'm here as an independent — this is a sabbatical project, and it stands on JustFix's Who Owns What, which most of you know. My background is mathematics; these days I build trustworthy AI for a living, and the approach I work in is grounding models in knowledge graphs — so the system answers from a structured, sourced record instead of free-associating. This project is me pointing that at NYC housing ownership. I'm new to the housing-data world, and I'm here looking for feedback and help on the project. [Nav: arrows to move · S for speaker notes · F fullscreen]</aside>
-</section>
+      <!-- 1 — TITLE -->
+      <section id="title" data-auto-animate>
+        <h1>WatchlineNYC</h1>
+        <div class="tag-line">Making NYC landlord ownership visible <br>conversationally, with its uncertainty labeled
+        </div>
+        <hr class="rule" style="margin-left:auto;margin-right:auto">
+        <div class="who">Robert Flagg — mathematician turned trustworthy-AI engineer
+          <small>I make AI systems trustworthy by grounding them in knowledge graphs</small>
+        </div>
+        <div class="built">An independent sabbatical project, built on JustFix's <strong>Who Owns What</strong></div>
+        <aside class="notes">(~25s) I'm here as an independent — this is a sabbatical project, and it stands on
+          JustFix's Who Owns What, which most of you know. My background is mathematics; these days I build trustworthy
+          AI for a living, and the approach I work in is grounding models in knowledge graphs — so the system answers
+          from a structured, sourced record instead of free-associating. This project is me pointing that at NYC housing
+          ownership. I'm new to the housing-data world, and I'm here looking for feedback and help on the project. [Nav:
+          arrows to move · S for speaker notes · F fullscreen]</aside>
+      </section>
 
-<!-- 2 — THE PROBLEM -->
-<section>
-  <span class="kicker">The problem</span>
-  <h2>One landlord, many masks</h2>
-  <hr class="rule">
-  <div class="masks-wrap">
-    <div class="masks">
-      <div class="chip">102 E 7TH ST LLC</div><div class="chip">11 AVENUE B LLC</div><div class="chip">124 RIDGE LLC</div><div class="chip">134 ORCHARD LLC</div>
-      <div class="chip">17 GAY LLC</div><div class="chip">151 RIVINGTON HLDGS</div><div class="chip">159-161 STANTON LLC</div><div class="chip">17 W 103RD LLC</div>
-      <div class="chip">145 E 26 LLC</div><div class="chip">1590 LEXINGTON LLC</div><div class="chip">124 RIDGE LLC</div><div class="chip">…107 names</div>
+      <!-- 2 — THE PROBLEM -->
+      <section>
+        <span class="kicker">The problem</span>
+        <h2>One landlord, many masks</h2>
+        <hr class="rule">
+        <div class="masks-wrap">
+          <div class="masks">
+            <div class="chip">102 E 7TH ST LLC</div>
+            <div class="chip">11 AVENUE B LLC</div>
+            <div class="chip">124 RIDGE LLC</div>
+            <div class="chip">134 ORCHARD LLC</div>
+            <div class="chip">17 GAY LLC</div>
+            <div class="chip">151 RIVINGTON HLDGS</div>
+            <div class="chip">159-161 STANTON LLC</div>
+            <div class="chip">17 W 103RD LLC</div>
+            <div class="chip">145 E 26 LLC</div>
+            <div class="chip">1590 LEXINGTON LLC</div>
+            <div class="chip">124 RIDGE LLC</div>
+            <div class="chip">…107 names</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="owner">
+            <div class="o-name">STEVEN CROMAN</div>
+            <div class="o-sub">one operator</div>
+          </div>
+        </div>
+        <p style="font-size:.9em"><strong>118 buildings. 107 different LLC names.</strong> Almost one shell per building
+          — each named for its own address, none of them "Croman."</p>
+        <div class="pull">A tenant can't find their real landlord. A journalist can't map the empire. An agency can't
+          add up the violations.</div>
+        <span class="src">Source: Who Owns What's own "Steven Croman" portfolio (#87254); LLC names from NYC PLUTO
+          owner-of-record. AG case: public record.</span>
+        <aside class="notes">(~45s) NYC ownership is fragmented by design. Each building sits in its own single-purpose
+          LLC, usually named after the address — so on paper there's no "landlord," just a scatter of shells. Take
+          Steven Croman: a landlord the AG investigated, who pleaded guilty and served jail time — about as public and
+          documented as a bad actor gets. In Who Owns What's OWN Croman portfolio, those 118 buildings are held under
+          107 different corporate names — nothing in that list says "Croman." Tools like Who Owns What already
+          re-assemble a lot of this — that's what I build on. But if it takes work to see it for a FAMOUS operator, the
+          quiet ones are effectively invisible — to tenants, reporters, and the agencies meant to hold them accountable.
+        </aside>
+      </section>
+
+      <!-- 3 — THESIS -->
+      <section>
+        <span class="kicker">The thesis</span>
+        <h2>The provenance bar is higher when the output is a <span class="em">person</span></h2>
+        <hr class="rule">
+        <table>
+          <thead>
+            <tr>
+              <th>When the answer is a <b>statistic</b></th>
+              <th>When the answer is a <b>person</b> — who controls this building</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="fragment">
+              <td>ground truth is <strong>published</strong> — you look it up</td>
+              <td>ground truth is <strong>deliberately hidden</strong> (shell LLCs) — you must <strong>infer</strong> it
+              </td>
+            </tr>
+            <tr class="fragment">
+              <td>a wrong answer is an <strong>inaccuracy</strong></td>
+              <td>a wrong answer is a <strong>false accusation</strong></td>
+            </tr>
+            <tr class="fragment">
+              <td>it's meant to <strong>inform</strong></td>
+              <td>it's meant to be <strong>acted on</strong> — organizing, journalism, enforcement</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pull fragment"><em>"Reasonably incorrect"</em> isn't a tolerable failure mode. Provenance,
+          precision, and <em>"leads, not verdicts"</em> are <strong>preconditions — not polish.</strong></div>
+        <aside class="notes">(~50s) Hold onto those 107 masks — they're the whole point. There's a real difference
+          between a conversational layer over AGGREGATE data and over OWNERSHIP data. If a number's off by a decimal,
+          you get a bad number — bounded, impersonal, correctable. Our unit isn't a statistic; it's a person — who
+          really controls this building. The ground truth isn't published, it's deliberately obscured behind shell LLCs,
+          so we have to INFER it. And the output is meant to be ACTED ON. Put those together and a wrong answer becomes
+          a false accusation about a named individual. So provenance isn't polish here — it's the precondition for
+          pointing an LLM at this data at all. LINE: "If an ownership tool is wrong, you don't get a bad number — you
+          get a false accusation about a real person."</aside>
+      </section>
+
+      <!-- 4 — THE STACK -->
+      <section>
+        <span class="kicker">The stack</span>
+        <h2>How it's built — one look</h2>
+        <h3>Every stage is sourced, or explicitly labeled <em>inferred</em></h3>
+        <hr class="rule">
+        <div class="pipe">
+          <div class="pbox">
+            <div class="pt">Knowledge graph</div>
+            <div class="pd">sourced facts — HPD · ACRIS · DOB · PLUTO</div>
+          </div>
+          <div class="parrow">→</div>
+          <div class="pbox">
+            <div class="pt">Resolution</div>
+            <div class="pd">precision-first record linkage — who is one owner</div>
+          </div>
+          <div class="parrow">→</div>
+          <div class="pbox">
+            <div class="pt">Three layers</div>
+            <div class="pd">management · operational nexus · owner identity</div>
+          </div>
+          <div class="parrow">→</div>
+          <div class="pbox">
+            <div class="pt">Conversational agent</div>
+            <div class="pd">read-only · cites sources · labels certainty</div>
+          </div>
+        </div>
+        <div class="aud">↓ &nbsp; tenant · journalist · agency</div>
+        <div class="pull" style="font-size:.82em">Provenance runs the length of the pipeline — nothing downstream drops
+          the label of what it came from.</div>
+        <aside class="notes">(~35s) One map, then we go deep on the parts that matter. A single knowledge graph of
+          buildings, people, and events from the public record. A resolution step that figures out which messy records
+          are the SAME owner. On top, three separate layers — who MANAGES a building, the operational nexus, and who
+          OWNS it — kept distinct on purpose. And a conversational agent that only ever READS the graph and cites what
+          it found. Carry forward: provenance runs the full length — every stage knows whether it's a sourced fact or an
+          inference.</aside>
+      </section>
+
+      <!-- 5 — RELIABILITY -->
+      <section>
+        <span class="kicker">Credibility anchor #1</span>
+        <h2>A data layer that knows what it knows</h2>
+        <h3>Every element is tagged — directly <span class="tag s">sourced</span> or <span class="tag i">inferred</span>
+          — and every inference carries a caveat</h3>
+        <hr class="rule">
+        <p style="font-size:.85em; margin:.3em 0"><strong>"Who owns 17 Gay Street?"</strong> — two answers, never
+          blurred:</p>
+        <div class="cards">
+          <div class="card s">
+            <div class="cl">Recorded owner · sourced</div>
+            <div class="cv">"17 GAY LLC"</div>
+            <div class="cd">straight from the deed &amp; registration — a fact (but a shell that tells you nothing)
+            </div>
+          </div>
+          <div class="card i">
+            <div class="cl">Apparent controller · inferred</div>
+            <div class="cv">"Steven Croman"</div>
+            <div class="cd">inferred from record linkage — a lead to verify, not a determination</div>
+          </div>
+        </div>
+        <p style="font-size:.8em"> The tool <strong>always returns both, labeled</strong> — and says so when they
+          diverge.</p>
+        <span class="src">Real record: BBL 1005930008 · every derived element carries this tag in the graph
+          itself.</span>
+        <aside class="notes">(~50s) The piece I'd most want you to take away. Underneath is a knowledge graph — but the
+          important part is that every element KNOWS WHAT IT IS: either a directly-sourced fact, or an inference — and
+          if it's an inference, it carries a caveat, automatically, everywhere it's used. Ask "who owns 17 Gay Street?"
+          A naïve tool picks one answer. Ours returns TWO and refuses to blur them. Recorded owner "17 Gay LLC" — a
+          sourced fact, and a shell that tells you nothing. Apparent controller Steven Croman — an INFERENCE, stamped: a
+          lead to verify, not a legal determination. When the two disagree, it says so. This isn't slideware — it's a
+          hard rule in the code: that question always returns both, labeled.</aside>
+      </section>
+
+      <!-- 6 — RESOLUTION + NUMBERS -->
+      <section>
+        <span class="kicker">The linkage improvement</span>
+        <h2>Precision-first owner resolution</h2>
+        <h3>Probabilistic record linkage that refuses to fuse two different people</h3>
+        <hr class="rule">
+        <p class="lead">Replaces exact/rule matching with probabilistic linkage + precision guards: common-name veto ·
+          aggregator-office &amp; servicer-signer masks · co-op/condo exclusion</p>
+        <div class="num fragment"><span class="n">①</span><span class="t"><b>Precision ≈ 1.0</b> — 0 cross-surname
+            merges on a 105-record gold set → Croman's 107 LLC names resolve to one owner &nbsp; <span
+              class="cap">resolver quality</span></span></div>
+        <div class="num fragment"><span class="n">②</span><span class="t"><b>Divergence — <em>not</em> accuracy</b> — on
+            the <b>39,456 buildings both systems group</b>, they differ both ways: <b>~780</b> of our owner-groups unify
+            what WoW splits · <b>~620</b> WoW portfolios split across ours &nbsp; <span class="cap">scale of the
+              difference</span></span></div>
+        <div class="num fragment"><span class="n">③</span><span class="t"><b>The honest gap</b> — which differences are
+            improvements? A blind head-to-head on ~530 pairs is <b>built, not yet run</b> &nbsp; <span class="cap">the
+              ask →</span></span></div>
+        <span class="src">No "beats WoW" claim: precision is measured; the head-to-head is not. &nbsp; Reproduce ②:
+          <code>compare_kg --divergence</code></span>
+        <aside class="notes">(~60s) Three numbers at three confidence levels — being clear about which is which is the
+          whole ethos. ONE, precision: on a hand-labeled gold set, when it links two records as the same owner it's
+          essentially never wrong — zero cross-surname merges. Croman's 107 LLC names collapse to one. TWO — careful
+          here — is DIVERGENCE, not accuracy. On ~39,000 buildings where both make a call, they disagree both
+          directions: ~780 of my owner-groups pull together buildings WoW splits, ~620 WoW portfolios split across mine.
+          That's how far apart, and which way — NOT a claim about who's right; there's no ground truth in that number.
+          Which is THREE: deciding who's right needs a blind, adjudicated head-to-head. Built — ~530 pairs — but not
+          run. That's the honest gap, and the help I'll ask for at the end. CAVEATS if pushed: divergence≠accuracy;
+          co-op/condo are out of the universe so the splits aren't artifacts; both drivers of the split are real but
+          unjudged.</aside>
+      </section>
+
+      <!-- 7 — NOT EVERY PORTFOLIO IS OWNERSHIP -->
+      <section>
+        <span class="kicker">Credibility anchor #2</span>
+        <h2>Not every "portfolio" is ownership</h2>
+        <h3>Shared-address linkage answers <em>"who operates through this office"</em> — not <em>"who owns this"</em>
+        </h3>
+        <hr class="rule">
+        <p style="font-size:.82em">Linking landlords by shared business address is powerful — often it's the
+          <em>only</em> thread through a shell operation. But it can't tell an <strong>owner's</strong> office from a
+          <strong>managing agent's</strong>.
+        </p>
+        <div class="pull" style="font-size:.95em"><strong>138 different owners register from one office at 770 Lexington
+            Ave</strong> (453 buildings).<br>Read "same office" as "same owner" and you fuse them into one empire that
+          doesn't exist.</div>
+        <p style="font-size:.78em">Same trap: <strong>co-op &amp; condo boards</strong> — many unit owners, no single
+          landlord.</p>
+        <p style="font-size:.82em; color:var(--navy-2)">The fix isn't to throw away the address signal — it's to stop
+          asking it two questions at once. <strong>→ three layers</strong></p>
+        <span class="src">Source: raw HPD registrations, 770 Lexington Ave. Inherent to address-linkage — WoW uses the
+          signal deliberately and flags it on the site.</span>
+        <aside class="notes">(~50s) One design decision I want to explain. Linking landlords by shared business address
+          is powerful — often the only thread tying a shell operation together, and Who Owns What uses it deliberately
+          and to good effect. But a shared address can't tell you whether it's the OWNER's office or a MANAGING AGENT's.
+          Raw public record: 138 different owners register from one office at 770 Lexington — 453 buildings. Read "same
+          office" as "same owner" and those 138 collapse into an empire that doesn't exist. Co-op and condo boards do it
+          from the other direction. None of this is a discovery — it's inherent to address linkage, well understood. The
+          question is what you DO about it. Not throw away the signal — it's valuable — but stop making one signal
+          answer two questions.</aside>
+      </section>
+
+      <!-- 8 — THREE LAYERS -->
+      <section>
+        <span class="kicker">The architecture</span>
+        <h2>Three layers, not one</h2>
+        <h3>A single "portfolio" hides three different questions — so we ask them separately</h3>
+        <hr class="rule">
+        <table>
+          <thead>
+            <tr>
+              <th>The question</th>
+              <th>Layer</th>
+              <th>Signal</th>
+              <th>Reliability</th>
+              <th>Live scale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Who <b>manages</b> it?</td>
+              <td>management</td>
+              <td>self-disclosed HPD agent</td>
+              <td><span class="tag s">mostly sourced</span></td>
+              <td>~28,500 managers · ~67,000 bldgs</td>
+            </tr>
+            <tr>
+              <td>What network does it <b>run through</b>?</td>
+              <td>operational nexus</td>
+              <td>shared office / agent / shell <em>(WoW's strength)</em></td>
+              <td><span class="tag i">inferred</span></td>
+              <td>~15,800 multi-building nexuses</td>
+            </tr>
+            <tr>
+              <td>Who actually <b>owns</b> it?</td>
+              <td>owner identity</td>
+              <td>precision-first record linkage</td>
+              <td><span class="tag i">inferred</span></td>
+              <td>~6,500 owner-groups</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pull" style="font-size:.85em">770 Lexington's 138 owners share an <strong>operational nexus</strong>
+          — real and useful. They are <strong>not one owner.</strong> Separate layers keep the signal <em>without</em>
+          the false empire.</div>
+        <span class="src">Owner-identity is inferred (Type II); its accuracy vs. WoW is not yet adjudicated → the blind
+          eval (slide 11).</span>
+        <aside class="notes">(~55s) The architectural idea. Collapse everything into one "portfolio" and you're
+          answering three different questions at once — with different answers and different reliability. Who MANAGES is
+          mostly self-disclosed — close to a sourced fact. What operational NETWORK it runs through — WoW's real
+          strength, an inference, deliberately recall-biased. Who OWNS it — a third question, answered precision-first
+          and separately. Back to 770 Lexington: those 138 owners genuinely share an operational nexus — true and
+          useful, we keep it. But they're NOT one owner, and now nothing in the system says they are, because "shares an
+          office" and "same owner" live in different layers. You don't trade recall for precision — you keep both,
+          labeled. Honest note: the owner-identity layer runs — ~6,500 groups — but whether it's MORE ACCURATE than WoW
+          where they disagree is what I haven't adjudicated yet.</aside>
+      </section>
+
+      <!-- 9 — CONVERSATIONAL BY DESIGN -->
+      <section>
+        <span class="kicker">Setting up the demo</span>
+        <h2>Conversational — by design, not free-form</h2>
+        <h3>The agent <em>orchestrates queries</em>; it doesn't reason about people</h3>
+        <hr class="rule">
+        <p class="lead">Four guarantees, enforced in code — not asked of the model:</p>
+        <ul class="tight">
+          <li><strong>Asks the graph, doesn't answer from itself</strong> — plain English → parameterized,
+            <em>read-only</em> queries. Writes/admin refused, even for the deep tier.
+          </li>
+          <li><strong>Reports only what a query returned</strong> — no free-form claims; every inferred element carries
+            its caveat, automatically.</li>
+          <li><strong>"Who owns this?" returns both</strong> — recorded owner <em>and</em> apparent controller, labeled
+            — and flags disagreement.</li>
+          <li><strong>Capability is gated structurally</strong> — deep investigation only for <em>vetted</em> users;
+            persona sets tone, never access; fail-closed.</li>
+        </ul>
+        <div class="pull" style="font-size:.82em">The answer to the thesis: you can't manufacture false certainty about
+          a person if you only ever report what a <em>sourced, labeled query</em> returned.</div>
+        <span class="src">Gating lives in the tool-visibility layer, not a prompt — because the records themselves (raw
+          violation text, ACRIS JSON) are a prompt-injection surface.</span>
+        <aside class="notes">(~55s) Before I show you this live, I want to be precise about what it is and isn't. The
+          agent is an ORCHESTRATOR, not a reasoner. It turns your plain-English question into a parameterized, read-only
+          query — it does not free-associate an answer. It can only READ; writes and admin are refused at a guard, even
+          for the deep mode. It reports only what a query returned, with caveats attached. And gating is structural:
+          deep investigation only for vetted users — a self-declared "journalist" doesn't get it; persona only shapes
+          tone. Crucially, that's enforced in the code that decides which tools the model can even SEE — not by
+          instructing the model in a prompt — because the records contain free text, a place an adversary could smuggle
+          instructions. You don't defend that with a polite system prompt. Orchestrator, not reasoner. Now let me show
+          you.</aside>
+      </section>
+
+      <!-- 10 — LIVE DEMO -->
+      <section>
+        <span class="kicker">Live demo · pinned to a public landlord</span>
+        <h2>Ask it about Steven Croman</h2>
+        <h3>Watch it label every layer — sourced vs inferred — and refuse to overclaim</h3>
+        <hr class="rule">
+        <div class="demo-q">
+          <div class="q">① "Who owns 17 Gay Street?" <span class="conf">→ slides 5·6·8</span></div>
+          <div class="a">Three labeled layers, one answer: <b>17 GAY LLC</b> (sourced) · <b>Steven Croman</b> (inferred)
+            · <b>unified owner — 12 fragments, 127 buildings</b> (inferred, a lead not title).</div>
+        </div>
+        <div class="demo-q">
+          <div class="q">② "And who manages it — same as who owns it?" <span class="conf">→ slides 7·8</span></div>
+          <div class="a"><b>Centennial Properties NY (114 buildings)</b> — "a manager is not an owner." Management ≠
+            ownership.</div>
+        </div>
+        <div class="demo-q">
+          <div class="q">③ "So can I report he legally owns all 127?" <span class="conf">→ slides 3·9</span></div>
+          <div class="a"><b>It declines</b> — "not a legal determination… only a title search or court finding could
+            support that." Leads, not verdicts.</div>
+        </div>
+        <span class="src">If projection fails: pre-recorded capture + screenshots as backup. Data: BBL 1005930008 →
+          owner group OG-105462 (12→127) · manager Centennial (114).</span>
+        <aside class="notes">Beats are agent-verified. ① one call → three labeled layers. "One question — the LLC, the
+          person, AND the 127-building owner those shells roll up into, each labeled by how much to trust it." ②
+          building_manager + ownership → Centennial (114) vs the ownership layers — "it won't confuse 'runs the
+          building' with 'owns the building' — the trap that turns a management office into a fake empire." ③ it
+          declines to say "legally owns" — "that's the whole ethos, live. It turns an inference into a lead, never an
+          accusation." SIZING: ① and ② can be one question ("who owns and who manages 17 Gay St?"). SAFETY: pinned to
+          Croman; if anything about a private individual surfaces, don't dwell — steer back.</aside>
+      </section>
+
+      <!-- 11 — LEADS NOT VERDICTS / THE ASK -->
+      <section>
+        <span class="kicker">The close</span>
+        <h2>Leads, not verdicts — and what's next</h2>
+        <h3>Inference to point an investigator at a question — never a determination about a person</h3>
+        <hr class="rule">
+        <div class="cards">
+          <div class="card" style="border-top:5px solid var(--navy)">
+            <div class="cl" style="color:var(--navy)">Honestly not done yet</div>
+            <ul class="tight" style="margin-top:.2em">
+              <li>The blind <b>accuracy</b> eval is <b>built, not run</b> — ~530 pairs need adjudication.</li>
+              <li>Validated for <b>precision</b>, not yet <b>recall / who's-right-vs-WoW</b>.</li>
+              <li>A <b>sabbatical prototype</b>, not a shared service.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top:5px solid var(--gold)">
+            <div class="cl" style="color:var(--gold)">What I'm asking this room</div>
+            <ul class="tight" style="margin-top:.2em">
+              <li><b>Help run the blind eval</b> — ground-truth data, adjudication time, or methodology.</li>
+              <li>Some of this may belong <b>upstream in Who Owns What</b>.</li>
+              <li><b>Feedback on the three-layer model.</b></li>
+            </ul>
+          </div>
+        </div>
+        <p style="text-align:center; color:var(--navy); font-weight:750; font-size:1.05em; margin-top:.5em">Thank you —
+          and I'd love to talk. &nbsp;<span style="color:var(--gold)">(Q&amp;A)</span></p>
+        <aside class="notes">(~55s) Let me close where I started. Everything you've seen produces LEADS, not verdicts —
+          a pointer to a question a human should investigate, never a claim that a named person owns something. You
+          watched it refuse to cross that line a minute ago; that refusal is the most important feature in the system.
+          And let me be straight about what I HAVEN'T done — the resolver is precise on a labeled set, and it groups
+          differently from Who Owns What at scale, but I have NOT run the blind, adjudicated head-to-head that tells you
+          who's right where we disagree. It's built; it needs ground truth and hands. This isn't a service you can use
+          yet. So the reason I'm really here: I'd love your help — ground-truth data, adjudication time. Some of this
+          probably belongs back in Who Owns What. And I'd value your read on the three-layer idea. I'm new to this
+          world, the tool is the contribution, and I'm hoping to build the next part WITH people in this room. Thank
+          you.</aside>
+      </section>
+
     </div>
-    <div class="arrow">→</div>
-    <div class="owner"><div class="o-name">STEVEN CROMAN</div><div class="o-sub">one operator</div></div>
   </div>
-  <p style="font-size:.9em"><strong>118 buildings. 107 different LLC names.</strong> Almost one shell per building — each named for its own address, none of them "Croman."</p>
-  <div class="pull">A tenant can't find their real landlord. A journalist can't map the empire. An agency can't add up the violations.</div>
-  <span class="src">Source: Who Owns What's own "Steven Croman" portfolio (#87254); LLC names from NYC PLUTO owner-of-record. AG case: public record.</span>
-  <aside class="notes">(~45s) NYC ownership is fragmented by design. Each building sits in its own single-purpose LLC, usually named after the address — so on paper there's no "landlord," just a scatter of shells. Take Steven Croman: a landlord the AG investigated, who pleaded guilty and served jail time — about as public and documented as a bad actor gets. In Who Owns What's OWN Croman portfolio, those 118 buildings are held under 107 different corporate names — nothing in that list says "Croman." Tools like Who Owns What already re-assemble a lot of this — that's what I build on. But if it takes work to see it for a FAMOUS operator, the quiet ones are effectively invisible — to tenants, reporters, and the agencies meant to hold them accountable.</aside>
-</section>
-
-<!-- 3 — THESIS -->
-<section>
-  <span class="kicker">The thesis</span>
-  <h2>The provenance bar is higher when the output is a <span class="em">person</span></h2>
-  <hr class="rule">
-  <table>
-    <thead><tr><th>When the answer is a <b>statistic</b></th><th>When the answer is a <b>person</b> — who controls this building</th></tr></thead>
-    <tbody>
-      <tr class="fragment"><td>ground truth is <strong>published</strong> — you look it up</td><td>ground truth is <strong>deliberately hidden</strong> (shell LLCs) — you must <strong>infer</strong> it</td></tr>
-      <tr class="fragment"><td>a wrong answer is an <strong>inaccuracy</strong></td><td>a wrong answer is a <strong>false accusation</strong></td></tr>
-      <tr class="fragment"><td>it's meant to <strong>inform</strong></td><td>it's meant to be <strong>acted on</strong> — organizing, journalism, enforcement</td></tr>
-    </tbody>
-  </table>
-  <div class="pull fragment"><em>"Reasonably incorrect"</em> isn't a tolerable failure mode. Provenance, precision, and <em>"leads, not verdicts"</em> are <strong>preconditions — not polish.</strong></div>
-  <aside class="notes">(~50s) Hold onto those 107 masks — they're the whole point. There's a real difference between a conversational layer over AGGREGATE data and over OWNERSHIP data. If a number's off by a decimal, you get a bad number — bounded, impersonal, correctable. Our unit isn't a statistic; it's a person — who really controls this building. The ground truth isn't published, it's deliberately obscured behind shell LLCs, so we have to INFER it. And the output is meant to be ACTED ON. Put those together and a wrong answer becomes a false accusation about a named individual. So provenance isn't polish here — it's the precondition for pointing an LLM at this data at all. LINE: "If an ownership tool is wrong, you don't get a bad number — you get a false accusation about a real person."</aside>
-</section>
-
-<!-- 4 — THE STACK -->
-<section>
-  <span class="kicker">The stack</span>
-  <h2>How it's built — one look</h2>
-  <h3>Every stage is sourced, or explicitly labeled <em>inferred</em></h3>
-  <hr class="rule">
-  <div class="pipe">
-    <div class="pbox"><div class="pt">Knowledge graph</div><div class="pd">sourced facts — HPD · ACRIS · DOB · PLUTO</div></div>
-    <div class="parrow">→</div>
-    <div class="pbox"><div class="pt">Resolution</div><div class="pd">precision-first record linkage — who is one owner</div></div>
-    <div class="parrow">→</div>
-    <div class="pbox"><div class="pt">Three layers</div><div class="pd">management · operational nexus · owner identity</div></div>
-    <div class="parrow">→</div>
-    <div class="pbox"><div class="pt">Conversational agent</div><div class="pd">read-only · cites sources · labels certainty</div></div>
-  </div>
-  <div class="aud">↓ &nbsp; tenant · journalist · agency</div>
-  <div class="pull" style="font-size:.82em">Provenance runs the length of the pipeline — nothing downstream drops the label of what it came from.</div>
-  <aside class="notes">(~35s) One map, then we go deep on the parts that matter. A single knowledge graph of buildings, people, and events from the public record. A resolution step that figures out which messy records are the SAME owner. On top, three separate layers — who MANAGES a building, the operational nexus, and who OWNS it — kept distinct on purpose. And a conversational agent that only ever READS the graph and cites what it found. Carry forward: provenance runs the full length — every stage knows whether it's a sourced fact or an inference.</aside>
-</section>
-
-<!-- 5 — RELIABILITY -->
-<section>
-  <span class="kicker">Credibility anchor #1</span>
-  <h2>A data layer that knows what it knows</h2>
-  <h3>Every element is tagged — directly <span class="tag s">sourced</span> or <span class="tag i">inferred</span> — and every inference carries a caveat</h3>
-  <hr class="rule">
-  <p style="font-size:.85em; margin:.3em 0"><strong>"Who owns 17 Gay Street?"</strong> — two answers, never blurred:</p>
-  <div class="cards">
-    <div class="card s"><div class="cl">Recorded owner · sourced</div><div class="cv">"17 GAY LLC"</div><div class="cd">straight from the deed &amp; registration — a fact (but a shell that tells you nothing)</div></div>
-    <div class="card i"><div class="cl">Apparent controller · inferred</div><div class="cv">"Steven Croman"</div><div class="cd">inferred from record linkage — a lead to verify, not a determination</div></div>
-  </div>
-  <p style="font-size:.8em"> The tool <strong>always returns both, labeled</strong> — and says so when they diverge.</p>
-  <span class="src">Real record: BBL 1005930008 · every derived element carries this tag in the graph itself.</span>
-  <aside class="notes">(~50s) The piece I'd most want you to take away. Underneath is a knowledge graph — but the important part is that every element KNOWS WHAT IT IS: either a directly-sourced fact, or an inference — and if it's an inference, it carries a caveat, automatically, everywhere it's used. Ask "who owns 17 Gay Street?" A naïve tool picks one answer. Ours returns TWO and refuses to blur them. Recorded owner "17 Gay LLC" — a sourced fact, and a shell that tells you nothing. Apparent controller Steven Croman — an INFERENCE, stamped: a lead to verify, not a legal determination. When the two disagree, it says so. This isn't slideware — it's a hard rule in the code: that question always returns both, labeled.</aside>
-</section>
-
-<!-- 6 — RESOLUTION + NUMBERS -->
-<section>
-  <span class="kicker">The linkage improvement</span>
-  <h2>Precision-first owner resolution</h2>
-  <h3>Probabilistic record linkage that refuses to fuse two different people</h3>
-  <hr class="rule">
-  <p class="lead">Replaces exact/rule matching with probabilistic linkage + precision guards: common-name veto · aggregator-office &amp; servicer-signer masks · co-op/condo exclusion</p>
-  <div class="num fragment"><span class="n">①</span><span class="t"><b>Precision ≈ 1.0</b> — 0 cross-surname merges on a 105-record gold set → Croman's 107 LLC names resolve to one owner &nbsp; <span class="cap">resolver quality</span></span></div>
-  <div class="num fragment"><span class="n">②</span><span class="t"><b>Divergence — <em>not</em> accuracy</b> — on the <b>39,456 buildings both systems group</b>, they differ both ways: <b>~780</b> of our owner-groups unify what WoW splits · <b>~620</b> WoW portfolios split across ours &nbsp; <span class="cap">scale of the difference</span></span></div>
-  <div class="num fragment"><span class="n">③</span><span class="t"><b>The honest gap</b> — which differences are improvements? A blind head-to-head on ~530 pairs is <b>built, not yet run</b> &nbsp; <span class="cap">the ask →</span></span></div>
-  <span class="src">No "beats WoW" claim: precision is measured; the head-to-head is not. &nbsp; Reproduce ②: <code>compare_kg --divergence</code></span>
-  <aside class="notes">(~60s) Three numbers at three confidence levels — being clear about which is which is the whole ethos. ONE, precision: on a hand-labeled gold set, when it links two records as the same owner it's essentially never wrong — zero cross-surname merges. Croman's 107 LLC names collapse to one. TWO — careful here — is DIVERGENCE, not accuracy. On ~39,000 buildings where both make a call, they disagree both directions: ~780 of my owner-groups pull together buildings WoW splits, ~620 WoW portfolios split across mine. That's how far apart, and which way — NOT a claim about who's right; there's no ground truth in that number. Which is THREE: deciding who's right needs a blind, adjudicated head-to-head. Built — ~530 pairs — but not run. That's the honest gap, and the help I'll ask for at the end. CAVEATS if pushed: divergence≠accuracy; co-op/condo are out of the universe so the splits aren't artifacts; both drivers of the split are real but unjudged.</aside>
-</section>
-
-<!-- 7 — NOT EVERY PORTFOLIO IS OWNERSHIP -->
-<section>
-  <span class="kicker">Credibility anchor #2</span>
-  <h2>Not every "portfolio" is ownership</h2>
-  <h3>Shared-address linkage answers <em>"who operates through this office"</em> — not <em>"who owns this"</em></h3>
-  <hr class="rule">
-  <p style="font-size:.82em">Linking landlords by shared business address is powerful — often it's the <em>only</em> thread through a shell operation. But it can't tell an <strong>owner's</strong> office from a <strong>managing agent's</strong>.</p>
-  <div class="pull" style="font-size:.95em"><strong>138 different owners register from one office at 770 Lexington Ave</strong> (453 buildings).<br>Read "same office" as "same owner" and you fuse them into one empire that doesn't exist.</div>
-  <p style="font-size:.78em">Same trap: <strong>co-op &amp; condo boards</strong> — many unit owners, no single landlord.</p>
-  <p style="font-size:.82em; color:var(--navy-2)">The fix isn't to throw away the address signal — it's to stop asking it two questions at once. <strong>→ three layers</strong></p>
-  <span class="src">Source: raw HPD registrations, 770 Lexington Ave. Inherent to address-linkage — WoW uses the signal deliberately and flags it on the site.</span>
-  <aside class="notes">(~50s) One design decision I want to explain. Linking landlords by shared business address is powerful — often the only thread tying a shell operation together, and Who Owns What uses it deliberately and to good effect. But a shared address can't tell you whether it's the OWNER's office or a MANAGING AGENT's. Raw public record: 138 different owners register from one office at 770 Lexington — 453 buildings. Read "same office" as "same owner" and those 138 collapse into an empire that doesn't exist. Co-op and condo boards do it from the other direction. None of this is a discovery — it's inherent to address linkage, well understood. The question is what you DO about it. Not throw away the signal — it's valuable — but stop making one signal answer two questions.</aside>
-</section>
-
-<!-- 8 — THREE LAYERS -->
-<section>
-  <span class="kicker">The architecture</span>
-  <h2>Three layers, not one</h2>
-  <h3>A single "portfolio" hides three different questions — so we ask them separately</h3>
-  <hr class="rule">
-  <table>
-    <thead><tr><th>The question</th><th>Layer</th><th>Signal</th><th>Reliability</th><th>Live scale</th></tr></thead>
-    <tbody>
-      <tr><td>Who <b>manages</b> it?</td><td>management</td><td>self-disclosed HPD agent</td><td><span class="tag s">mostly sourced</span></td><td>~28,500 managers · ~67,000 bldgs</td></tr>
-      <tr><td>What network does it <b>run through</b>?</td><td>operational nexus</td><td>shared office / agent / shell <em>(WoW's strength)</em></td><td><span class="tag i">inferred</span></td><td>~15,800 multi-building nexuses</td></tr>
-      <tr><td>Who actually <b>owns</b> it?</td><td>owner identity</td><td>precision-first record linkage</td><td><span class="tag i">inferred</span></td><td>~6,500 owner-groups</td></tr>
-    </tbody>
-  </table>
-  <div class="pull" style="font-size:.85em">770 Lexington's 138 owners share an <strong>operational nexus</strong> — real and useful. They are <strong>not one owner.</strong> Separate layers keep the signal <em>without</em> the false empire.</div>
-  <span class="src">Owner-identity is inferred (Type II); its accuracy vs. WoW is not yet adjudicated → the blind eval (slide 11).</span>
-  <aside class="notes">(~55s) The architectural idea. Collapse everything into one "portfolio" and you're answering three different questions at once — with different answers and different reliability. Who MANAGES is mostly self-disclosed — close to a sourced fact. What operational NETWORK it runs through — WoW's real strength, an inference, deliberately recall-biased. Who OWNS it — a third question, answered precision-first and separately. Back to 770 Lexington: those 138 owners genuinely share an operational nexus — true and useful, we keep it. But they're NOT one owner, and now nothing in the system says they are, because "shares an office" and "same owner" live in different layers. You don't trade recall for precision — you keep both, labeled. Honest note: the owner-identity layer runs — ~6,500 groups — but whether it's MORE ACCURATE than WoW where they disagree is what I haven't adjudicated yet.</aside>
-</section>
-
-<!-- 9 — CONVERSATIONAL BY DESIGN -->
-<section>
-  <span class="kicker">Setting up the demo</span>
-  <h2>Conversational — by design, not free-form</h2>
-  <h3>The agent <em>orchestrates queries</em>; it doesn't reason about people</h3>
-  <hr class="rule">
-  <p class="lead">Four guarantees, enforced in code — not asked of the model:</p>
-  <ul class="tight">
-    <li><strong>Asks the graph, doesn't answer from itself</strong> — plain English → parameterized, <em>read-only</em> queries. Writes/admin refused, even for the deep tier.</li>
-    <li><strong>Reports only what a query returned</strong> — no free-form claims; every inferred element carries its caveat, automatically.</li>
-    <li><strong>"Who owns this?" returns both</strong> — recorded owner <em>and</em> apparent controller, labeled — and flags disagreement.</li>
-    <li><strong>Capability is gated structurally</strong> — deep investigation only for <em>vetted</em> users; persona sets tone, never access; fail-closed.</li>
-  </ul>
-  <div class="pull" style="font-size:.82em">The answer to the thesis: you can't manufacture false certainty about a person if you only ever report what a <em>sourced, labeled query</em> returned.</div>
-  <span class="src">Gating lives in the tool-visibility layer, not a prompt — because the records themselves (raw violation text, ACRIS JSON) are a prompt-injection surface.</span>
-  <aside class="notes">(~55s) Before I show you this live, I want to be precise about what it is and isn't. The agent is an ORCHESTRATOR, not a reasoner. It turns your plain-English question into a parameterized, read-only query — it does not free-associate an answer. It can only READ; writes and admin are refused at a guard, even for the deep mode. It reports only what a query returned, with caveats attached. And gating is structural: deep investigation only for vetted users — a self-declared "journalist" doesn't get it; persona only shapes tone. Crucially, that's enforced in the code that decides which tools the model can even SEE — not by instructing the model in a prompt — because the records contain free text, a place an adversary could smuggle instructions. You don't defend that with a polite system prompt. Orchestrator, not reasoner. Now let me show you.</aside>
-</section>
-
-<!-- 10 — LIVE DEMO -->
-<section>
-  <span class="kicker">Live demo · pinned to a public landlord</span>
-  <h2>Ask it about Steven Croman</h2>
-  <h3>Watch it label every layer — sourced vs inferred — and refuse to overclaim</h3>
-  <hr class="rule">
-  <div class="demo-q">
-    <div class="q">① "Who owns 17 Gay Street?" <span class="conf">→ slides 5·6·8</span></div>
-    <div class="a">Three labeled layers, one answer: <b>17 GAY LLC</b> (sourced) · <b>Steven Croman</b> (inferred) · <b>unified owner — 12 fragments, 127 buildings</b> (inferred, a lead not title).</div>
-  </div>
-  <div class="demo-q">
-    <div class="q">② "And who manages it — same as who owns it?" <span class="conf">→ slides 7·8</span></div>
-    <div class="a"><b>Centennial Properties NY (114 buildings)</b> — "a manager is not an owner." Management ≠ ownership.</div>
-  </div>
-  <div class="demo-q">
-    <div class="q">③ "So can I report he legally owns all 127?" <span class="conf">→ slides 3·9</span></div>
-    <div class="a"><b>It declines</b> — "not a legal determination… only a title search or court finding could support that." Leads, not verdicts.</div>
-  </div>
-  <span class="src">If projection fails: pre-recorded capture + screenshots as backup. Data: BBL 1005930008 → owner group OG-105462 (12→127) · manager Centennial (114).</span>
-  <aside class="notes">Beats are agent-verified. ① one call → three labeled layers. "One question — the LLC, the person, AND the 127-building owner those shells roll up into, each labeled by how much to trust it." ② building_manager + ownership → Centennial (114) vs the ownership layers — "it won't confuse 'runs the building' with 'owns the building' — the trap that turns a management office into a fake empire." ③ it declines to say "legally owns" — "that's the whole ethos, live. It turns an inference into a lead, never an accusation." SIZING: ① and ② can be one question ("who owns and who manages 17 Gay St?"). SAFETY: pinned to Croman; if anything about a private individual surfaces, don't dwell — steer back.</aside>
-</section>
-
-<!-- 11 — LEADS NOT VERDICTS / THE ASK -->
-<section>
-  <span class="kicker">The close</span>
-  <h2>Leads, not verdicts — and what's next</h2>
-  <h3>Inference to point an investigator at a question — never a determination about a person</h3>
-  <hr class="rule">
-  <div class="cards">
-    <div class="card" style="border-top:5px solid var(--navy)">
-      <div class="cl" style="color:var(--navy)">Honestly not done yet</div>
-      <ul class="tight" style="margin-top:.2em">
-        <li>The blind <b>accuracy</b> eval is <b>built, not run</b> — ~530 pairs need adjudication.</li>
-        <li>Validated for <b>precision</b>, not yet <b>recall / who's-right-vs-WoW</b>.</li>
-        <li>A <b>sabbatical prototype</b>, not a shared service.</li>
-      </ul>
-    </div>
-    <div class="card" style="border-top:5px solid var(--gold)">
-      <div class="cl" style="color:var(--gold)">What I'm asking this room</div>
-      <ul class="tight" style="margin-top:.2em">
-        <li><b>Help run the blind eval</b> — ground-truth data, adjudication time, or methodology.</li>
-        <li>Some of this may belong <b>upstream in Who Owns What</b>.</li>
-        <li><b>Feedback on the three-layer model.</b></li>
-      </ul>
-    </div>
-  </div>
-  <p style="text-align:center; color:var(--navy); font-weight:750; font-size:1.05em; margin-top:.5em">Thank you — and I'd love to talk. &nbsp;<span style="color:var(--gold)">(Q&amp;A)</span></p>
-  <aside class="notes">(~55s) Let me close where I started. Everything you've seen produces LEADS, not verdicts — a pointer to a question a human should investigate, never a claim that a named person owns something. You watched it refuse to cross that line a minute ago; that refusal is the most important feature in the system. And let me be straight about what I HAVEN'T done — the resolver is precise on a labeled set, and it groups differently from Who Owns What at scale, but I have NOT run the blind, adjudicated head-to-head that tells you who's right where we disagree. It's built; it needs ground truth and hands. This isn't a service you can use yet. So the reason I'm really here: I'd love your help — ground-truth data, adjudication time. Some of this probably belongs back in Who Owns What. And I'd value your read on the three-layer idea. I'm new to this world, the tool is the contribution, and I'm hoping to build the next part WITH people in this room. Thank you.</aside>
-</section>
-
-</div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.min.js"></script>
-<script>
-  // Speaker notes go into the PDF export ONLY (as separate pages), never on-screen —
-  // so the live talk never leaks notes to the audience. Export: open this deck with
-  // ?print-pdf in the URL, then the browser's Print dialog → Save as PDF.
-  const printPdf = /print-pdf/gi.test(window.location.search);
-  Reveal.initialize({
-    hash: true, center: false, transition: 'fade', transitionSpeed: 'fast',
-    slideNumber: 'c/t', controls: true, progress: true,
-    width: 1120, height: 740, margin: 0.06,
-    showNotes: printPdf ? 'separate-page' : false,
-    plugins: [ RevealNotes ]
-  });
-</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.min.js"></script>
+  <script>
+    // Speaker notes go into the PDF export ONLY (as separate pages), never on-screen —
+    // so the live talk never leaks notes to the audience. Export: open this deck with
+    // ?print-pdf in the URL, then the browser's Print dialog → Save as PDF.
+    const printPdf = /print-pdf/gi.test(window.location.search);
+    Reveal.initialize({
+      hash: true, center: false, transition: 'fade', transitionSpeed: 'fast',
+      slideNumber: 'c/t', controls: true, progress: true,
+      width: 1120, height: 740, margin: 0.06,
+      showNotes: printPdf ? 'separate-page' : false,
+      plugins: [RevealNotes]
+    });
+  </script>
 </body>
+
 </html>
