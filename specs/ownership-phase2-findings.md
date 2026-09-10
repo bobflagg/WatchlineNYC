@@ -551,14 +551,25 @@ No real NYC owner appears — a small, human-verifiable set, exactly like the 73
 **Draft (`aggregator_officer_audit.py`, read-only + tests):** a Postgres audit emitting the exclusion
 *candidates* (pure `is_institutional_officer(buildings, pct_far)`; `MIN_BUILDINGS=20`, `FAR_PCT=60`,
 `METRO_STATES=NY/NJ/CT/PA`). It **decides nothing** — like `aggregator_audit`/`curated_owners`, a human
-curates the ~8. **Application (two options, not yet wired):** (a) *pre-resolution mask* — drop the curated
-officers' HPD contacts from `extract()` so their buildings resolve by owner-of-record (registered-llc / deed)
-instead of the shared signer name (the officer analogue of the aggregator-address mask blanking the address);
-or (b) *projection flag* — tag the entity `institutional_officer` and exclude it from accountability targeting
-(additive, mirroring the co-op/condo drop and F5). Recommend (a) with a curated list for precision, since the
-set is tiny and human-verifiable. NB Moore is *mostly* this class; the broader **local** aggregator-officer
-(Hirschfield/McEntee — NY managing agents across many owners) is a distinct sub-problem out-of-state address
-does not catch, and owner-diversity can't safely catch either (Scharfman) — deferred.
+curates the ~8. **WIRED (option a, extract-level):** `splink_bridge._resolve` now drops the flagged officers
+(`aggregator_officer_audit.excluded_officer_names`) from the resolution input *before* clustering **and the
+feedback loop**, so their buildings resolve by owner-of-record (registered-llc / deed), not the shared signer
+name. Doing it at `extract()` — rather than as a clusterer veto — is essential: it is **feedback-proof**.
+(This is the lesson from the earlier common-name/surname-escalation attempt in `cluster_gated`, since
+**reverted**: `feedback_merge` runs after the clusterer with the same un-escalated `(last, first_initial)`
+rarity gate and NO address check, so it re-merged what the veto split — the name-veto approach can't hold a
+common signer. Dropping the identity at extract removes it from the frame `feedback_merge` even sees.)
+Validated: Eric Moore's identities go **13 → 0** in the 145,412-row resolution frame; 39 identities total drop
+across the 8 names — small and targeted; the effect on the live graph awaits the resolution re-run + KG
+rebuild (write-capable). **Review the 8 names before a run of consequence** (the rule is precision-safe — 0
+real owners at ≥20 buildings / ≥60% far-state — but it is a rule, not a curated allowlist). The **local**
+aggregator-officer (Hirschfield/McEntee — NY managing agents across many owners) is a distinct sub-problem
+out-of-state address does not catch, and owner-diversity can't safely catch either (Scharfman) — deferred.
+
+*Correction to the review_merge finding (2026-09-10):* re-verifying on the re-run graph showed **GREG COHEN
+was NOT a false merge** — one co-op/HDFC board officer (shared `MADISON AVENUE HDFC`, co-op buildings, already
+dropped by the co-op/condo exclusion), reclassified SAME; my address-scatter read mistook it for different
+people. So the S2 riskiest set had **one** genuine rental false merge (Eric Moore, handled here), not two.
 
 ## Materialization + status
 

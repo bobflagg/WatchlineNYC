@@ -41,9 +41,12 @@ MIN_BUILDINGS = 20
 # an owner with one stray out-of-state filing is not flagged.
 FAR_PCT = 60
 
-_OFFICER_SQL = """
+# The officer key is `upper(btrim(first)) || ' ' || upper(btrim(last))` — built the same way here and at the
+# resolution's exclusion (splink_bridge) so the two match exactly (whitespace-robust: each part trimmed).
+_OFFICER_KEY = "upper(btrim(c.firstname)) || ' ' || upper(btrim(c.lastname))"
+_OFFICER_SQL = f"""
 WITH o AS (
-  SELECT upper(btrim(c.firstname || ' ' || c.lastname)) AS officer, r.bbl,
+  SELECT {_OFFICER_KEY} AS officer, r.bbl,
          CASE WHEN upper(btrim(c.businessstate)) = ANY(%(metro)s) THEN 0 ELSE 1 END AS far
   FROM hpd_contacts c JOIN hpd_registrations r ON r.registrationid = c.registrationid
   WHERE c.type = 'HeadOfficer' AND c.firstname IS NOT NULL AND c.lastname IS NOT NULL
@@ -69,6 +72,14 @@ def audit(conn, *, min_buildings: int = MIN_BUILDINGS) -> list[dict]:
         rows = [{"officer": o, "buildings": int(b), "pct_far": float(pf)} for o, b, pf in cur.fetchall()]
     flagged = [r for r in rows if is_institutional_officer(r["buildings"], r["pct_far"])]
     return sorted(flagged, key=lambda r: -r["buildings"])
+
+
+def excluded_officer_names(conn, *, min_buildings: int = MIN_BUILDINGS) -> set[str]:
+    """The set of flagged officer NAMES (`upper(btrim(first)) ' ' upper(btrim(last))`), for the resolution
+    to drop from `extract()` so their buildings resolve by owner-of-record rather than the shared signer.
+    The rule is precision-safe (see module docstring: 0 real owners among the flagged), but it is a *rule* —
+    review the list before a run of consequence, or gate it behind a curated allowlist."""
+    return {r["officer"] for r in audit(conn, min_buildings=min_buildings)}
 
 
 if __name__ == "__main__":  # read-only sanity run (PGDATABASE must point at justfixwow)

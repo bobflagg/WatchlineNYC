@@ -31,6 +31,7 @@ from itertools import combinations
 import pandas as pd
 
 from watchline.discovery.ingest.portfolio import splink_source as ss
+from watchline.discovery.ingest.portfolio import aggregator_officer_audit as aoa
 
 # Splink edges dominate name (~1.5) / address (~1.0) links so that when a merged component
 # exceeds MAX_SIZE and Louvain splits it, a resolved owner's nodes stay together. Raised
@@ -86,6 +87,16 @@ def _resolve(conn, threshold: float):
     against the owner-level gold (P 1.0, 0 cross-surname) for a ~+30pt recall lift."""
     full = ss.extract(conn, "TRUE")
     full = full[full.contact_kind == "person"].drop_duplicates("unique_id").reset_index(drop=True)
+    # F12 — drop OUT-OF-STATE INSTITUTIONAL officers (national servicer/REO signers, e.g. ERIC MOORE) from
+    # the resolution input entirely, so their buildings resolve by owner-of-record (registered-llc / deed),
+    # NOT by the shared signer name. Done at extract-level, before clustering AND the feedback loop, so the
+    # exclusion is feedback-proof (unlike a clusterer-only veto, which feedback_merge re-merges). See
+    # aggregator_officer_audit / phase-2 findings F12.
+    inst = aoa.excluded_officer_names(conn)
+    if inst:
+        okey = ((full["first_name"].fillna("").str.strip().str.upper()) + " " +
+                (full["last_name"].fillna("").str.strip().str.upper())).str.strip()
+        full = full[~okey.isin(inst)].reset_index(drop=True)
     train = _stratified_train(full)
     degs = ss.address_degrees(conn)
     nf = ss.name_freq(conn)
