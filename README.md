@@ -15,6 +15,12 @@ A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) shows Watchline
 answering *"Build a referral-ready case file on landlord Steven Croman. Investigate patterns of neglect across their
       portfolio, worst buildings first. Corroborate with public reporting and any enforcement or litigation history."*
 
+A [slide deck](https://bobflagg.github.io/WatchlineNYC/docs/meetup/) presented at the
+NYC Housing Data Coalition walks through the approach — precision-first owner
+resolution, the three-layer ownership model (management vs. operational nexus vs. owner
+identity), and the reliability tagging that labels every answer as sourced or inferred.
+Press **S** in the deck for speaker notes.
+
 ## Run it locally
 
 Watchline is a Streamlit app over a Neo4j knowledge graph, with a Geosupport sidecar
