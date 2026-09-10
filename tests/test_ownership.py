@@ -209,7 +209,13 @@ class TestBothAnswersAreLabelled:
     def test_controller_is_never_described_as_an_owner(self, fake_read):
         fake_read(ROW_WITH_CONTROLLER)
         controller = lookup_building_ownership("1000050010")["apparent_controllers"][0]
-        assert not any("owner" in key.casefold() for key in controller)
+        # The controller is never labelled an owner. ``owner_group`` is exempt:
+        # it is not a claim that this controller IS the owner, but a labelled,
+        # caveated link to the inferred owner-IDENTITY layer (same owner across
+        # differently-named LLCs), named to match the OwnerGroup graph element.
+        assert not any(
+            "owner" in key.casefold() for key in controller if key != "owner_group"
+        )
         assert "apparent" in controller["label"]
 
     def test_each_side_carries_its_reliability_type(self, fake_read):
@@ -233,18 +239,24 @@ class TestBothAnswersAreLabelled:
 
 
 class TestCaveatsAndReliability:
-    """Validation 2.4 — Type II with all three caveats, text from caveats.py."""
+    """Validation 2.4 — Type II with all four caveats, text from caveats.py.
+
+    Four since the tool gained the owner-identity layer: the recorded owner
+    (dof_ownername), the apparent controller (APPARENT_CONTROL), the landlord
+    identity behind it (Landlord), and the unified owner it rolls up into
+    (OwnerGroup)."""
 
     def test_type_ii(self, fake_read):
         fake_read(ROW_WITH_CONTROLLER)
         result = lookup_building_ownership("1000050010")
         assert result[RELIABILITY_KEY]["type"] == "II"
 
-    def test_three_caveats(self, fake_read):
+    def test_four_caveats(self, fake_read):
         fake_read(ROW_WITH_CONTROLLER)
         result = lookup_building_ownership("1000050010")
         elements = {c["element"] for c in result[RELIABILITY_KEY]["caveats"]}
-        assert elements == {"Landlord", "APPARENT_CONTROL", "Building.dof_ownername"}
+        assert elements == {"Landlord", "OwnerGroup", "APPARENT_CONTROL",
+                            "Building.dof_ownername"}
 
     def test_caveat_text_matches_the_canonical_module(self, fake_read):
         fake_read(ROW_WITH_CONTROLLER)
@@ -260,7 +272,7 @@ class TestCaveatsAndReliability:
         recorded owner as the answer."""
         fake_read(ROW_WITHOUT_CONTROLLER)
         result = lookup_building_ownership("1000010010")
-        assert len(result[RELIABILITY_KEY]["caveats"]) == 3
+        assert len(result[RELIABILITY_KEY]["caveats"]) == 4
 
     def test_not_tier_4_gated(self, fake_read):
         fake_read(ROW_WITH_CONTROLLER)

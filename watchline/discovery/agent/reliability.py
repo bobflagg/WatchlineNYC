@@ -4,8 +4,10 @@ Implements the taxonomy from ``discovery-schema-reference``, orthogonal to
 query tier:
 
 * **Type I** — built entirely from directly-sourced fields.
-* **Type II** — touches ``Landlord``, ``Portfolio``, ``APPARENT_CONTROL``,
-  ``CONNECTED_BY_NAME``, or ``CONNECTED_BY_ADDRESS`` anywhere in the query.
+* **Type II** — touches a derived element anywhere in the query: ``Landlord``,
+  ``Portfolio``, ``OwnerGroup``, ``Manager``, ``APPARENT_CONTROL``,
+  ``CONNECTED_BY_NAME``, ``CONNECTED_BY_ADDRESS``, or an edge into one of these
+  (``MEMBER_OF``/``IN_PORTFOLIO``, ``IN_OWNER_GROUP``, ``MANAGED_BY``).
 * **Type III** — Tier 4's own self-generated Cypher, not a pre-vetted template.
 * **Type IV** — Type III plus web/registry search.
 
@@ -99,6 +101,14 @@ TYPE_II_ELEMENTS: frozenset[str] = frozenset(
         "CONNECTED_BY_ADDRESS",
         "MEMBER_OF",
         "IN_PORTFOLIO",
+        # Owner-identity layer: connected components of the identity edges,
+        # materialized as (:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup). Inferred
+        # ownership, never a legal determination.
+        "OwnerGroup",
+        "IN_OWNER_GROUP",
+        # Management layer: self-disclosed managing agent, normalized to a brand.
+        "Manager",
+        "MANAGED_BY",
     }
 )
 
@@ -129,6 +139,13 @@ _ELEMENT_CAVEATS: dict[str, DerivedElement] = {
     "Portfolio": DerivedElement.PORTFOLIO,
     "MEMBER_OF": DerivedElement.PORTFOLIO,
     "IN_PORTFOLIO": DerivedElement.PORTFOLIO,
+    # Owner identity across differently-named entities. The edge into the group
+    # reuses the group's caveat, mirroring the Portfolio pattern above.
+    "OwnerGroup": DerivedElement.OWNER_GROUP,
+    "IN_OWNER_GROUP": DerivedElement.OWNER_GROUP,
+    # Self-disclosed management; the edge reuses the Manager caveat.
+    "Manager": DerivedElement.MANAGER,
+    "MANAGED_BY": DerivedElement.MANAGER,
     "APPARENT_CONTROL": DerivedElement.APPARENT_CONTROL,
     "CONNECTED_BY_ADDRESS": DerivedElement.CONNECTED_BY_ADDRESS,
     "CONNECTED_BY_NAME": DerivedElement.CONNECTED_BY_NAME,

@@ -9,6 +9,15 @@ says to get it right first. The rule it must follow, verbatim from the design:
     When they disagree, that disagreement is itself the interesting answer —
     surface it, don't hide it.
 
+**Third layer — owner identity.** Each apparent controller now also carries its
+``owner_group`` (Type II): the unified owner the controller resolves to across
+differently-named LLCs, reached via ``IN_OWNER_GROUP``, or ``None`` when the
+controller is in no multi-member group (a singleton is its own owner — a normal
+answer). This is the de-fragmentation layer: it is why "who owns 17 Gay Street?"
+can name the LLC *and* the person *and* the wider owner the person's other shells
+roll up into. It is inferred, not a legal determination; the OwnerGroup caveat is
+attached automatically.
+
 **Three facts measured in Phase 0 shape this tool more than anything else.**
 
 1. ``APPARENT_CONTROL`` reaches only 171,347 of 859,794 buildings. **A building
@@ -55,9 +64,11 @@ __all__ = [
 TOOL_DESCRIPTION = (
     "Look up who owns a specific NYC building by its BBL. Call this whenever the "
     "user asks who owns, controls, or is the landlord of a particular building. "
-    "Returns two distinct answers that must both be reported: the recorded owner "
-    "filed with the Department of Finance, and the apparent controller inferred "
-    "by the graph. Takes a 10-digit BBL, not an address."
+    "Returns up to three layered answers that should be reported together: the "
+    "recorded owner filed with the Department of Finance (often a shell LLC), the "
+    "apparent controller inferred by the graph, and — when the controller resolves "
+    "to one — the unified owner identity (owner group) that ties this owner's "
+    "differently-named LLCs together. Takes a 10-digit BBL, not an address."
 )
 
 #: How the two answers are labelled in output. These are *labels*, not caveat
@@ -82,7 +93,12 @@ RETURN b.bbl AS bbl, b.address AS address, b.borough AS borough,
        b.dof_ownername AS recorded_owner,
        [ (l:Landlord)-[ac:APPARENT_CONTROL]->(b) | {
            actor_id: l.actor_id, name: l.name, bizaddr: l.bizaddr,
-           method: ac.method, run_id: ac.run_id
+           method: ac.method, run_id: ac.run_id,
+           owner_group: head([ (l)-[:IN_OWNER_GROUP]->(o:OwnerGroup) | {
+               owner_group_id: o.owner_group_id, name: o.name,
+               member_count: o.member_count, building_count: o.building_count,
+               composition: o.composition
+           } ])
        } ] AS apparent_controllers"""
 
 
@@ -119,7 +135,8 @@ def _describe_comparison(recorded: str | None, controller_name: str | None) -> d
     }
 
 
-@tagged(["Building", "Building.dof_ownername", "APPARENT_CONTROL", "Landlord"])
+@tagged(["Building", "Building.dof_ownername", "APPARENT_CONTROL", "Landlord",
+         "OwnerGroup", "IN_OWNER_GROUP"])
 def lookup_building_ownership(bbl: str) -> dict[str, Any]:
     """Return both ownership answers for a building, clearly labelled.
 
@@ -172,6 +189,14 @@ def lookup_building_ownership(bbl: str) -> dict[str, Any]:
                 # run and is not a standing fact about the world.
                 "provenance": {"method": raw["method"], "run_id": raw["run_id"]},
                 "comparison": _describe_comparison(recorded_owner_name, raw["name"]),
+                # The third layer: the unified owner identity this controller
+                # resolves to (same owner across differently-named LLCs). None
+                # when the controller is in no multi-member owner group — a
+                # normal answer, not a failure. Inferred (Type II); the
+                # OwnerGroup caveat is already attached to this result. Read
+                # tolerantly: the cypher always supplies the key (null or a
+                # map), and a missing key means the same thing — no group.
+                "owner_group": raw.get("owner_group"),
             }
         )
 

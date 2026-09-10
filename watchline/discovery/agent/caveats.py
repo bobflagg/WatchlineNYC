@@ -54,20 +54,25 @@ class CaveatKind(StrEnum):
 class DerivedElement(StrEnum):
     """Graph elements that carry mandatory caveat text.
 
-    The first five are the Type II elements from
-    ``discovery-schema-reference``. ``DOF_OWNERNAME`` is Type I and carries an
+    All but ``DOF_OWNERNAME`` are Type II elements from
+    ``discovery-schema-reference``; ``DOF_OWNERNAME`` is Type I and carries an
     interpretation note instead.
 
     Declaration order determines output order, so it runs from the most
     primitive derived element to the most composed: a ``Portfolio`` is a
-    cluster *of* ``Landlord`` entities, so ``Landlord`` comes first.
+    cluster *of* ``Landlord`` entities, so ``Landlord`` comes first, and an
+    ``OWNER_GROUP`` (owner identity across differently-named entities) sits
+    alongside it as the other landlord-grouping layer. ``MANAGER`` is a
+    self-disclosed management layer, orthogonal to ownership.
     """
 
     LANDLORD = "Landlord"
     PORTFOLIO = "Portfolio"
+    OWNER_GROUP = "OwnerGroup"
     APPARENT_CONTROL = "APPARENT_CONTROL"
     CONNECTED_BY_ADDRESS = "CONNECTED_BY_ADDRESS"
     CONNECTED_BY_NAME = "CONNECTED_BY_NAME"
+    MANAGER = "Manager"
     DOF_OWNERNAME = "Building.dof_ownername"
 
 
@@ -116,6 +121,24 @@ CAVEATS: dict[DerivedElement, Caveat] = {
         ),
         kind=CaveatKind.RELIABILITY,
     ),
+    DerivedElement.OWNER_GROUP: Caveat(
+        element=DerivedElement.OWNER_GROUP,
+        short=(
+            "Owner identity is inferred from record linkage, not verified — "
+            "a lead, not a legal ownership determination."
+        ),
+        long=(
+            "This owner group is a set of landlord records that a record-linkage "
+            "step inferred to describe the same owner across differently-named "
+            "entities. It is not a legal determination of ownership and has not "
+            "been independently verified. Records for one owner may be split "
+            "across separate groups, and records for different owners may "
+            "occasionally be merged, so the members and the combined list of "
+            "buildings may each be incomplete or overstated. Treat it as a lead "
+            "to investigate, not a verdict."
+        ),
+        kind=CaveatKind.RELIABILITY,
+    ),
     DerivedElement.APPARENT_CONTROL: Caveat(
         element=DerivedElement.APPARENT_CONTROL,
         short="Apparent controller, not a confirmed legal owner.",
@@ -150,6 +173,22 @@ CAVEATS: dict[DerivedElement, Caveat] = {
             "names may link unrelated people, while inconsistent name "
             "formatting for the same person may fail to link records that "
             "should be connected. This has not been independently verified."
+        ),
+        kind=CaveatKind.RELIABILITY,
+    ),
+    DerivedElement.MANAGER: Caveat(
+        element=DerivedElement.MANAGER,
+        short=(
+            "Managing agent as self-disclosed on the registration — a manager "
+            "is not an owner."
+        ),
+        long=(
+            "This manager is the property's managing agent as self-disclosed on "
+            "its HPD registration, normalized to a single brand name across "
+            "spelling and corporate-form variants. Managing a building is not "
+            "owning or controlling it: the same agent commonly manages buildings "
+            "for many unrelated owners, so a shared manager is not evidence of "
+            "common ownership."
         ),
         kind=CaveatKind.RELIABILITY,
     ),

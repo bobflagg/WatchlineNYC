@@ -166,14 +166,20 @@ class TestModuleIsTheOnlyCopy:
 
 
 class TestCaveatStructure:
-    def test_five_reliability_warnings_and_one_interpretation_note(self):
-        """dof_ownername differs in kind: the record is reliable, it just
-        usually names a shell entity."""
+    def test_reliability_warnings_and_one_interpretation_note(self):
+        """Every derived element carries a reliability warning except
+        dof_ownername, which differs in kind: the record is reliable, it just
+        usually names a shell entity.
+
+        The reliability set grew as the ownership model gained layers — Landlord,
+        Portfolio, OwnerGroup, APPARENT_CONTROL, CONNECTED_BY_ADDRESS/NAME, and
+        Manager — so this asserts "all-but-the-one-interpretation-note" rather
+        than a frozen count."""
         reliability = [c for c in CAVEATS.values() if c.kind is CaveatKind.RELIABILITY]
         interpretation = [
             c for c in CAVEATS.values() if c.kind is CaveatKind.INTERPRETATION
         ]
-        assert len(reliability) == 5
+        assert len(reliability) == len(CAVEATS) - 1
         assert [c.element for c in interpretation] == [DerivedElement.DOF_OWNERNAME]
 
     def test_landlord_and_apparent_control_say_different_things(self):

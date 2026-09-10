@@ -36,7 +36,9 @@ from . import (
     investigation,
     landlord,
     landlord_portfolio,
+    manager,
     network,
+    owner_group,
     ownership,
     portfolio_detail,
 )
@@ -58,6 +60,13 @@ TOOL_FUNCTIONS: tuple[tuple[Any, str], ...] = (
     (landlord_portfolio.lookup_landlord, landlord_portfolio.LOOKUP_LANDLORD_DESCRIPTION),
     (landlord_portfolio.landlord_portfolio_membership,
      landlord_portfolio.LANDLORD_PORTFOLIO_MEMBERSHIP_DESCRIPTION),
+    # Owner-identity layer: the same owner across differently-named LLCs. Distinct
+    # from portfolio (operational/address nexus) and manager (who runs it).
+    (owner_group.owner_group_for_landlord, owner_group.OWNER_GROUP_FOR_LANDLORD_DESCRIPTION),
+    (owner_group.owner_group_portfolio, owner_group.OWNER_GROUP_PORTFOLIO_DESCRIPTION),
+    # Management layer: self-disclosed managing agent (a manager is not an owner).
+    (manager.building_manager, manager.BUILDING_MANAGER_DESCRIPTION),
+    (manager.manager_portfolio, manager.MANAGER_PORTFOLIO_DESCRIPTION),
     # Phase 3 Tier-2 aggregations.
     (building.aggregate_building_events, building.AGGREGATE_BUILDING_EVENTS_DESCRIPTION),
     (landlord_portfolio.aggregate_landlord_portfolio_events,

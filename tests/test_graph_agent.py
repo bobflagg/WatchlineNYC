@@ -145,6 +145,11 @@ class TestToolsAreWiredIn:
         "lookup_building_events",
         "lookup_landlord",
         "landlord_portfolio_membership",
+        # Owner-identity + management layers (Tier 1-3, Type II, public).
+        "owner_group_for_landlord",
+        "owner_group_portfolio",
+        "building_manager",
+        "manager_portfolio",
         "aggregate_building_events",
         "aggregate_landlord_portfolio_events",
         "aggregate_events_by_geo_time",
