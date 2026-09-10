@@ -289,7 +289,13 @@ sync with the CSV, so regenerating is safe.
   office shared by many landlords poisons EM ("same address = weak") and *depresses*
   legitimate merges. Masking high-degree addresses (`AGGREGATOR_DEGREE=25`, computed
   **full-population** via `address_degrees`) was the single biggest lift (F1 0.23 →
-  0.93). This is WoW's `MAX_ADDR_DEGREE`, done probabilistically.
+  0.93). NB this is a deliberate DIVERGENCE from WoW, not a copy of it: WoW's matching
+  (`who-owns-what/portfoliograph/sql/landlords_with_connections.sql`) has **no
+  aggregator/degree cap** — any two landlords sharing an exact business address are
+  linked (weight ~2–3), so a managing-agent/registration megaoffice connects many
+  unrelated owners (e.g. 138 distinct owners register from 770 Lexington Ave). That
+  over-connection is inherent to address-nexus linkage; masking high-degree addresses is
+  our precision fix, not a "WoW `MAX_ADDR_DEGREE`" (no such constant exists in WoW).
 - **NAME-ANCHORED blocking (the full-population precision fix).** The full run exposed
   what the slice gold structurally could not: an address-only blocking rule
   (`block_on(biz_house, biz_street_norm, first_initial)`) scores **different-surname**
