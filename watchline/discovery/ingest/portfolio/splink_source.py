@@ -349,7 +349,7 @@ def _addr_key(house, street_norm) -> str:
 def cluster_gated(preds, nodes, threshold: float = 0.95, *,
                   gamma_col: str = "gamma_first_name",
                   name_freq: pd.DataFrame | None = None,
-                  name_cap: int = 15, surname_cap: int = 50) -> pd.DataFrame:
+                  name_cap: int = 15) -> pd.DataFrame:
     """Cluster with two precision vetoes, then connected-components.
 
     **First-name veto** (always on). Splink's pairwise score lets a strong exact-address
@@ -364,15 +364,11 @@ def cluster_gated(preds, nodes, threshold: float = 0.95, *,
     **Common-name veto** (on when ``name_freq`` is passed). An exact common full name
     repeated at a *different* address (two unrelated JIN CHENs) merges on name alone —
     the coincidence term-frequency under-penalizes. Drop an edge when the name is common
-    AND the two normalized addresses differ (:func:`_addr_key`). "Common" fires on EITHER
-    a common (last_name, first_initial) subset (``> name_cap`` distinct identities) OR a
-    common **surname** overall (``> surname_cap`` summed identities) — the surname
-    escalation catches leaks whose initial-subset stays small though the surname is very
-    common (GREG COHEN over-merged a stray at a different office because (COHEN,G)=9 <
-    ``name_cap`` yet COHEN=280; ERIC MOORE likewise). Rare surnames (Croman/Kadden ~8) sit
-    below both caps, so cross-office typo merges are untouched; same-address formatting
-    variants share an address key, so those correct merges survive. This mirrors the loop's
-    name-rarity gate, applied to the base linkage.
+    (``> name_cap`` distinct identities for its (last_name, first_initial), from
+    :func:`name_freq`) AND the two normalized addresses differ (:func:`_addr_key`). Rare
+    names stay below the cap, so cross-office merges (Croman ~8) are untouched; same-
+    address formatting variants share an address key, so those correct merges survive.
+    This mirrors the loop's name-rarity gate, applied to the base linkage.
 
     ``nodes`` is the record frame (or a unique_id iterable) so every node — including
     singletons Splink would emit — gets a ``cluster_id``. Returns the node columns
@@ -392,21 +388,12 @@ def cluster_gated(preds, nodes, threshold: float = 0.95, *,
         if node_df is None:
             raise ValueError("common-name veto needs `nodes` as a record frame")
         rar = {(r.last_name, r.first_initial): r.identities for r in name_freq.itertuples()}
-        surf = name_freq.groupby("last_name")["identities"].sum().to_dict()
         node_rar = {u: rar.get((ln, fi), 0) for u, ln, fi
                     in zip(node_df["unique_id"], node_df["last_name"], node_df["first_initial"])}
-        node_surf = {u: surf.get(ln, 0) for u, ln
-                     in zip(node_df["unique_id"], node_df["last_name"])}
         akey = {u: _addr_key(h, s) for u, h, s
                 in zip(node_df["unique_id"], node_df["biz_house"], node_df["biz_street_norm"])}
-        # keep an edge unless the name is common AND the addresses genuinely differ. "Common" fires on EITHER
-        # a common (last, first-initial) subset (> name_cap) OR a common SURNAME overall (> surname_cap). The
-        # surname escalation catches leaks whose specific-initial subset stays small though the surname is very
-        # common — GREG COHEN merged a stray at a different office because (COHEN,G)=9 < name_cap even though
-        # COHEN=280; ERIC MOORE likewise ((MOORE,E)=12, MOORE=127). Rare surnames (Croman/Kadden ~8) sit below
-        # both caps, so their cross-office typo merges are untouched; same-address variants share a key and stay.
-        keep = [((node_rar.get(a, 0) <= name_cap) and (node_surf.get(a, 0) <= surname_cap))
-                or (akey.get(a) == akey.get(b))
+        # keep an edge unless the name is common AND the addresses genuinely differ
+        keep = [(node_rar.get(a, 0) <= name_cap) or (akey.get(a) == akey.get(b))
                 for a, b in zip(edges["unique_id_l"], edges["unique_id_r"])]
         edges = edges[pd.Series(keep, index=edges.index).values]
 
