@@ -847,10 +847,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.min.js"></script>
   <script>
+    // Speaker notes go into the PDF export ONLY (as separate pages), never on-screen —
+    // so the live talk never leaks notes to the audience. Export: open this deck with
+    // ?print-pdf in the URL, then the browser's Print dialog → Save as PDF.
+    const printPdf = /print-pdf/gi.test(window.location.search);
     Reveal.initialize({
       hash: true, center: false, transition: 'fade', transitionSpeed: 'fast',
       slideNumber: 'c/t', controls: true, progress: true,
       width: 1120, height: 740, margin: 0.06,
+      showNotes: printPdf ? 'separate-page' : false,
       plugins: [RevealNotes]
     });
   </script>
