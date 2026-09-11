@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio map · wow-183</title>
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root{--ink:#1a2129;--soft:#5b6570;--line:#d9ddd6;--panel:#fff;}
+  html,body{margin:0;height:100%;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);}
+  #map{position:absolute;inset:0;}
+  .card{position:absolute;top:12px;left:12px;z-index:2;background:var(--panel);border:1px solid var(--line);
+        border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.12);max-width:320px;overflow:hidden;}
+  .card h1{font-size:.95rem;margin:0;padding:11px 14px;border-bottom:1px solid var(--line);}
+  .card h1 small{display:block;color:var(--soft);font-weight:400;font-size:.72rem;margin-top:2px;}
+  .toggle{display:flex;padding:10px 14px 6px;gap:8px;}
+  .toggle button{flex:1;font:inherit;font-size:.8rem;padding:7px 4px;border:1px solid var(--line);
+        background:#f6f7f4;color:var(--ink);border-radius:6px;cursor:pointer;}
+  .toggle button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .legend{padding:4px 14px 12px;max-height:46vh;overflow-y:auto;}
+  .legend .row{font-size:.78rem;margin:8px 0;padding-left:20px;position:relative;color:var(--ink);}
+  .legend .dot{position:absolute;left:0;top:2px;width:12px;height:12px;border-radius:50%;
+        border:1px solid rgba(0,0,0,.35);}
+  .legend .nm{color:var(--ink);font-weight:600;}
+  .legend .addr{color:var(--soft);font-family:ui-monospace,monospace;font-size:.72rem;}
+  .note{padding:0 14px 12px;font-size:.72rem;color:var(--soft);}
+  .maplibregl-popup-content{font:13px/1.4 -apple-system,sans-serif;padding:9px 12px;border-radius:7px;
+        box-shadow:0 2px 10px rgba(0,0,0,.18);}
+  .maplibregl-popup-content b{font-size:.85rem;}
+  .pp{color:#5b6570;font-family:ui-monospace,monospace;font-size:.72rem;}
+  .tip .mrow{margin-top:4px;font-size:.78rem;color:var(--ink);}
+  .tip .tag{background:var(--flag,#b23a2e);color:#fff;font-size:.66rem;padding:1px 5px;border-radius:3px;}
+</style></head>
+<body>
+<div id="map"></div>
+<div class="card">
+  <h1>One portfolio, many owners<small>27 buildings · Who Owns What = 1 portfolio (#183) · WatchlineNYC = 7 owners</small></h1>
+  <div class="toggle">
+    <button id="b-wl" class="on" onclick="setView('wl')">Who Owns What</button>
+    <button id="b-wow" onclick="setView('wow')">WatchlineNYC</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="note"><b>These groupings are algorithmic inferences from public records — leads to verify, not determinations of legal ownership. Data as of 2026-09-11.</b><br>Coordinates: NYC DOF/PLUTO via the discovery graph.
+    Owner identity: discovery graph <code>IN_OWNER_GROUP</code>. Base map tiles © Esri.</div>
+</div>
+<script>
+const DATA = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9831726, 40.7273412]}, "properties": {"bbl": "1004360028", "address": "438 EAST 9 STREET", "bldgclass": "C7", "units": 8, "year": 1900, "owner": "141 AVE A LLC", "officer": "JEANETTE PADILLA", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JEANETTE PADILLA", "wow_color": "#d97706", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9829453, 40.7272451]}, "properties": {"bbl": "1004360029", "address": "141 AVENUE A", "bldgclass": "C7", "units": 8, "year": 1888, "owner": "141 AVE A LLC", "officer": "JEANETTE PADILLA", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JEANETTE PADILLA", "wow_color": "#d97706", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.983086, 40.7273027]}, "properties": {"bbl": "1004360129", "address": "440 EAST 9TH STREET", "bldgclass": "C7", "units": 8, "year": 1888, "owner": "141 AVE A LLC", "officer": "JEANETTe PADILLa", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JEANETTE PADILLA", "wow_color": "#d97706", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9826999, 40.7277391]}, "properties": {"bbl": "1004370027", "address": "153 AVENUE A", "bldgclass": "C7", "units": 30, "year": 1900, "owner": "153 AVE A LLC", "officer": "JEANETTe PADILLa", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JEANETTE PADILLA", "wow_color": "#d97706", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9533685, 40.8187519]}, "properties": {"bbl": "1019880024", "address": "509 WEST 134 STREET", "bldgclass": "C1", "units": 19, "year": 1905, "owner": "509 WEST 134TH LLC", "officer": "NATHAN OBSTFELD", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "NATHAN OBSTFELD", "wow_color": "#059669", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.951878, 40.821507]}, "properties": {"bbl": "1020700019", "address": "523 WEST 138 STREET", "bldgclass": "C1", "units": 20, "year": 1910, "owner": "523 WEST 138TH LLC", "officer": "NATHAN OBSTFELD", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "NATHAN OBSTFELD", "wow_color": "#059669", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8874912, 40.8656712]}, "properties": {"bbl": "2032780028", "address": "382 EAST 197 STREET", "bldgclass": "C1", "units": 21, "year": 1914, "owner": "382 E 197TH STREET LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8869814, 40.8656762]}, "properties": {"bbl": "2032780054", "address": "2749 WEBSTER AVENUE", "bldgclass": "C7", "units": 22, "year": 1913, "owner": "395 E 197TH STREET LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8858082, 40.8667482]}, "properties": {"bbl": "2032790006", "address": "2820 DECATUR AVENUE", "bldgclass": "C1", "units": 54, "year": 1925, "owner": "2820 DECATUR AVENUE LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8886986, 40.8657712]}, "properties": {"bbl": "2032830022", "address": "2728 MARION AVENUE", "bldgclass": "D1", "units": 31, "year": 1932, "owner": "2728 MARION AVENUE LLC", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8872209, 40.8672958]}, "properties": {"bbl": "2032890032", "address": "340 MARION AVENUE", "bldgclass": "C1", "units": 17, "year": 1910, "owner": "340 E 198TH STREET LLC", "officer": "NATHAN OBTFELD", "bizaddr": "235 RIVER AVENUE 220, LAKEWOOD NJ 08701", "wow_pf": "NATHAN OBTFELD", "wow_color": "#0891b2", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8934297, 40.8644527]}, "properties": {"bbl": "2032930142", "address": "2603 BRIGGS AVENUE", "bldgclass": "C1", "units": 10, "year": 1913, "owner": "2603 BRIGGS AVENUE LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8934913, 40.8643567]}, "properties": {"bbl": "2032930144", "address": "2599 BRIGGS AVENUE", "bldgclass": "C1", "units": 10, "year": 1913, "owner": "2599 BRIGGS AVENUE LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8935457, 40.864258]}, "properties": {"bbl": "2032930146", "address": "2595 BRIGGS AVENUE", "bldgclass": "C1", "units": 10, "year": 1922, "owner": "2595 BRIGGS AVENUE LLC", "officer": "JOE NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8897276, 40.8688078]}, "properties": {"bbl": "2033010063", "address": "2833 BRIGGS AVENUE", "bldgclass": "C1", "units": 28, "year": 1926, "owner": "2833 BRIGGS AVENUE LLC", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9980745, 40.6875323]}, "properties": {"bbl": "3003050032", "address": "159 BALTIC STREET", "bldgclass": "C7", "units": 7, "year": 1920, "owner": "159 BALTIC DEVELOPMENT LLC", "officer": "VANESSA SORIA", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "VANESSA SORIA", "wow_color": "#7c3aed", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9851271, 40.6832742]}, "properties": {"bbl": "3003930043", "address": "481 WARREN STREET", "bldgclass": "C1", "units": 9, "year": 1920, "owner": "481 WARREN LLC", "officer": "ABARAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9530476, 40.669259]}, "properties": {"bbl": "3012680001", "address": "1195 UNION STREET", "bldgclass": "C1", "units": 16, "year": 1915, "owner": "1195 UNION LLC", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9512826, 40.6674824]}, "properties": {"bbl": "3012820053", "address": "1151 CARROLL STREET", "bldgclass": "C1", "units": 12, "year": 1912, "owner": "PPG 1151 CARROLL LLC", "officer": "NATHAN OBSTFELD", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "NATHAN OBSTFELD", "wow_color": "#059669", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9490263, 40.71431]}, "properties": {"bbl": "3027570036", "address": "595 METROPOLITAN AVENUE", "bldgclass": "C7", "units": 24, "year": 1920, "owner": "595 METROPOLITAN AVE LLC", "officer": "JOSEPH NEBENZAHL", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "JOE NEBENZAHL", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9430984, 40.7114746]}, "properties": {"bbl": "3027890011", "address": "740 GRAND STREET", "bldgclass": "D5", "units": 23, "year": 1900, "owner": "750 GRAND ST LLC, TENANT-IN-COMMON", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9207678, 40.7047697]}, "properties": {"bbl": "3032210031", "address": "70 WYCKOFF AVENUE", "bldgclass": "D2", "units": 52, "year": 1931, "owner": "70 WYCKOFF AVE LLC", "officer": "BENYOMIn FIScH", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "BENYOMIN FISCH", "wow_color": "#db2777", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9209575, 40.7029143]}, "properties": {"bbl": "3032370001", "address": "1549 DEKALB AVENUE", "bldgclass": "S5", "units": 6, "year": 1931, "owner": "1549 DEKALB LLC", "officer": "VANESSA SORIA", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "VANESSA SORIA", "wow_color": "#7c3aed", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9499929, 40.651908]}, "properties": {"bbl": "3050880046", "address": "275 MARTENSE STREET", "bldgclass": "C1", "units": 8, "year": 1931, "owner": "275 MARTENSE AVE LLC", "officer": "NATHAN OBSTFELD", "bizaddr": "235 RIVER AVENUE 220, Lakewood NY 08701", "wow_pf": "NATHAN OBSTFELD", "wow_color": "#059669", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9549017, 40.6407387]}, "properties": {"bbl": "3051890045", "address": "2307 AVENUE D", "bldgclass": "S5", "units": 6, "year": 1931, "owner": "2307 AVE D LLC", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9496418, 40.6396798]}, "properties": {"bbl": "3052150042", "address": "2814 NEWKIRK AVENUE", "bldgclass": "C1", "units": 39, "year": 1931, "owner": "ADENNIKA REALTY CORP", "officer": "VANEESA SORIA", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "VANESSA SORIA", "wow_color": "#7c3aed", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8606747, 40.726259]}, "properties": {"bbl": "4031040070", "address": "64-68 AUSTIN STREET", "bldgclass": "C1", "units": 16, "year": 1979, "owner": "64-48 AUSTIN LLC", "officer": "ABRAHAM MILLER", "bizaddr": "235 RIVER AVENUE 220, Lakewood NJ 08701", "wow_pf": "ABRAHAM MILLER", "wow_color": "#dc2626", "stray": false}}]};
+const WL_COLOR = "#2563eb";
+const LEGEND = {wl: `<div class="row"><span class="dot" style="background:#2563eb"></span>One portfolio · 27 buildings</div>`, wow: `<div class="row"><span class="dot" style="background:#2563eb"></span><span class="nm">JOE NEBENZAHL</span> · 7 bldgs</div>
+<div class="row"><span class="dot" style="background:#dc2626"></span><span class="nm">ABRAHAM MILLER</span> · 7 bldgs</div>
+<div class="row"><span class="dot" style="background:#d97706"></span><span class="nm">JEANETTE PADILLA</span> · 4 bldgs</div>
+<div class="row"><span class="dot" style="background:#059669"></span><span class="nm">NATHAN OBSTFELD</span> · 4 bldgs</div>
+<div class="row"><span class="dot" style="background:#7c3aed"></span><span class="nm">VANESSA SORIA</span> · 3 bldgs</div>
+<div class="row"><span class="dot" style="background:#0891b2"></span><span class="nm">NATHAN OBTFELD</span> · 1 bldgs · <span style="color:#b23a2e">singleton (unmerged)</span></div>
+<div class="row"><span class="dot" style="background:#db2777"></span><span class="nm">BENYOMIN FISCH</span> · 1 bldgs · <span style="color:#b23a2e">singleton (unmerged)</span></div>`};
+const DEFAULT_VIEW = "wow";   // which view opens first: "wl" (single) or "wow" (split)
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {version: 8, sources: {"esribase": {"type": "raster", "tileSize": 256, "maxzoom": 16, "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"], "attribution": "Tiles \u00a9 Esri \u2014 Esri, HERE, Garmin, \u00a9 OpenStreetMap contributors"}, "esriref": {"type": "raster", "tileSize": 256, "maxzoom": 16, "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"]}}, layers: [{"id": "esribase", "type": "raster", "source": "esribase"}, {"id": "esriref", "type": "raster", "source": "esriref"}]},
+  center:[-73.9,40.84], zoom:11
+});
+map.addControl(new maplibregl.NavigationControl({showCompass:false}), "top-right");
+
+function setView(v){
+  document.getElementById("b-wl").classList.toggle("on", v==="wl");
+  document.getElementById("b-wow").classList.toggle("on", v==="wow");
+  document.getElementById("legend").innerHTML = LEGEND[v];
+  const color = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const radius = v==="wow"
+    ? ["interpolate",["linear"],["zoom"], 10,["case",["get","stray"],7,5], 15,["case",["get","stray"],13,9]]
+    : ["interpolate",["linear"],["zoom"], 10,5, 15,9];
+  const stroke = v==="wow" ? ["case",["get","stray"],2.2,1] : 1;
+  map.setPaintProperty("pts","circle-color",color);
+  map.setPaintProperty("pts","circle-radius",radius);
+  map.setPaintProperty("pts","circle-stroke-width",stroke);
+}
+
+map.on("load", ()=>{
+  map.addSource("pts",{type:"geojson",data:DATA});
+  map.addLayer({id:"pts",type:"circle",source:"pts",
+    paint:{"circle-color":WL_COLOR,"circle-radius":6,
+           "circle-stroke-width":1,"circle-stroke-color":"#fff","circle-opacity":.92}});
+  // fit to all buildings
+  const b = new maplibregl.LngLatBounds();
+  DATA.features.forEach(f=>b.extend(f.geometry.coordinates));
+  if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:15});
+  setView(DEFAULT_VIEW);   // paints + legend + button state for the opening view
+
+  // Hover tooltip with building details.
+  const tip = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12,
+                                    className:"tip", maxWidth:"280px"});
+  map.on("mousemove","pts",e=>{
+    map.getCanvas().style.cursor="pointer";
+    const p = e.features[0].properties;
+    const stray = (p.stray===true||p.stray==="true") ? ' <span class="tag">split-off</span>' : '';
+    tip.setLngLat(e.lngLat).setHTML(
+      `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
+      `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
+      `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
+      `<div class="mrow">HPD head officer: ${p.officer}</div>`+
+      `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
+      `<div class="mrow">WatchlineNYC owner: ${p.wow_pf}${stray}</div>`
+    ).addTo(map);
+  });
+  map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
+  window._mapReady = true;   // hook for headless PNG export
+});
+// resolves once the map has finished rendering (tiles + paint settled)
+window.mapIdle = () => new Promise(res => map.once("idle", res));
+</script>
+</body></html>

@@ -21,6 +21,19 @@ resolution, the three-layer ownership model (management vs. operational nexus vs
 identity), and the reliability tagging that labels every answer as sourced or inferred.
 Press **S** in the deck for speaker notes.
 
+Two interactive comparison maps show how Watchline's owner-identity layer diverges from
+Who Owns What — in **both** directions. Toggle between the two systems; hover a building
+for details. *(These groupings are algorithmic inferences from public records — leads to
+verify, not determinations of legal ownership.)*
+
+- **[Croman — 127 buildings, one owner](https://bobflagg.github.io/WatchlineNYC/docs/maps/croman.html):**
+  Watchline unifies Steven Croman's 127 buildings that Who Owns What splits across six
+  portfolios on a one-character address typo (`4 WEST 51` vs `424 WEST 51`).
+- **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
+  Who Owns What groups 27 buildings as a single owner because they share one registration
+  office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
+  actually are — a more accurate, disaggregated view of the same public records.
+
 ## Run it locally
 
 Watchline is a Streamlit app over a Neo4j knowledge graph, with a Geosupport sidecar
