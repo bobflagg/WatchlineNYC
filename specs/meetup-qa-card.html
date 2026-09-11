@@ -98,6 +98,18 @@
   </div>
 
   <div class="q">
+    <h2>"What does <code>CONNECTED_BY_SPLINK</code> really mean?"</h2>
+    <div class="lead">The "same owner" edge — and the name undersells it.</div>
+    <ul>
+      <li>A high-weight link between two landlord records inferred to be the <b>same owner</b> across differently-named LLCs.</li>
+      <li>Despite the name it bundles <b>three</b> sources (distinct <code>method</code>): ① the <b>Splink model</b> — name-anchored Fellegi-Sunter record linkage, precision-first (first-name + common-name vetoes, aggregator masking); ② <b>curated</b> hand-verified overrides; ③ <b>same-registered-LLC</b> (deterministic, precision-1).</li>
+      <li>Guarantee: <b>0 cross-surname</b> merges. Weighted high (100) so it survives Louvain splitting.</li>
+      <li>Deed co-ownership is a <b>separate</b> edge (<code>CONNECTED_BY_DEED</code>), not this one.</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "It's the 'same registered owner' edge. Most of it is a name-anchored statistical linkage model — that's the 'splink' — but it also carries hand-curated and exact-LLC matches. It never crosses surnames, and it's what collapses one owner's typo'd offices into a single entity."</div>
+  </div>
+
+  <div class="q">
     <h2>"Can we use it? Is it a product?"</h2>
     <ul>
       <li>No — it's a <b>sabbatical prototype</b>, not a shared service.</li>
