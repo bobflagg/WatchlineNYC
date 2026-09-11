@@ -449,6 +449,31 @@ Regenerate the map with `portfolio_map.py --wow-portfolio 183` (see that case st
 
 ---
 
+## Backup slide — Two fair questions (likely pushback)
+
+*Held for two predictable objections; deliver whichever comes up.*
+
+**On-slide:** two cards — *"We live in SQL — what does the graph add?"* and *"We don't trust AI."* —
+each **conceding first**, then locating what the tool adds. Unifying line: the substance is the
+public record + a transparent, measured linkage step; the graph and the LLM are tooling around it,
+everything labeled sourced vs. inferred.
+
+- **SQL:** concede most of the pipeline is SQL (WoW=Postgres, Splink=DuckDB); the graph earns its
+  place for transitive/multi-relationship work — connected-component owner identity, N-hop
+  cross-layer traversal, graph data science. *"Count violations per owner → SQL; everyone within 3
+  hops across four link types, ranked by centrality → graph."* If pressed on recursive CTEs / Apache
+  AGE: concede — it's a convenience/performance + agent/GDS call, not a capability SQL lacks.
+- **AI:** agree — skepticism is correct. Separate the two AIs (auditable statistical linkage ≠ the
+  language model, which is a read-only front door that makes no claims). *"If you don't trust the AI,
+  ignore it and read the sourced records it points you to."* Trust-builder: its job is to **not**
+  falsely connect people (Miller). Name the unrun eval yourself.
+
+**Companion:** a printable Q&A cheat-sheet — `specs/meetup-qa-card.html` — covers these two plus
+accuracy, privacy, the WoW relationship, and "can we use it," each with a **SAY:** line. Speaker
+material; not published.
+
+---
+
 ## Sizing & flex
 
 - **Tight on time:** cut slide 4 (the map) and fold slide 8 into one line on 7 — lose ~3 min

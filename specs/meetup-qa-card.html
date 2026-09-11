@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q&A card — HDC meetup</title>
+<style>
+  :root{--navy:#0a1629;--gold:#b8860b;--ink:#1b2430;--muted:#5c6b80;--line:#dfe3ea;--say:#0c5a3a;}
+  *{box-sizing:border-box}
+  body{font:13px/1.42 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);
+    max-width:900px;margin:0 auto;padding:20px 22px 40px;background:#fff}
+  h1{font-size:1.15rem;color:var(--navy);margin:0 0 .1em}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:.9em}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .q{border:1px solid var(--line);border-radius:9px;padding:11px 13px;break-inside:avoid}
+  .q h2{font-size:.92rem;color:var(--navy);margin:0 0 .35em}
+  .q .lead{font-weight:700;color:var(--gold);font-size:.82rem;margin:0 0 .4em}
+  .q ul{margin:.2em 0 .5em;padding-left:1.1em}
+  .q li{margin:.2em 0}
+  .say{background:#eaf5ef;border-left:3px solid var(--say);border-radius:0 6px 6px 0;padding:6px 9px;
+    color:#0c3d2a;font-size:.82rem;margin-top:.4em}
+  .say b{color:var(--say)}
+  .full{grid-column:1 / -1}
+  .foot{color:var(--muted);font-size:.74rem;margin-top:1em;border-top:1px solid var(--line);padding-top:.6em}
+  code{background:#eef1f5;border-radius:4px;padding:.03em .3em;font-size:.9em}
+  @media print{body{padding:0;max-width:none}.q{page-break-inside:avoid}}
+</style></head>
+<body>
+<h1>Q&amp;A card — NYC Housing Data Coalition</h1>
+<div class="sub">Posture everywhere: <b>concede first, then locate what each tool adds.</b> The substance is the public record + a transparent, measured linkage step; the graph and the LLM are tooling around it, everything labeled sourced vs. inferred.</div>
+
+<div class="grid">
+
+  <div class="q">
+    <h2>"We live in SQL — what does the graph add?"</h2>
+    <div class="lead">Concede: most of this IS SQL.</div>
+    <ul>
+      <li>WoW is Postgres; the linkage (Splink) is DuckDB; every conditions aggregate is a <code>GROUP BY</code>.</li>
+      <li>The graph earns its place for the <b>transitive, multi-relationship</b> parts:</li>
+      <li>① connected-component <b>owner identity</b> (recursive-CTE headache in SQL, one call in a graph);</li>
+      <li>② heterogeneous <b>N-hop traversal</b> across owner/manager/address/deed layers;</li>
+      <li>③ <b>graph data science</b> (centrality, community, link-prediction) runs natively.</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "Count violations per owner → SQL wins. Everyone within 3 hops across four link types, ranked by centrality → that's the graph."</div>
+    <div class="say" style="background:#f6f7f9;border-left-color:#8894a5;color:#3a4658"><b>If pressed</b> ("recursive CTEs / Apache AGE could do it"): concede — you can; it's a convenience/performance + agent/GDS substrate call, not a capability SQL lacks.</div>
+  </div>
+
+  <div class="q">
+    <h2>"We don't trust AI."</h2>
+    <div class="lead">Agree — skepticism is correct.</div>
+    <ul>
+      <li><b>Separate the two AIs:</b> the model that decides who's the same owner is an <b>auditable statistical</b> linkage model (measured precision) — <i>not</i> a neural net.</li>
+      <li>The language model is only a <b>read-only front door</b>: it turns a question into a query and reports what came back. It never invents an answer.</li>
+      <li>Every element is labeled <b>sourced</b> vs. <b>inferred</b>; inferences are leads to verify.</li>
+      <li>Trust-builder: its main job is to <b>not falsely connect people</b> (the Miller un-merge).</li>
+      <li>Name the limit yourself: the blind accuracy eval isn't run yet.</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "The model makes no claims — it reads the public record and labels every answer as fact or inference. If you don't trust the AI, ignore it and read the sourced records it points you to. The findings don't depend on it."</div>
+  </div>
+
+  <div class="q">
+    <h2>"How accurate is it?"</h2>
+    <ul>
+      <li><b>Precision</b> ≈ 1.0, 0 cross-surname merges, on a 105-record hand-adjudicated gold set.</li>
+      <li><b>Recall / head-to-head vs WoW: not yet adjudicated</b> — a ~530-pair blind eval is built, not run. Say this plainly.</li>
+      <li>Divergence (not accuracy): on ~39K shared buildings the two systems differ both ways (~780 / ~620).</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "I can show it's precise on a labeled set. Whether it beats WoW where they disagree is exactly the eval I haven't run — and the help I'm here to ask for."</div>
+  </div>
+
+  <div class="q">
+    <h2>"Isn't naming people a privacy problem?"</h2>
+    <ul>
+      <li>All of it is <b>public record</b> (HPD/DOB/ACRIS); WoW already publishes these names with caveats.</li>
+      <li>We present it <b>more accurately</b> — the Miller map <i>disaggregates</i> a WoW over-merge (fairer to those individuals).</li>
+      <li>Leads, not verdicts; no legal determination; the demo is pinned to a public, AG-adjudicated figure (Croman).</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "Same public records the field already publishes, presented more accurately and caveated — a lead to verify, never a verdict."</div>
+  </div>
+
+  <div class="q">
+    <h2>"How is this different from Who Owns What?"</h2>
+    <ul>
+      <li>It <b>builds on</b> WoW — credit it. Not a replacement.</li>
+      <li>Adds an <b>owner-identity</b> layer (de-fragment one owner's LLCs) and separates <b>management vs. ownership vs. operational nexus</b>.</li>
+      <li>Some of it (precision-first linkage, servicer/aggregator filters) is a candidate <b>upstream PR</b> to WoW.</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "WoW answers 'who operates through this office'; I add 'who actually owns it,' kept as a separate, labeled layer — and I'd love to send some of it upstream."</div>
+  </div>
+
+  <div class="q">
+    <h2>"Can we use it? Is it a product?"</h2>
+    <ul>
+      <li>No — it's a <b>sabbatical prototype</b>, not a shared service.</li>
+      <li>Read-only over public data; a conversational interface + these public examples.</li>
+      <li>I'm here for <b>feedback and collaborators</b> — especially to run the blind eval and to sanity-check the three-layer model.</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "Not yet a service — a prototype I'm hoping to build the next part of with people in this room."</div>
+  </div>
+
+</div>
+
+<div class="foot">One-line fallback for anything: <b>"The substance is the public record; the graph and the LLM are tooling around it, each labeled sourced or inferred, all leads to verify."</b> · Companion: the deck's "Two fair questions" backup slide.</div>
+</body></html>
