@@ -11,9 +11,12 @@ question into structured queries, retrieves evidence from a knowledge graph, app
 explicit rules, and explains the result in plain language — making public housing
 data accessible to everyone without sacrificing transparency or accountability.
 
-A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) shows Watchline
-answering *"Build a referral-ready case file on landlord Steven Croman. Investigate patterns of neglect across their
-      portfolio, worst buildings first. Corroborate with public reporting and any enforcement or litigation history."*
+A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) — a **referral-ready case
+file** on landlord Steven Croman — is assembled from the Watchline knowledge graph: one owner
+resolved across 115 differently-named LLCs into a 127-building portfolio, the conditions and
+court record across it, and the public enforcement history. Ownership links are labeled
+*inferred* (leads to verify, not legal determinations); conditions and enforcement figures are
+directly sourced public records.
 
 A [slide deck](https://bobflagg.github.io/WatchlineNYC/docs/meetup/) presented at the
 NYC Housing Data Coalition walks through the approach — precision-first owner
