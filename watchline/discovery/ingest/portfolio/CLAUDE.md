@@ -51,6 +51,40 @@ missed. Validated on the wow DB: 16,693 edges, 99.9% node coverage, 0 cross-surn
 edges, ~7,476 fragmented portfolios consolidated. (This supersedes the earlier
 "replace WoW's construction / materialize a separate Portfolio set" idea.)
 
+## `:Portfolio` vs `:OwnerGroup` — two different partitions (do NOT conflate)
+
+The KG carries **two** landlord-grouping layers, built by different rules over different edge sets.
+Keep them straight — this is the single most common point of confusion:
+
+- **`:Portfolio`** (`pipeline.py --step reconcile`, `algorithms.py`) — **WoW's construction, reproduced
+  and de-fragmented.** Built from WoW's `landlords_with_connections`; the GDS projection runs
+  **WCC → Louvain-split** (`MAX_SIZE=300`) over exactly three undirected weighted edge types:
+  `CONNECTED_BY_NAME`, `CONNECTED_BY_ADDRESS`, and `CONNECTED_BY_SPLINK`. So it *is* JustFix's portfolio
+  — same algorithm, same name/address edges — with **one added ingredient: `CONNECTED_BY_SPLINK`**.
+  Edges only ADD, so components only MERGE vs WoW, never split: WoW's address-nexus portfolios are
+  preserved and its typo-fragmented ones collapse. This is the **operational / accountability nexus** —
+  recall-biased, and it KEEPS the shared-office/address glue. `CONNECTED_BY_DEED` is **not** projected
+  here. *Croman's `:Portfolio` = 135 buildings / 17 members.*
+
+- **`:OwnerGroup`** (`pipeline.py --step ownergroup`, `owner_groups.py`) — **the owner-IDENTITY layer.**
+  Plain union-find (connected components) over **`CONNECTED_BY_SPLINK | CONNECTED_BY_DEED` only — no
+  name/address glue, no Louvain.** It answers "the same owner across differently-named LLCs,"
+  precision-first. Because it drops the address glue `:Portfolio` keeps, it is *stricter* and usually
+  *smaller* than the matching Portfolio. *Croman's `:OwnerGroup` (`OG-105462`) = 127 buildings / 12
+  members.*
+
+**The trap:** anything that says "owner identity / de-fragmentation / Croman = 127" (deck, case file,
+maps) is the **`:OwnerGroup`**, NOT "the Portfolio with splink added." `:Portfolio` (135) is broader —
+it also carries the operational-nexus address links.
+
+> One-liner: **`:Portfolio` = WoW + splink over name/address/splink (WCC+Louvain); `:OwnerGroup` =
+> connected components of the identity edges (splink|deed) alone.**
+
+Provenance nuance: `CONNECTED_BY_SPLINK` bundles **three** sources under one relationship type (distinct
+`method`): the Splink model (`splink_bridge`), curated overrides (`curated_owners`), and same-registered-
+LLC edges (`llc_edges`). `CONNECTED_BY_DEED` (`deed_edges`) is a **separate** type, projected into
+`:OwnerGroup` only.
+
 ## Module map (`watchline/discovery/ingest/portfolio/`)
 
 - **`splink_source.py`** — the core. Key functions:
