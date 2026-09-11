@@ -175,8 +175,9 @@ Adopt the Type I/II/III/IV taxonomy, orthogonal to tier, and **tag each tool
 statically** at write time by which labels/rel types it touches:
 
 - **Type I** — directly-sourced fields only.
-- **Type II** — touches a derived element (`Landlord`, `Portfolio`,
-  `APPARENT_CONTROL`, `CONNECTED_BY_*`).
+- **Type II** — touches a derived element (`Landlord`, `Portfolio`, `OwnerGroup`,
+  `Manager`, `APPARENT_CONTROL`, `CONNECTED_BY_*`, or an edge into one:
+  `MEMBER_OF`/`IN_PORTFOLIO`, `IN_OWNER_GROUP`, `MANAGED_BY`).
 - **Type III** — Tier-4's own self-generated Cypher (`run_cypher`).
 - **Type IV** — Type III plus web/registry search.
 
@@ -185,10 +186,14 @@ caveat text** (short inline form + long narrative form). Caveat wording lives in
 `caveats.py` — one canonical pair per element, reused everywhere; don't hardcode
 strings per tool.
 
-**"Who owns this building?" always returns both answers, labeled** —
-`Building.dof_ownername` (Type I, "recorded owner," may be a shell LLC) and the
-`Landlord` reached via `APPARENT_CONTROL` (Type II, "apparent controller"). When
-they disagree, surface the disagreement. This is the most common Tier-1 query.
+**"Who owns this building?" returns the labeled layers** —
+`Building.dof_ownername` (Type I, "recorded owner," may be a shell LLC), the
+`Landlord` reached via `APPARENT_CONTROL` (Type II, "apparent controller"), and —
+when the controller resolves to one — its **`OwnerGroup`** (Type II, "owner identity":
+the same owner across differently-named LLCs, via `IN_OWNER_GROUP`). When the recorded
+owner and controller disagree, surface it. Who *manages* a building (`MANAGED_BY` →
+`Manager`) is a **separate** question from who owns it — never conflate them. This is
+the most common Tier-1 query.
 
 **Ambiguity — never silently guess.** Narrow with session context first
 (deterministic), else return a structured "needs disambiguation" result (capped
@@ -216,7 +221,7 @@ and is covered by Streamlit `AppTest`.
 ## The graph (`watchline-discovery`)
 
 The live Neo4j graph is authoritative; `reliability.py`/`caveats.py` encode which
-elements are derived. Five node types, all implying `:WatchlineNode`:
+elements are derived. Seven node types, all implying `:WatchlineNode`:
 
 - **`Building`** — DOF/PLUTO record. Key `bbl`. Type I (`address`, `borough`,
   `bin`, lat/long, `residential_units`, `year_built`, `building_class`, `rs_*`,
@@ -226,8 +231,16 @@ elements are derived. Five node types, all implying `:WatchlineNode`:
 - **`Landlord`** — a label some `Actor`s also carry (not a separate identity):
   resolved/curated landlord entities with a business address and a `bbls` list.
   Type II.
-- **`Portfolio`** — a computed cluster of `Landlord`s (GDS WCC+Louvain),
-  self-documenting via `method`/`run_id`. Type II.
+- **`Portfolio`** — a computed cluster of `Landlord`s (GDS WCC+Louvain over
+  name/address **plus** `CONNECTED_BY_SPLINK`), self-documenting via `method`/`run_id`.
+  The **operational/accountability nexus** (keeps shared-office address glue). Type II.
+- **`OwnerGroup`** — inferred owner **identity**: connected components of the identity
+  edges (`CONNECTED_BY_SPLINK`|`CONNECTED_BY_DEED`) — the same owner across
+  differently-named LLCs, precision-first. Key `owner_group_id`;
+  `member_count`/`building_count`/`composition`. **Distinct from `Portfolio`** — see the
+  note below the relationship table. Type II.
+- **`Manager`** — a self-disclosed managing agent (from HPD registrations), normalized to
+  a brand. Key `manager_id`. **Management ≠ ownership.** Type II.
 - **`Event`** — timestamped public-record event. Key `event_id`. Sources: HPD
   Complaints/Violations/VacateOrders, ACRIS Deed/Mortgage/{Satisfaction,Assignment},
   DOB Violations, ECB Judgments, HPD-Litigations, Marshal Evictions. `raw_record`
@@ -241,9 +254,24 @@ elements are derived. Five node types, all implying `:WatchlineNode`:
 | `REFERENCES` | `Event → Event` | Document citation. Type I |
 | `CONNECTED_BY_NAME` | `Landlord ↔ Landlord` | Fuzzy identity signal, weighted. Type II |
 | `CONNECTED_BY_ADDRESS` | `Landlord ↔ Landlord` | Shared-address signal, weighted. Type II |
+| `CONNECTED_BY_SPLINK` | `Landlord ↔ Landlord` | Owner-**identity** link (Splink model + curated + registered-LLC, distinct `method`). Weighted. Type II |
+| `CONNECTED_BY_DEED` | `Landlord ↔ Landlord` | ACRIS co-deed veil-pierce. Feeds `OwnerGroup` only. Type II |
 | `MEMBER_OF` | `Landlord → Portfolio` | Type II |
 | `IN_PORTFOLIO` | `Building → Portfolio` | Type II |
+| `IN_OWNER_GROUP` | `Landlord → OwnerGroup` | Owner-identity membership. Type II |
+| `MANAGED_BY` | `Building → Manager` | Self-disclosed managing agent. Type II |
 | `APPARENT_CONTROL` | `Landlord → Building` | Heuristic (~18.5% of edges have no matching `REGISTERED_FOR`). Type II |
+
+**`:Portfolio` vs `:OwnerGroup` — do not conflate them.** Two different partitions of
+landlords, over different edge sets. **`:Portfolio`** is JustFix's Who-Owns-What
+construction reproduced — WCC+Louvain over `CONNECTED_BY_NAME` + `CONNECTED_BY_ADDRESS` +
+`CONNECTED_BY_SPLINK` — the operational *nexus* that **keeps the shared-office/address
+glue** (recall-biased). **`:OwnerGroup`** is the owner-*identity* layer — connected
+components of `CONNECTED_BY_SPLINK`|`CONNECTED_BY_DEED` **only** (no name/address glue, no
+Louvain), so it is stricter and usually smaller. Example: Steven Croman's `:Portfolio` =
+135 buildings, his `:OwnerGroup` (`OG-105462`) = 127. Anything phrased as "owner identity /
+de-fragmentation / who really owns this" is the **`:OwnerGroup`**, not the Portfolio. (Full
+detail: `watchline/discovery/ingest/portfolio/CLAUDE.md`.)
 
 A raw ACRIS `Actor` is **not** guaranteed to have an edge into the
 `Landlord`/`APPARENT_CONTROL` graph — there's no explicit "this party resolved to
@@ -256,7 +284,8 @@ and disambiguation with this gap in mind.
   `cypher_guard.py` refuses writes/admin; reuse `watchline.shared.connections`.
 - **Fail closed on trust** — enforced in middleware/tool-visibility, never prompt.
 - **Never emit or imply a legal ownership/control determination.** `Landlord`,
-  `APPARENT_CONTROL`, and `Portfolio` are inferred — always carry their caveats.
+  `APPARENT_CONTROL`, `Portfolio`, `OwnerGroup`, and `Manager` are inferred — always
+  carry their caveats.
 - **Bound hops/rows/search calls** on Tier 3 and Tier 4 — no unbounded traversals
   or external-search loops.
 - **Deterministic re-query** — a refinement ("just the Class A ones") triggers a
