@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watchline NYC — Case studies</title>
+<style>
+  :root{
+    --navy:#0a1629;--navy-2:#12243f;--gold:#c8971c;--ink:#1b2430;--muted:#5c6b80;--faint:#8290a3;
+    --line:#e2e6ee;--bg:#eef1f5;--card:#fff;--sourced:#1c7c54;--sourced-bg:#e7f4ee;--inferred:#b26a00;--inferred-bg:#fbeede;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px}
+  img{max-width:100%}a{color:#1f6fb0}
+  .wrap{max-width:900px;margin:0 auto;padding:0 22px 80px}
+  .masthead{background:var(--navy)}.masthead img{display:block;width:100%;max-width:900px;margin:0 auto}
+  .titlebar{background:linear-gradient(180deg,var(--navy-2),var(--navy));color:#fff;padding:24px 0 20px}
+  .titlebar .wrap{padding-bottom:0}
+  .kicker{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:.72rem}
+  .titlebar h1{margin:.25em 0 .1em;font-size:1.95rem;font-weight:800}
+  .titlebar .sub{color:#c7d2e2;font-size:1rem;max-width:70ch}
+  .note{background:var(--inferred-bg);border-top:3px solid var(--gold);color:#5a4410;font-size:.86rem;padding:11px 0}
+  .note .wrap{padding-bottom:0}.note b{color:#3d2e08}
+  .toc{position:sticky;top:0;background:rgba(238,241,245,.94);backdrop-filter:blur(4px);border-bottom:1px solid var(--line);z-index:5}
+  .toc .wrap{display:flex;gap:18px;flex-wrap:wrap;padding:9px 22px;font-size:.82rem}
+  .toc a{color:var(--muted);text-decoration:none;font-weight:600}.toc a:hover{color:var(--navy)}
+  .lede{color:var(--muted);max-width:74ch;margin:24px 0 8px}
+  h2{font-size:1.35rem;color:var(--navy);margin:30px 0 .1em;font-weight:800}
+  h2 .tag{font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;padding:.15em .55em;border-radius:6px;margin-left:.5em}
+  h2 .tag.merge{color:var(--sourced);background:var(--sourced-bg)}
+  h2 .tag.unmerge{color:var(--inferred);background:var(--inferred-bg)}
+  h2 .rule{display:block;height:3px;width:56px;background:var(--gold);margin-top:.4em}
+  .case{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:12px 0}
+  .case p{margin:.55em 0;max-width:74ch}.case p:first-of-type{margin-top:.1em}
+  table{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.86rem;margin:.6em 0}
+  thead th{background:var(--navy);color:#fff;text-align:left;padding:9px 11px;font-weight:650;font-size:.8rem;white-space:nowrap}
+  tbody td{border-top:1px solid var(--line);padding:8px 11px;vertical-align:top}
+  tbody tr:nth-child(even) td{background:#f7f8fb}
+  td.k{font-weight:650;color:var(--navy-2)}
+  .badge{display:inline-block;font-size:.64rem;font-weight:800;letter-spacing:.04em;padding:.1em .5em;border-radius:5px;text-transform:uppercase;vertical-align:middle}
+  .badge.s{color:var(--sourced);background:var(--sourced-bg)}.badge.i{color:var(--inferred);background:var(--inferred-bg)}
+  .takeaway{border-left:5px solid var(--gold);background:#fbf8f0;border-radius:0 8px 8px 0;padding:9px 15px;margin:12px 0;font-size:.9rem;color:var(--navy-2)}
+  code{font-family:var(--mono);font-size:.86em;background:#eef1f5;padding:.03em .35em;border-radius:5px;color:var(--navy-2)}
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--faint);font-size:.82rem}
+  footer a{color:#1f6fb0}
+</style>
+</head>
+<body>
+
+<div class="masthead"><img src="../../header.png" alt="Watchline NYC — Accountability infrastructure for NYC housing enforcement"></div>
+<div class="titlebar"><div class="wrap">
+  <div class="kicker">Case studies</div>
+  <h1>The layers in practice</h1>
+  <div class="sub">Three worked examples of the owner-identity layer doing its job — merging one owner
+    the record splits, and (twice) refusing to merge parties the record only appears to connect. The
+    answer, in data, to "doesn't it just merge everything?"</div>
+</div></div>
+<div class="note"><div class="wrap"><b>Leads, not verdicts.</b> Ownership and control links below are
+  algorithmic <b>inferences</b> from public records — investigative leads to verify, not determinations
+  of legal ownership. Recorded owners, court records, and managing agents are directly sourced. The two
+  "un-merge" cases below <em>separate</em> parties the record only appears to connect — the favorable,
+  cautious direction. All names are drawn from public NYC filings.</div></div>
+
+<nav class="toc"><div class="wrap">
+  <a href="#escobar">1 · Escobar (merge)</a>
+  <a href="#miller">2 · Miller (un-merge: address)</a>
+  <a href="#levitov">3 · Levitov (un-merge: manager)</a>
+</div></nav>
+
+<div class="wrap">
+<p class="lede">Watchline separates three questions the record often conflates — who <em>owns</em> a
+  building, what operational network it <em>runs through</em>, and who <em>manages</em> it. These cases
+  show each boundary holding. (See also the flagship <a href="../../">Steven Croman case file</a>.)</p>
+
+<!-- ESCOBAR -->
+<h2 id="escobar">1 · One owner, split by a typo <span class="tag merge">merge</span><span class="rule"></span></h2>
+<div class="case">
+  <p>Who Owns What splits landlord <b>Ramon Escobar</b>'s Bronx portfolio into <b>two</b> portfolios that
+    carry the <em>identical</em> name and business address — because a single registration-address typo
+    (<code>2432 GRAND COURSE 504</code> vs <code>…CONCOURSE…</code>) fractured its connection graph.
+    Watchline keeps all <b>26 buildings</b> together as one owner.</p>
+  <table><thead><tr><th></th><th>Grouping</th><th>Buildings</th><th>Label</th></tr></thead><tbody>
+    <tr><td class="k">WatchlineNYC</td><td>1 owner</td><td>26</td><td>one Bronx portfolio</td></tr>
+    <tr><td class="k">Who Owns What</td><td>2 portfolios</td><td>2 + 24</td><td>both "RAMON ESCOBAR @ 2432 GRAND CONCOURSE #504"</td></tr>
+  </tbody></table>
+  <p>Three adjacent Creston Avenue buildings, all deed-owned by the same entity, land in different WoW
+    portfolios purely on the typo. The ACRIS held-deed signal <span class="badge s">sourced</span> plus
+    name-anchored resolution reunites them. <b>Layer:</b> owner-identity <em>de-fragmentation</em>.</p>
+</div>
+
+<!-- MILLER -->
+<h2 id="miller">2 · One office, seven owners <span class="tag unmerge">un-merge · address</span><span class="rule"></span></h2>
+<div class="case">
+  <p>Who Owns What groups <b>27 buildings</b> as a single owner (its portfolio #183, labeled "Nathan
+    Obstfeld") — but they are really <b>~10 different owners</b> who merely share one registration office
+    at <b>235 River Ave, Lakewood NJ</b>. Watchline <b>separates</b> them into the seven distinct owners
+    they actually are.</p>
+  <table><thead><tr><th></th><th>Grouping</th><th>What connects them</th></tr></thead><tbody>
+    <tr><td class="k">Who Owns What</td><td>1 portfolio · 27 bldgs</td><td>a shared registration office (an address)</td></tr>
+    <tr><td class="k">WatchlineNYC</td><td>7 distinct owners</td><td>nothing — different people at a shared address</td></tr>
+  </tbody></table>
+  <p>The office is a shared suite, <em>not</em> a registered agent and not one operator — so "same office"
+    is not "same owner." <b>Layer:</b> operational nexus ≠ ownership. Explore the
+    <a href="../maps/miller.html">interactive map</a> (toggle Watchline ↔ Who Owns What).</p>
+  <div class="takeaway">This is the direct answer to "doesn't it just merge everything?" — here it does the
+    opposite, correctly.</div>
+</div>
+
+<!-- LEVITOV -->
+<h2 id="levitov">3 · One manager, five separate owners <span class="tag unmerge">un-merge · manager</span><span class="rule"></span></h2>
+<div class="case">
+  <p>Five buildings all filed from one small office (240 Riverside Blvd, unit CU2) and all managed by
+    <b>Verus Real Estate</b>. The single constant is the <b>managing agent</b> — every recorded owner and
+    every apparent controller differs. So the shared thread is <em>management</em>, not ownership.</p>
+  <table><thead><tr><th>Building</th><th>Recorded owner <span class="badge s">sourced</span></th><th>Apparent controller <span class="badge i">inferred</span></th><th>Manager <span class="badge s">sourced</span></th></tr></thead><tbody>
+    <tr><td class="k">349 West 53 St</td><td>Gates Overseas NYC</td><td>Michael Schwarz</td><td>Verus Real Estate</td></tr>
+    <tr><td class="k">418 MacDonough St</td><td>Michael Schwarz</td><td>Michael Schwarz</td><td>Verus Real Estate</td></tr>
+    <tr><td class="k">124 South 2 St</td><td>Bollingen LLC</td><td>Oleg Evdokimenko</td><td>Verus Real Estate</td></tr>
+    <tr><td class="k">1239 Putnam Ave</td><td>Mulholland Rev. Trust</td><td>Dmitry Sokolov</td><td>Verus Real Estate</td></tr>
+    <tr><td class="k">1111 Jefferson Ave</td><td>Cem Olcer</td><td>Dmitry Sokolov</td><td>Verus Real Estate</td></tr>
+  </tbody></table>
+  <p>Watchline puts <b>none</b> of these in one owner group; it splits them into three portfolios grouped
+    by their apparent <em>owners</em>, and keeps the shared operator only in the management layer. If it
+    had merged them, it would almost certainly have been wrong — the deeds name five unrelated parties.
+    <b>Layer:</b> management ≠ ownership.</p>
+</div>
+
+<div class="takeaway" style="margin-top:26px;font-size:.94rem">
+  <b>One message across all three:</b> the owner-identity layer is <em>precision-first</em>. It keeps
+  <b>who owns</b> cleanly separate from <b>who operates through this office</b> and <b>who manages the
+  building</b> — merging a true owner the record fragments, and declining to merge parties the record
+  only appears to connect.
+</div>
+
+<footer>
+  <b>Watchline NYC — Discovery.</b> Investigative aids assembled from public records; they make no legal
+  determination of ownership, control, or wrongdoing. ·
+  <a href="../../">Case file</a> · <a href="../faq/">FAQ</a> · <a href="../meetup/">Slides</a> ·
+  <a href="../maps/croman.html">Maps</a> · <a href="https://github.com/bobflagg/WatchlineNYC">Code</a>
+</footer>
+</div>
+</body>
+</html>
