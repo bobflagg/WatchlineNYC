@@ -26,9 +26,15 @@ Needs .env (NEO4J_* and PG*), same as the other eval scripts.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
+
+# Standing caveat carried on every rendered map — these groupings are inferences from public
+# records, matching the standard of care of the public tools this compares against.
+CAVEAT = ("These groupings are algorithmic inferences from public records — leads to verify, not "
+          "determinations of legal ownership.")
 
 from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE, pg_conn
 
@@ -315,7 +321,8 @@ _TEMPLATE = """<!doctype html>
     <button id="b-wow" onclick="setView('wow')">__BTN_SPLIT__</button>
   </div>
   <div class="legend" id="legend"></div>
-  <div class="note">Coordinates: NYC DOF/PLUTO via the discovery graph. __SPLIT_NOTE__ __BM_NOTE__</div>
+  <div class="note"><b>__CAVEAT__</b><br>Coordinates: NYC DOF/PLUTO via the discovery graph.
+    __SPLIT_NOTE__ __BM_NOTE__</div>
 </div>
 <script>
 const DATA = __GEOJSON__;
@@ -398,8 +405,10 @@ def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: st
     if subhead is None:
         subhead = (f"{n} buildings · WatchlineNYC = 1 portfolio · "
                    f"Who Owns What = {n_wow_pfs} portfolio{'s' if n_wow_pfs != 1 else ''}")
+    caveat = f"{CAVEAT} Data as of {datetime.date.today().isoformat()}."
     return (_TEMPLATE
             .replace("__TITLE__", f"Portfolio map · {portfolio_id}")
+            .replace("__CAVEAT__", caveat)
             .replace("__HEADING__", heading)
             .replace("__SUBHEAD__", subhead)
             .replace("__GEOJSON__", json.dumps(geojson))
