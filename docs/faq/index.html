@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watchline NYC — FAQ</title>
+<style>
+  :root{
+    --navy:#0a1629;--navy-2:#12243f;--gold:#c8971c;--ink:#1b2430;--muted:#5c6b80;--faint:#8290a3;
+    --line:#e2e6ee;--bg:#eef1f5;--card:#fff;--sourced:#1c7c54;--sourced-bg:#e7f4ee;--inferred:#b26a00;--inferred-bg:#fbeede;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px}
+  img{max-width:100%}a{color:#1f6fb0}
+  .wrap{max-width:860px;margin:0 auto;padding:0 22px 80px}
+  .masthead{background:var(--navy)}.masthead img{display:block;width:100%;max-width:860px;margin:0 auto}
+  .titlebar{background:linear-gradient(180deg,var(--navy-2),var(--navy));color:#fff;padding:24px 0 20px}
+  .titlebar .wrap{padding-bottom:0}
+  .kicker{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:.72rem}
+  .titlebar h1{margin:.25em 0 .1em;font-size:1.95rem;font-weight:800}
+  .titlebar .sub{color:#c7d2e2;font-size:1rem;max-width:66ch}
+  .note{background:var(--inferred-bg);border-top:3px solid var(--gold);color:#5a4410;font-size:.86rem;padding:11px 0}
+  .note .wrap{padding-bottom:0}.note b{color:#3d2e08}
+  .toc{position:sticky;top:0;background:rgba(238,241,245,.94);backdrop-filter:blur(4px);border-bottom:1px solid var(--line);z-index:5}
+  .toc .wrap{display:flex;gap:18px;flex-wrap:wrap;padding:9px 22px;font-size:.82rem}
+  .toc a{color:var(--muted);text-decoration:none;font-weight:600}.toc a:hover{color:var(--navy)}
+  h2{font-size:1.15rem;color:var(--navy);margin:34px 0 .2em;font-weight:800}
+  h2 .rule{display:block;height:3px;width:56px;background:var(--gold);margin-top:.4em}
+  .qa{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px 20px;margin:12px 0}
+  .qa h3{font-size:1.02rem;color:var(--navy-2);margin:0 0 .4em;font-weight:750}
+  .qa p{margin:.5em 0;max-width:72ch}
+  .qa p:first-of-type{margin-top:0}
+  .badge{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.04em;padding:.1em .5em;border-radius:5px;text-transform:uppercase;vertical-align:middle}
+  .badge.s{color:var(--sourced);background:var(--sourced-bg)}.badge.i{color:var(--inferred);background:var(--inferred-bg)}
+  code{font-family:var(--mono);font-size:.86em;background:#eef1f5;padding:.03em .35em;border-radius:5px;color:var(--navy-2)}
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--faint);font-size:.82rem}
+  footer a{color:#1f6fb0}
+</style>
+</head>
+<body>
+
+<div class="masthead"><img src="../../header.png" alt="Watchline NYC — Accountability infrastructure for NYC housing enforcement"></div>
+<div class="titlebar"><div class="wrap">
+  <div class="kicker">Frequently asked questions</div>
+  <h1>How Watchline works — and what to trust</h1>
+  <div class="sub">Straight answers for the two rooms that ask the hardest questions: people steeped in
+    SQL and public housing data, and people rightly skeptical of AI.</div>
+</div></div>
+<div class="note"><div class="wrap"><b>The one-line answer to everything:</b> the substance is the
+  public record; the graph and the language model are tooling around it, and every element is labeled
+  <span class="badge s">sourced</span> or <span class="badge i">inferred</span> — a lead to verify, never
+  a legal determination.</div></div>
+
+<nav class="toc"><div class="wrap">
+  <a href="#about">The project</a>
+  <a href="#methods">The methods</a>
+  <a href="#trust">Trust &amp; limits</a>
+  <a href="#using">Using it</a>
+</div></nav>
+
+<div class="wrap">
+
+<h2 id="about">The project<span class="rule"></span></h2>
+
+<div class="qa">
+  <h3>What is Watchline, and how is it different from Who Owns What?</h3>
+  <p>Watchline makes NYC's public housing record legible — who owns and runs the city's housing —
+    conversationally, and with its uncertainty labeled. It <b>builds on</b> JustFix's
+    <a href="https://whoownswhat.justfixnyc.org/">Who Owns What</a> (WoW), which it credits and complements,
+    not replaces. Its main addition is an <b>owner-identity</b> layer that resolves one owner's
+    differently-named LLCs into a single owner, and a separation of three questions the record often
+    conflates: who <em>manages</em> a building, what operational network it <em>runs through</em>, and who
+    actually <em>owns</em> it.</p>
+</div>
+
+<div class="qa">
+  <h3>What data does it use?</h3>
+  <p>Only NYC <b>public records</b> — HPD registrations, complaints, violations and vacate orders; DOB
+    violations; ECB judgments; ACRIS deeds and mortgages; and marshal evictions — assembled into a
+    knowledge graph. No private or proprietary data.</p>
+</div>
+
+<div class="qa">
+  <h3>How current is the data?</h3>
+  <p>It's a periodic <b>snapshot</b>, not a live feed, and each published page is dated. Figures can lag
+    the live public record — re-check against the source before acting on anything.</p>
+</div>
+
+<h2 id="methods">The methods<span class="rule"></span></h2>
+
+<div class="qa">
+  <h3>You could do all this in SQL — what does the knowledge graph add?</h3>
+  <p>Most of the pipeline <em>is</em> SQL: WoW is Postgres, the record linkage runs in DuckDB, and every
+    conditions aggregate is a <code>GROUP BY</code>. The graph earns its place for the parts that are
+    <b>transitive and multi-relationship</b>: connected-component owner identity, walking several hops
+    across owner / manager / address / deed links, and graph data science (centrality, community
+    detection, link prediction). "Count violations per owner" is SQL; "everyone within three hops across
+    four kinds of link, ranked by structural importance" is the graph.</p>
+</div>
+
+<div class="qa">
+  <h3>There's AI in this — should I trust it?</h3>
+  <p>Be skeptical; that's the right instinct, and the design assumes it. Two different things get called
+    "AI" here, and only one does the substantive work. The model that decides which records are the
+    <b>same owner</b> is an <b>auditable statistical record-linkage</b> model — not a neural network — and
+    its precision is measured. The <b>language model is only a front door</b>: it turns a plain-English
+    question into a read-only query and reports what the query returned; it never invents an answer. Every
+    element comes back labeled <span class="badge s">sourced</span> or <span class="badge i">inferred</span>.
+    <b>If you don't trust the language model, ignore it</b> and read the sourced records it points you to —
+    the findings don't depend on it.</p>
+</div>
+
+<div class="qa">
+  <h3>How do you decide two differently-named LLCs are the same owner?</h3>
+  <p>A high-confidence "same owner" link (<code>CONNECTED_BY_SPLINK</code>) connects records that resolve
+    to one owner. It comes from three sources: a <b>name-anchored probabilistic record-linkage</b> model
+    (precision-first, with vetoes for common names and shared aggregator offices), <b>hand-curated</b>
+    overrides for cases the model can't reach, and <b>exact same-registered-LLC</b> matches. It never links
+    two different surnames. It's what collapses one owner's typo'd offices and shell LLCs into a single
+    entity.</p>
+</div>
+
+<div class="qa">
+  <h3>How does your "portfolio" relate to Who Owns What's?</h3>
+  <p>The operational-nexus layer (<code>:Portfolio</code>) is <b>WoW's construction, reproduced</b> — the
+    same clustering over WoW's own name/address connections — <b>plus</b> the "same owner" links above.
+    Because links only add, it only ever <em>merges</em> what WoW split; it never fragments WoW's
+    groupings. Separately, the <b>owner-identity</b> layer (<code>:OwnerGroup</code>) is stricter: it uses
+    only the identity links and drops the shared-address glue, and it's the layer behind statements like
+    "these 115 LLC names are one owner."</p>
+</div>
+
+<h2 id="trust">Trust &amp; limits<span class="rule"></span></h2>
+
+<div class="qa">
+  <h3>How accurate is it?</h3>
+  <p>On a 105-record hand-adjudicated gold set, the owner resolution is essentially never wrong when it
+    links two records — <b>precision ≈ 1.0, zero cross-surname merges</b>. What is <b>not yet done</b> is
+    the head-to-head accuracy comparison against Who Owns What where the two disagree: a blind evaluation
+    of ~530 sampled pairs is built but not run. The two systems diverge on tens of thousands of buildings,
+    in both directions; which is right where they disagree is exactly what that evaluation will decide.</p>
+</div>
+
+<div class="qa">
+  <h3>Isn't naming people a privacy concern?</h3>
+  <p>Everything shown is <b>public record</b>, and tools like Who Owns What already publish these names
+    with caveats. Watchline presents the same records — often <em>more accurately</em>, for example by
+    separating owners that address-based grouping wrongly lumps together. Every ownership link is an
+    <b>inference, labeled as such</b> — a lead to investigate, never a legal determination — and the
+    public examples are pinned to figures already adjudicated in the public record.</p>
+</div>
+
+<h2 id="using">Using it<span class="rule"></span></h2>
+
+<div class="qa">
+  <h3>Can I use it? Is it a product? Is it open source?</h3>
+  <p>It's an <b>independent sabbatical prototype</b>, not a shared service. It reads public data only. The
+    point of publishing these examples is to gather <b>feedback and collaborators</b> — especially to help
+    run the blind accuracy evaluation and sanity-check the three-layer model. The code lives at
+    <a href="https://github.com/bobflagg/WatchlineNYC">github.com/bobflagg/WatchlineNYC</a>.</p>
+</div>
+
+<footer>
+  <b>Watchline NYC — Discovery.</b> An investigative aid assembled from public records; it makes no legal
+  determination of ownership, control, or wrongdoing. ·
+  <a href="../../">Case file</a> · <a href="../meetup/">Slides</a> ·
+  <a href="../maps/croman.html">Maps</a> · <a href="https://github.com/bobflagg/WatchlineNYC">Code</a>
+</footer>
+
+</div>
+</body>
+</html>

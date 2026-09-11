@@ -37,6 +37,11 @@ verify, not determinations of legal ownership.)*
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
   actually are — a more accurate, disaggregated view of the same public records.
 
+New to the project or skeptical of the approach? The
+[**FAQ**](https://bobflagg.github.io/WatchlineNYC/docs/faq/) gives straight answers on what the
+knowledge graph adds over SQL, how the AI is (and isn't) used, how accurate it is, and how ownership
+links are inferred — with the honest limits stated plainly.
+
 ## Run it locally
 
 Watchline is a Streamlit app over a Neo4j knowledge graph, with a Geosupport sidecar
