@@ -892,6 +892,34 @@
           from WoW in both directions.</aside>
       </section>
 
+      <!-- BACKUP — likely pushback (SQL / AI) -->
+      <section>
+        <span class="kicker">Backup · likely pushback</span>
+        <h2>Two fair questions</h2>
+        <hr class="rule">
+        <div class="cards">
+          <div class="card" style="border-top:5px solid var(--navy)">
+            <div class="cl" style="color:var(--navy)">"We live in SQL — what does the graph add?"</div>
+            <ul class="tight" style="margin-top:.35em">
+              <li><strong>Concede:</strong> most of the pipeline <em>is</em> SQL — WoW is Postgres, the linkage is DuckDB.</li>
+              <li>The graph earns its place for the <strong>transitive, multi-relationship</strong> parts: connected-component owner identity · N-hop "who connects to whom" across owner/manager/deed layers · graph analytics.</li>
+              <li style="color:var(--muted)"><em>"Count violations per owner" → SQL. "Everyone within 3 hops across four link types, ranked by centrality" → graph.</em></li>
+            </ul>
+          </div>
+          <div class="card" style="border-top:5px solid var(--gold)">
+            <div class="cl" style="color:var(--gold)">"We don't trust AI."</div>
+            <ul class="tight" style="margin-top:.35em">
+              <li><strong>Good — neither do I</strong>, for claims about people.</li>
+              <li>The real inference is <strong>transparent statistical linkage</strong> (measured precision), not a neural net.</li>
+              <li>The language model is a <strong>read-only front door</strong> — it makes no claims; the public record does. Ignore it and read the sourced records.</li>
+              <li>Its main job is to <strong>not falsely connect people.</strong></li>
+            </ul>
+          </div>
+        </div>
+        <div class="pull" style="font-size:.8em">Both answers share one core: the substance is the <strong>public record</strong> + a transparent, measured linkage step. The graph and the LLM are tooling around it — each earning its place, everything labeled sourced vs. inferred.</div>
+        <aside class="notes">SQL question — concede hard: most of this IS SQL. WoW is Postgres, Splink is DuckDB, every conditions aggregate is a GROUP BY. The graph earns its place in three spots that are awkward or slow in SQL, not impossible: (1) transitive closure — the owner-identity layer IS connected components over the identity edges, one call in a graph, a recursive-CTE headache in SQL; (2) heterogeneous N-hop traversal — "start at this building, walk out across shared-owner/manager/address/deed links, who do I reach" is one graph pattern, a per-hop per-edge-type union in SQL; (3) graph data science — centrality, community, link-prediction run natively. If someone says "you could do it with recursive CTEs or Apache AGE" — concede: you can; it's a convenience/performance + agent/GDS substrate call, not a capability SQL lacks. AI question — AGREE with them; skepticism is correct. Separate the two AIs: the thing that decides who's the same owner is an auditable STATISTICAL model whose precision we measure — not a neural net; the language model is only the front door and never invents an answer, it reads the record and labels it. "If you don't trust the AI, ignore it — read the sourced records it points you to; the findings don't depend on it." And the trust-builder: the tool's main job is to NOT falsely connect people (the Miller case). Name the honest limit yourself: the accuracy eval isn't run yet.</aside>
+      </section>
+
     </div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
