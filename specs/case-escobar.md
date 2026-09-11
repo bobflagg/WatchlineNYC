@@ -250,3 +250,12 @@ cd ../owner-review && REVIEW_QUEUE=../WatchlineNYC/eval_out/offeval/review_queue
   OWNER_REVIEW_STORE=data/offeval.sqlite uvicorn owner_review.review.app:app --port 8020
 # then open http://127.0.0.1:8020/pair/PB01?annotator=demo
 ```
+
+---
+
+**The trilogy:** this file = *merge* what WoW split (owner identity, one typo);
+[`case-miller.md`](case-miller.md) = *un-merge* what WoW conflated on a shared **address**
+(operational nexus); [`case-levitov.md`](case-levitov.md) = *un-merge* on a shared **manager**
+(management ≠ ownership). Three cases, one message: the owner-identity layer is
+*precision-first*, and it keeps *who owns* cleanly separate from *who operates through this
+office* and *who manages the building*.

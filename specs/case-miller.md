@@ -138,6 +138,8 @@ uv run --extra ingest python -m watchline.discovery.ingest.portfolio.eval.portfo
 Pairs with Escobar's forward map (`--portfolio <PF-id>`), which shows the merge direction. Same
 tool, both directions.
 
-**Pairing:** use with `case-escobar.md`. Escobar = merge WoW split (one typo); Miller =
-un-merge WoW conflated (one office). Two cases, opposite directions, same message: the
-owner-identity layer is *precision-first*, and divergence from WoW runs both ways.
+**The trilogy:** [`case-escobar.md`](case-escobar.md) = *merge* what WoW split (owner identity,
+one typo); this file = *un-merge* what WoW conflated on a shared **address** (operational nexus);
+[`case-levitov.md`](case-levitov.md) = *un-merge* on a shared **manager** (management ≠ ownership).
+Three cases, one message: the owner-identity layer is *precision-first*, and it keeps *who owns*
+cleanly separate from *who operates through this office* and *who manages the building*.
