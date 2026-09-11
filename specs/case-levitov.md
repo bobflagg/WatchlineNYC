@@ -55,6 +55,42 @@ This is the ownership-vs-management distinction working end to end: the shared t
 same office" masquerade as "same owner." It's the Miller lesson (shared *address* ≠ common
 owner) one level deeper — shared *agent* ≠ common owner.
 
+## Anatomy of one `APPARENT_CONTROL` edge (why 1239 Putnam → Dmitry Sokolov)
+
+Tracing a single edge shows how soft `APPARENT_CONTROL` is — here it's a **portfolio-anchor
+artifact**, not a direct finding about the building. 1239 Putnam Ave = `bbl 3033680047`,
+recorded owner (DOF) = THE BRIGITEE MULHOLLAND REVOCABLE TRUST.
+
+1. **Sourced fact (HPD registration `814025`, expired 2021-09-01, all @ 240 Riverside Blvd CU2):**
+   CorporateOwner + HeadOfficer = **1239 PUTNAM LLC** (the HeadOfficer slot holds the LLC name,
+   not a person); **Officer = DMITRY SOKOLOV** (the only natural person in an owner role);
+   Agent + SiteManager = **Anya Levitov / Verus**. So "Sokolov, Officer of 1239 Putnam" is
+   directly sourced; everything below is inference on top.
+2. **Two Landlord nodes.** Sokolov = `ACT-LL-29277`, but his `bbls` anchor is **1111 Jefferson
+   Ave** (`3033810056`) — a *different* building where he is also an Officer **and**
+   `REGISTERED_FOR`. 1239 Putnam is its own node, `1239 PUTNAM LLC` (`ACT-LL-14`). At 1239 Putnam
+   itself Sokolov has **no** `REGISTERED_FOR` edge — this is one of the ~18.5% of
+   `APPARENT_CONTROL` edges with no registration mirror.
+3. **Address-only glue → one Portfolio.** The only edge joining the two nodes is
+   `DMITRY SOKOLOV ──CONNECTED_BY_ADDRESS (w=2.0)── 1239 PUTNAM LLC` (both file from 240 Riverside
+   CU2). No `CONNECTED_BY_SPLINK`, no deed. WCC+Louvain groups them into Portfolio `PF-…-11`
+   (2 bldgs: 1111 Jefferson + 1239 Putnam).
+4. **The anchor heuristic** (`pipeline.py:506–526`) picks **one anchor per portfolio — the member
+   with the most BBLs — and stamps `APPARENT_CONTROL` from it onto *every* building in the
+   portfolio.** Both members have exactly 1 BBL → a **tie**, broken arbitrarily (internal node
+   order, *not* role). It landed on Sokolov, so he is stamped controller of both buildings,
+   1239 Putnam included — though his own registration is at 1111 Jefferson.
+
+**Why this sharpens the case.** The owner-identity layer **abstained** (`owner_group = None`):
+`CONNECTED_BY_ADDRESS` is an operational-nexus signal, not an identity edge (`OwnerGroup` reads
+`SPLINK`/`DEED` only), so Watchline asserts "apparent controller: Sokolov (inferred)" but never
+"Sokolov owns this." Two honest heuristic weaknesses it exposes: (a) the anchor is *most-BBLs*,
+**not role-based** (the code comment says so) — the tie here luckily resolved to the human over
+the shell, but could have named `1239 PUTNAM LLC` instead; (b) the recall-biased Portfolio layer
+keeps the shared-office address glue, so control propagated across a co-located manager's office —
+exactly the over-reach the `OwnerGroup` layer is built to avoid, and did. Textbook reason
+`APPARENT_CONTROL` is Type II ("a lead, not a legal determination").
+
 ## The teaching arc (why this example is strong)
 
 The cleanest rebuttal to *"your system just merges everything into big landlords."* Here the
@@ -94,6 +130,19 @@ Read-only. Vintage 2026-09-11.
 #    WHERE businesshousenumber='240' AND businessstreetname LIKE 'RIVERSIDE%'
 #    -> ~8 distinct owner/officer names over ~6 buildings (Levitov 4, Sokolov, Evdokimenko,
 #       1239 PUTNAM LLC). Small shared office; below the degree-25 aggregator cap.
+
+# 4) Anatomy of the 1239 Putnam -> Sokolov APPARENT_CONTROL edge
+#  a) raw registration roles (sourced): Sokolov = Officer; 1239 PUTNAM LLC = CorporateOwner/
+#     HeadOfficer; Levitov/Verus = Agent/SiteManager. (Postgres hpd_contacts JOIN registrations
+#     WHERE r.bbl='3033680047')
+#  b) MATCH (l:Landlord)-[r:APPARENT_CONTROL]->(:Building {bbl:'3033680047'})
+#     RETURN l.name, l.actor_id, l.bbls, r.heuristic   -> DMITRY SOKOLOV / ACT-LL-29277 /
+#     ['3033810056' = 1111 Jefferson] / true   (his bbls anchor is a DIFFERENT building)
+#  c) the only edge tying him to the shell that owns 1239 Putnam:
+#     MATCH (:Actor{actor_id:'ACT-LL-29277'})-[r]-(:Actor{actor_id:'ACT-LL-14'}) RETURN type(r),r
+#     -> CONNECTED_BY_ADDRESS {weight:2.0}   (240 Riverside CU2; no SPLINK/DEED -> og=None)
+#  d) anchor rule: pipeline.py:506-526 -- most-BBLs member of the portfolio is stamped
+#     APPARENT_CONTROL over ALL its buildings; here a 1-vs-1 BBL tie broke arbitrarily to Sokolov.
 ```
 
 **Pairing (the trilogy):** `case-escobar.md` = merge what WoW split (owner identity, one typo).
