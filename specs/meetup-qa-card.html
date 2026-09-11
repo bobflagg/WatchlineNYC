@@ -9,8 +9,8 @@
     max-width:900px;margin:0 auto;padding:20px 22px 40px;background:#fff}
   h1{font-size:1.15rem;color:var(--navy);margin:0 0 .1em}
   .sub{color:var(--muted);font-size:.82rem;margin-bottom:.9em}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .q{border:1px solid var(--line);border-radius:9px;padding:11px 13px;break-inside:avoid}
+  .grid{column-count:2;column-gap:12px}
+  .q{border:1px solid var(--line);border-radius:9px;padding:11px 13px;break-inside:avoid;margin:0 0 12px}
   .q h2{font-size:.92rem;color:var(--navy);margin:0 0 .35em}
   .q .lead{font-weight:700;color:var(--gold);font-size:.82rem;margin:0 0 .4em}
   .q ul{margin:.2em 0 .5em;padding-left:1.1em}
@@ -84,6 +84,17 @@
       <li>Some of it (precision-first linkage, servicer/aggregator filters) is a candidate <b>upstream PR</b> to WoW.</li>
     </ul>
     <div class="say"><b>SAY:</b> "WoW answers 'who operates through this office'; I add 'who actually owns it,' kept as a separate, labeled layer — and I'd love to send some of it upstream."</div>
+  </div>
+
+  <div class="q">
+    <h2>"How does your <code>:Portfolio</code> relate to WoW's portfolio?" <span style="font-weight:400;color:var(--muted)">(the technical version)</span></h2>
+    <div class="lead">It IS WoW's portfolio — plus one edge type.</div>
+    <ul>
+      <li>Same construction: WCC + Louvain over WoW's <code>landlords_with_connections</code>, same name/address edges — <b>plus <code>CONNECTED_BY_SPLINK</code></b>.</li>
+      <li>Edges only <b>add</b> → components only <b>merge</b>, never split: WoW's portfolios are preserved, its typo-fragmented ones collapse (Croman 6→1).</li>
+      <li><b>Don't confuse it with the owner-identity layer.</b> <code>:OwnerGroup</code> is separate — connected components of the identity edges (<code>splink|deed</code>) <i>only</i>, no address glue, no Louvain. That's the "127 / who really owns this" number (the <code>:Portfolio</code> is broader — 135).</li>
+    </ul>
+    <div class="say"><b>SAY:</b> "Our Portfolio is WoW's — same WCC, same name/address edges — plus our splink links, so it only ever merges what WoW split. The 'who really owns this' number comes from a separate, stricter layer that drops the address glue entirely."</div>
   </div>
 
   <div class="q">
