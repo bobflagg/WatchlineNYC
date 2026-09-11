@@ -13,8 +13,9 @@ bottom). All figures from the live `wow` schema + discovery graph on **2026-09-1
 
 ## The headline
 
-Anya Levitov appears on **five** buildings (raw HPD), all filed from one small office at
-**240 Riverside Blvd, unit CU2, Manhattan**, and all managed by **Verus Real Estate**:
+Anya Levitov appears on **five** buildings (raw HPD), all managed by **Verus Real Estate**
+(Anya Levitov) but filed from **two** owner offices — **33 West 60th St** and **240 Riverside
+Blvd CU2** — grouped by owner:
 
 | Building | Recorded owner (deed) | Apparent controller | Manager | WatchlineNYC portfolio |
 |---|---|---|---|---|
@@ -30,15 +31,17 @@ apparent controllers** (Schwarz, Evdokimenko, Sokolov).
 ## The finding — Levitov is a *manager*, not an owner
 
 Read the columns: the only uniform thing across the five is the **managing agent, Verus Real
-Estate**, and the person filing them, Anya Levitov, out of 240 Riverside CU2. The owners and
-apparent controllers differ building-to-building. So Levitov is almost certainly the
-**managing agent / operator** for a set of buildings owned by *different* small landlords —
-not the owner of any of them.
+Estate** (Anya Levitov). The owners and apparent controllers differ building-to-building — and the
+owners even file from **different offices**. So Levitov is almost certainly the **managing agent /
+operator** for a set of buildings owned by *different* small landlords — not the owner of any of them.
 
-`240 Riverside Blvd CU2` is a **small shared office**, not an aggregator megaoffice and not
-Levitov's alone: raw HPD shows **~8 distinct names across ~6 buildings** filing from it
-(Levitov 4, Sokolov, Evdokimenko, the `1239 PUTNAM LLC`). It's a sub-degree-cap shared
-address — the same class of signal as Miller's 235 River Ave.
+**Two owner offices, not one**, split the five into their portfolios: the Schwarz pair (349 W 53 /
+418 MacDonough) files from **33 West 60th St**; the Sokolov pair (1239 Putnam / 1111 Jefferson) and
+Evdokimenko's 124 South 2 file from **240 Riverside Blvd CU2**. `240 Riverside CU2` is a **small
+shared office** (not an aggregator megaoffice): raw HPD shows **~8 distinct names across ~6 buildings**
+filing from it — a sub-degree-cap shared address, the same class of signal as Miller's 235 River Ave.
+Verus/Levitov is listed as the agent at **both** addresses — which is exactly why brand-normalized
+`MANAGED_BY` unifies all five while the address-based portfolios keep them apart.
 
 ## What WatchlineNYC does — and why it's right
 
