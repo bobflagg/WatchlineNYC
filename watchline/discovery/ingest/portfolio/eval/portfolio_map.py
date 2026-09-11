@@ -85,6 +85,73 @@ def building_points(driver, portfolio_id: str) -> list[dict]:
         return [dict(r) for r in s.run(_Q_BUILDINGS, pid=portfolio_id)]
 
 
+# --- inverse mode: start from a WoW portfolio, split by WatchlineNYC owner identity ---
+
+_Q_POINTS_BY_BBL = (
+    "UNWIND $bbls AS bbl MATCH (b:Building {bbl:bbl}) "
+    "WHERE b.latitude IS NOT NULL AND b.longitude IS NOT NULL "
+    "RETURN b.bbl AS bbl, b.address AS address, b.latitude AS lat, b.longitude AS lon, "
+    "b.building_class AS bldgclass, b.residential_units AS units, b.year_built AS year, "
+    "b.dof_ownername AS owner ORDER BY b.bbl"
+)
+
+
+def points_for_bbls(driver, bbls: list[str]) -> list[dict]:
+    with driver.session(database=NEO4J_DISCOVERY_DATABASE) as s:
+        return [dict(r) for r in s.run(_Q_POINTS_BY_BBL, bbls=[str(b).strip() for b in bbls])]
+
+
+def wow_portfolio_bbls(pgc, orig_id: int | str) -> list[str]:
+    cur = pgc.cursor()
+    cur.execute("SELECT bbls FROM wow.wow_portfolios WHERE orig_id = %s", (int(orig_id),))
+    row = cur.fetchone()
+    return [str(b).strip() for b in (row[0] or [])] if row else []
+
+
+# For each BBL, the WatchlineNYC owner unit: its OwnerGroup, or the singleton landlord (its own
+# owner). A BBL touched by several landlords takes the dominant one (grouped first, then larger).
+_Q_OWNERGROUP_SPLIT = (
+    "UNWIND $bbls AS bbl MATCH (l:Landlord) WHERE bbl IN l.bbls "
+    "OPTIONAL MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup) "
+    "RETURN bbl AS bbl, (og IS NOT NULL) AS grouped, "
+    "  coalesce(og.owner_group_id, 'ACT:'+l.actor_id) AS gid, "
+    "  coalesce(og.name, l.name) AS name, coalesce(og.building_count, size(l.bbls)) AS gsize"
+)
+
+
+def ownergroup_split(driver, bbls: list[str]) -> tuple[dict[str, str], dict[str, dict]]:
+    """Return (bbl -> owner-unit id) and (id -> {count, name, singleton}) over `bbls`."""
+    with driver.session(database=NEO4J_DISCOVERY_DATABASE) as s:
+        rows = [dict(r) for r in s.run(_Q_OWNERGROUP_SPLIT, bbls=[str(b).strip() for b in bbls])]
+    cand: dict[str, list] = defaultdict(list)
+    for r in rows:
+        cand[r["bbl"]].append((bool(r["grouped"]), r["gsize"] or 0, r["gid"], r["name"]))
+    bbl2grp: dict[str, str] = {}
+    labels: dict[str, dict] = defaultdict(lambda: {"count": 0, "name": "", "singleton": False})
+    for bbl, opts in cand.items():
+        grouped, _sz, gid, name = sorted(opts, key=lambda t: (t[0], t[1]), reverse=True)[0]
+        bbl2grp[bbl] = gid
+        lab = labels[gid]
+        lab["count"] += 1
+        lab["name"], lab["singleton"] = name, (not grouped)
+    return bbl2grp, labels
+
+
+def _ownergroup_legend(grp_color: dict[str, str], labels: dict[str, dict], n: int) -> tuple[str, str]:
+    """Return (one_view_legend, split_view_legend) for the inverse map.
+
+    one = the WoW side (a single portfolio); split = the WatchlineNYC owner units."""
+    one = (f'<div class="row"><span class="dot" style="background:{PALETTE[0]}"></span>'
+           f'One portfolio · {n} buildings</div>')
+    rows = []
+    for gid, color in grp_color.items():
+        lab = labels.get(gid, {})
+        tag = ' · <span style="color:#b23a2e">singleton (unmerged)</span>' if lab.get("singleton") else ""
+        rows.append(f'<div class="row"><span class="dot" style="background:{color}"></span>'
+                    f'<span class="nm">{lab.get("name","?")}</span> · {lab.get("count",0)} bldgs{tag}</div>')
+    return one, "\n".join(rows)
+
+
 def wow_split(pgc, bbls: list[str]) -> tuple[dict[str, str], dict[str, dict]]:
     """Return (bbl -> wow orig_id) and (orig_id -> {count, names, bizaddrs}) restricted to `bbls`."""
     want = {str(b).strip() for b in bbls}
@@ -158,7 +225,11 @@ def _assign_colors(bbl2pf: dict[str, str], points: list[dict]) -> dict[str, str]
 
 
 def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str, str],
-                  majority_pf: str | None, hpd: dict[str, dict] | None = None) -> dict:
+                  majority_pf: str | None, hpd: dict[str, dict] | None = None,
+                  pf_label: dict[str, str] | None = None) -> dict:
+    """`pf_label` optionally maps a group key to a friendlier tooltip label (e.g. an owner-group
+    id -> the owner name); default shows the key itself. The property stays named ``wow_pf`` so the
+    template is shared, but it means "the splitting system's group" in either direction."""
     hpd = hpd or {}
     feats = []
     for p in points:
@@ -176,9 +247,9 @@ def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str
                 "owner": p.get("owner") or "—",
                 "officer": h.get("officer") or "—",
                 "bizaddr": h.get("bizaddr") or "—",
-                "wow_pf": pf or "—",
+                "wow_pf": ((pf_label or {}).get(pf, pf) if pf else None) or "—",
                 "wow_color": pf_color.get(pf, NO_PF_COLOR) if pf else NO_PF_COLOR,
-                "stray": bool(majority_pf) and pf != majority_pf,  # WoW split it off (or never placed it)
+                "stray": bool(majority_pf) and pf != majority_pf,  # the split system carved it off
             },
         })
     return {"type": "FeatureCollection", "features": feats}
@@ -240,17 +311,17 @@ _TEMPLATE = """<!doctype html>
 <div class="card">
   <h1>__HEADING__<small>__SUBHEAD__</small></h1>
   <div class="toggle">
-    <button id="b-wl" class="on" onclick="setView('wl')">WatchlineNYC</button>
-    <button id="b-wow" onclick="setView('wow')">Who Owns What</button>
+    <button id="b-wl" class="on" onclick="setView('wl')">__BTN_ONE__</button>
+    <button id="b-wow" onclick="setView('wow')">__BTN_SPLIT__</button>
   </div>
   <div class="legend" id="legend"></div>
-  <div class="note">Coordinates: NYC DOF/PLUTO via the discovery graph. WoW assignment: justfix
-    <code>wow.wow_portfolios</code>. __BM_NOTE__</div>
+  <div class="note">Coordinates: NYC DOF/PLUTO via the discovery graph. __SPLIT_NOTE__ __BM_NOTE__</div>
 </div>
 <script>
 const DATA = __GEOJSON__;
 const WL_COLOR = "__WL_COLOR__";
 const LEGEND = {wl: `__WL_LEGEND__`, wow: `__WOW_LEGEND__`};
+const DEFAULT_VIEW = "__DEFAULT_VIEW__";   // which view opens first: "wl" (single) or "wow" (split)
 
 const map = new maplibregl.Map({
   container: "map",
@@ -282,7 +353,7 @@ map.on("load", ()=>{
   const b = new maplibregl.LngLatBounds();
   DATA.features.forEach(f=>b.extend(f.geometry.coordinates));
   if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:15});
-  document.getElementById("legend").innerHTML = LEGEND.wl;
+  setView(DEFAULT_VIEW);   // paints + legend + button state for the opening view
 
   // Hover tooltip with building details.
   const tip = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12,
@@ -297,7 +368,7 @@ map.on("load", ()=>{
       `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
       `<div class="mrow">HPD head officer: ${p.officer}</div>`+
       `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
-      `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`
+      `<div class="mrow">__SPLIT_TIP_LABEL__: ${p.wow_pf}${stray}</div>`
     ).addTo(map);
   });
   map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
@@ -311,18 +382,35 @@ window.mapIdle = () => new Promise(res => map.once("idle", res));
 
 
 def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: str,
-                wl_color: str, n_wow_pfs: int, n: int, basemap: str = DEFAULT_BASEMAP) -> str:
+                wl_color: str, n_wow_pfs: int, n: int, basemap: str = DEFAULT_BASEMAP, *,
+                heading: str = "One owner, two answers", subhead: str | None = None,
+                btn_one: str = "WatchlineNYC", btn_split: str = "Who Owns What",
+                split_tip_label: str = "WoW portfolio", default_view: str = "wl",
+                split_note: str = "WoW assignment: justfix <code>wow.wow_portfolios</code>.") -> str:
+    """Render the shared map template. Defaults reproduce the merge view (one WatchlineNYC portfolio
+    vs WoW's split). The keyword args flip the framing for the inverse view (one WoW portfolio vs
+    WatchlineNYC's owner-identity split) without touching the merge path.
+
+    Internal view keys are fixed: ``wl`` = the single-color ("one group") view, ``wow`` = the
+    multi-color ("split") view. ``btn_one``/``btn_split`` are their button labels, and
+    ``default_view`` picks which opens first."""
     bm = BASEMAPS[basemap]
-    sub = (f"{n} buildings · WatchlineNYC = 1 portfolio · "
-           f"Who Owns What = {n_wow_pfs} portfolio{'s' if n_wow_pfs != 1 else ''}")
+    if subhead is None:
+        subhead = (f"{n} buildings · WatchlineNYC = 1 portfolio · "
+                   f"Who Owns What = {n_wow_pfs} portfolio{'s' if n_wow_pfs != 1 else ''}")
     return (_TEMPLATE
             .replace("__TITLE__", f"Portfolio map · {portfolio_id}")
-            .replace("__HEADING__", "One owner, two answers")
-            .replace("__SUBHEAD__", sub)
+            .replace("__HEADING__", heading)
+            .replace("__SUBHEAD__", subhead)
             .replace("__GEOJSON__", json.dumps(geojson))
             .replace("__WL_COLOR__", wl_color)
             .replace("__WL_LEGEND__", wl_legend)
             .replace("__WOW_LEGEND__", wow_legend)
+            .replace("__BTN_ONE__", btn_one)
+            .replace("__BTN_SPLIT__", btn_split)
+            .replace("__SPLIT_TIP_LABEL__", split_tip_label)
+            .replace("__DEFAULT_VIEW__", default_view)
+            .replace("__SPLIT_NOTE__", split_note)
             .replace("__BM_SOURCES__", json.dumps(bm["sources"]))
             .replace("__BM_LAYERS__", json.dumps(bm["layers"]))
             .replace("__BM_NOTE__", bm["note"]))
@@ -359,11 +447,57 @@ def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> di
             "unplaced": sum(1 for p in points if p["bbl"] not in bbl2pf), "out": str(out)}
 
 
-def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int = 1200) -> list[Path]:
+def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
+    """Inverse of :func:`generate`: start from ONE WoW portfolio and show how WatchlineNYC's
+    owner-identity layer splits it into distinct owners. The 'divergence runs both ways' view —
+    for cases where WoW over-merges unrelated owners on a shared address (e.g. Abraham Miller /
+    portfolio 183 / the 235 River Ave, Lakewood shared office)."""
+    pgc = pg_conn()
+    driver = neo4j_driver()
+    try:
+        bbls = wow_portfolio_bbls(pgc, wow_orig_id)
+        if not bbls:
+            raise SystemExit(f"No WoW portfolio with orig_id {wow_orig_id}")
+        points = points_for_bbls(driver, bbls)
+        if not points:
+            raise SystemExit(f"No geocoded buildings for WoW portfolio {wow_orig_id}")
+        pt_bbls = [p["bbl"] for p in points]
+        bbl2grp, labels = ownergroup_split(driver, pt_bbls)
+        hpd = hpd_officers(pgc, pt_bbls)
+    finally:
+        driver.close()
+        pgc.close()
+
+    grp_color = _assign_colors(bbl2grp, points)          # largest owner = blue, others cycle
+    pf_label = {gid: lab["name"] for gid, lab in labels.items()}   # tooltip shows the owner name
+    geojson = build_geojson(points, bbl2grp, grp_color, None, hpd=hpd, pf_label=pf_label)
+    one_legend, split_legend = _ownergroup_legend(grp_color, labels, len(points))
+    n_owners = len(grp_color)
+    sub = (f"{len(points)} buildings · Who Owns What = 1 portfolio (#{wow_orig_id}) · "
+           f"WatchlineNYC = {n_owners} owner{'s' if n_owners != 1 else ''}")
+    html = render_html(
+        f"wow-{wow_orig_id}", geojson, one_legend, split_legend, PALETTE[0], n_owners, len(points),
+        basemap=basemap, heading="One portfolio, many owners", subhead=sub,
+        btn_one="Who Owns What", btn_split="WatchlineNYC", split_tip_label="WatchlineNYC owner",
+        default_view="wow",   # open on the reveal: WatchlineNYC's multi-owner split
+        split_note="Owner identity: discovery graph <code>IN_OWNER_GROUP</code>.")
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html)
+    return {"buildings": len(points), "owner_groups": n_owners,
+            "singletons": sum(1 for v in labels.values() if v["singleton"]), "out": str(out)}
+
+
+def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int = 1200, *,
+               views: tuple[tuple[str, str], ...] = (("wl", "watchline"), ("wow", "wow"))) -> list[Path]:
     """Headless-render both views of an emitted map HTML to slide-ready PNGs (needs Playwright).
 
     Writes  <stem>-watchline.png  and  <stem>-wow.png  beside the HTML. The toggle chrome is hidden;
     the heading + legend remain (the legend carries the counts and the fracturing address variants).
+
+    ``views`` maps each internal view key to its filename suffix. Default is the merge convention
+    (``wl`` = WatchlineNYC's one portfolio, ``wow`` = WoW's split); the inverse map flips it so that
+    ``-watchline`` still names WatchlineNYC's answer (the owner split) in either direction.
     """
     try:
         from playwright.sync_api import sync_playwright
@@ -382,7 +516,7 @@ def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int =
         page.goto(url)
         page.wait_for_function("() => window._mapReady === true", timeout=30000)
         page.add_style_tag(content=".toggle{display:none!important}")
-        for view, suffix in (("wl", "watchline"), ("wow", "wow")):
+        for view, suffix in views:
             page.evaluate(f"() => setView('{view}')")
             page.evaluate("() => window.mapIdle()")   # await tiles + paint
             page.wait_for_timeout(600)                # small settle for raster tiles
@@ -395,20 +529,34 @@ def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int =
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Render a WoW-vs-WatchlineNYC portfolio comparison map.")
-    ap.add_argument("--portfolio", required=True, help="WatchlineNYC portfolio_id")
-    ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<pid>.html)")
+    src = ap.add_mutually_exclusive_group(required=True)
+    src.add_argument("--portfolio", help="WatchlineNYC portfolio_id (merge view: 1 WL portfolio vs WoW's split)")
+    src.add_argument("--wow-portfolio", dest="wow_portfolio",
+                     help="WoW orig_id (inverse view: 1 WoW portfolio vs WatchlineNYC's owner split)")
+    ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<id>.html)")
     ap.add_argument("--basemap", choices=list(BASEMAPS), default=DEFAULT_BASEMAP,
                     help="base map tiles (default osm = most detailed; esri/esri-street load from "
                          "file:// without a Referer if osm shows 403)")
     ap.add_argument("--png", action="store_true", help="also export slide-ready PNGs of both views (Playwright)")
     ap.add_argument("--scale", type=int, default=2, help="PNG device-scale factor (default 2 = retina)")
     args = ap.parse_args()
-    out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
-    info = generate(args.portfolio, out, basemap=args.basemap)
-    print(f"wrote {info['out']}  ({info['buildings']} buildings, "
-          f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
+
+    if args.wow_portfolio:
+        out = args.out or Path("eval_out/maps") / f"wow-{args.wow_portfolio}.html"
+        info = generate_wow_split(args.wow_portfolio, out, basemap=args.basemap)
+        print(f"wrote {info['out']}  ({info['buildings']} buildings, "
+              f"WatchlineNYC = {info['owner_groups']} owner(s), {info['singletons']} singleton(s))")
+    else:
+        out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
+        info = generate(args.portfolio, out, basemap=args.basemap)
+        print(f"wrote {info['out']}  ({info['buildings']} buildings, "
+              f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     if args.png:
-        for p in render_png(out, scale=args.scale):
+        # Inverse map flips which internal view is WatchlineNYC's, so flip the suffixes too:
+        # -watchline always names WatchlineNYC's answer (the owner split), -wow names WoW's.
+        views = (("wl", "wow"), ("wow", "watchline")) if args.wow_portfolio \
+            else (("wl", "watchline"), ("wow", "wow"))
+        for p in render_png(out, scale=args.scale, views=views):
             print(f"wrote {p}")
 
 
