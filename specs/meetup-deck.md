@@ -402,6 +402,31 @@ ask). If Q&A time is short, lead with the eval ask.
 
 ---
 
+## Backup slide — Abraham Miller (divergence runs both ways)
+
+*After slide 11; shown only if a question calls for it — the answer to "doesn't your system
+just merge everything?"*
+
+**On-slide:** the rendered comparison map (`docs/meetup/miller-map.png`) — WoW portfolio #183's
+27 buildings across three boroughs, colored by WatchlineNYC's **7 owner groups**, two singletons
+flagged "unmerged" — under the heading **"One WoW portfolio → seven owners."** Caption: *WoW calls
+these 27 buildings one owner; they're ~10 owners sharing one Lakewood office (not a registered
+agent). WatchlineNYC resolves 7 — fixing typos, honestly missing one (OBTFELD). The answer to
+"doesn't it just merge everything?" — here it does the opposite.*
+
+**Speaker note:** WoW's portfolio #183 labels 27 buildings as one owner (Nathan Obstfeld); they're
+actually seven owners tied only by a shared Lakewood office at 235 River Ave — which I checked is
+*not* a registered agent, just a shared address ~10 small landlords self-file from. WatchlineNYC
+splits them correctly, fixes the misspellings (Abraham vs Abaraham Miller), and — honestly — misses
+one (OBTFELD, a one-letter typo of OBSTFELD). Showing the miss is the point: precision-first, not
+magic, and divergence runs both ways.
+
+**Why it's here:** the first *real rendered output* in the deck (not a mockup) — concrete, credible
+evidence, and the clean rebuttal to the over-merge objection. Full write-up: `specs/case-miller.md`.
+Regenerate the map with `portfolio_map.py --wow-portfolio 183` (see that case study's "Show it").
+
+---
+
 ## Sizing & flex
 
 - **Tight on time:** cut slide 4 (the map) and fold slide 8 into one line on 7 — lose ~3 min
