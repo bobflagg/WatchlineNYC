@@ -752,6 +752,84 @@
           where they disagree is what I haven't adjudicated yet.</aside>
       </section>
 
+      <!-- 8b — THREE LAYERS, A WORKED EXAMPLE (VERUS) -->
+      <section>
+        <span class="kicker">The architecture — in practice</span>
+        <h2>The three layers on one cluster</h2>
+        <h3>One manager, five buildings, three owners — the identity layer <em>abstains</em></h3>
+        <hr class="rule">
+        <svg viewBox="0 74 960 492" style="width:100%;max-width:1000px;height:auto;display:block;margin:.2em auto 0" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="74" width="960" height="492" fill="#ffffff"/>
+          <rect x="678" y="80" width="262" height="120" rx="8" fill="#ffffff" stroke="#d8dee7"/>
+          <text x="690" y="99" font-size="11.5" font-weight="700" fill="#12243f">Edges by layer</text>
+          <line x1="690" y1="117" x2="716" y2="117" stroke="#c8971c" stroke-width="3"/>
+          <text x="722" y="121" font-size="10.5" fill="#1b2430">MANAGED_BY — management (sourced)</text>
+          <line x1="690" y1="139" x2="716" y2="139" stroke="#b26a00" stroke-width="2.5" stroke-dasharray="5 3"/>
+          <text x="722" y="143" font-size="10.5" fill="#1b2430">APPARENT_CONTROL — control (inferred)</text>
+          <line x1="690" y1="161" x2="716" y2="161" stroke="#1f6fb0" stroke-width="2.5" stroke-dasharray="5 3"/>
+          <text x="722" y="165" font-size="10.5" fill="#1b2430">CONNECTED_BY_ADDRESS — shared office</text>
+          <line x1="690" y1="183" x2="716" y2="183" stroke="#aab3c2" stroke-width="2.5" stroke-dasharray="2 3"/>
+          <text x="722" y="187" font-size="10.5" fill="#1b2430">IN_OWNER_GROUP — identity (absent)</text>
+          <rect x="52"  y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+          <rect x="388" y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+          <rect x="724" y="192" width="150" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+          <text x="186" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-67385</text>
+          <text x="522" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-11</text>
+          <text x="799" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-73027</text>
+          <g stroke="#c8971c" stroke-width="2" opacity="0.5" fill="none">
+            <path d="M480,146 L126,298"/><path d="M480,146 L250,298"/><path d="M480,146 L462,298"/><path d="M480,146 L586,298"/><path d="M480,146 L799,298"/>
+          </g>
+          <g stroke="#b26a00" stroke-width="2" stroke-dasharray="5 3" fill="none">
+            <path d="M188,250 L126,298"/><path d="M188,250 L250,298"/><path d="M524,250 L462,298"/><path d="M524,250 L586,298"/><path d="M799,250 L799,298"/>
+          </g>
+          <g stroke="#1f6fb0" stroke-width="2" stroke-dasharray="5 3" fill="none">
+            <path d="M126,344 Q188,378 250,344"/><path d="M462,344 Q524,378 586,344"/>
+          </g>
+          <text x="188" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 33 W 60th St</text>
+          <text x="524" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 240 Riverside CU2</text>
+          <rect x="366" y="98" width="228" height="50" rx="10" fill="#0a1629"/>
+          <text x="480" y="119" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">VERUS REAL ESTATE</text>
+          <text x="480" y="136" font-size="10" fill="#c8971c" text-anchor="middle">managing agent (Anya Levitov) · MANAGED_BY</text>
+          <g>
+            <rect x="113" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+            <text x="188" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Michael Schwarz</text>
+            <text x="188" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+            <rect x="449" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+            <text x="524" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Dmitry Sokolov</text>
+            <text x="524" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+            <rect x="724" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+            <text x="799" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Oleg Evdokimenko</text>
+            <text x="799" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+          </g>
+          <g font-size="11.5" font-weight="600" fill="#12243f" text-anchor="middle">
+            <rect x="70"  y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+            <text x="126" y="320">349 W 53 St</text><text x="126" y="335" font-size="9" font-weight="400" fill="#8290a3">Manhattan</text>
+            <rect x="194" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+            <text x="250" y="320">418 MacDonough</text><text x="250" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+            <rect x="406" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+            <text x="462" y="320">1239 Putnam Ave</text><text x="462" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+            <rect x="530" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+            <text x="586" y="320">1111 Jefferson</text><text x="586" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+            <rect x="743" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+            <text x="799" y="320">124 South 2 St</text><text x="799" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+          </g>
+          <rect x="230" y="424" width="500" height="34" rx="8" fill="#f2f3f6" stroke="#c7cdd8" stroke-dasharray="4 3"/>
+          <text x="480" y="446" font-size="11.5" fill="#8290a3" text-anchor="middle">⊘  IN_OWNER_GROUP — no owner group spans the five · the identity layer abstains</text>
+          <rect x="40" y="486" width="880" height="74" rx="10" fill="#0a1629"/>
+          <text x="60" y="516" font-size="16" font-weight="700" fill="#ffffff">Management connects all five buildings. Owner-identity connects none.</text>
+          <text x="60" y="540" font-size="12.5" fill="#c7d2e2">Three separate owners behind one managing agent — the graph refuses to let “same manager” become “same owner.”</text>
+        </svg>
+        <span class="src">Every edge verified against the live graph · ownership / control are inferred (Type II) — leads, not verdicts.</span>
+        <aside class="notes">(~45s) The table on the last slide, made concrete. Five buildings, all managed by
+          Verus Real Estate — that gold star is the management layer, and it's the ONE thing common to all five.
+          Underneath, the owners file from two different offices — 33 West 60th and 240 Riverside — so the operational
+          layer splits them into three portfolios with three different apparent controllers: Schwarz, Sokolov,
+          Evdokimenko. And the owner-identity layer? It abstains — no owner-group spans them (the grey ghost). If we'd
+          grouped on the shared manager, we'd have invented one big fake landlord. Instead: same manager, clearly
+          separate owners. That's the answer to "doesn't it just merge everything?" — here it does the opposite,
+          on purpose.</aside>
+      </section>
+
       <!-- 9 — CONVERSATIONAL BY DESIGN -->
       <section>
         <span class="kicker">Setting up the demo</span>

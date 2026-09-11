@@ -112,9 +112,10 @@
 <!-- LEVITOV -->
 <h2 id="levitov">3 · One manager, five separate owners <span class="tag unmerge">un-merge · manager</span><span class="rule"></span></h2>
 <div class="case">
-  <p>Five buildings all filed from one small office (240 Riverside Blvd, unit CU2) and all managed by
-    <b>Verus Real Estate</b>. The single constant is the <b>managing agent</b> — every recorded owner and
-    every apparent controller differs. So the shared thread is <em>management</em>, not ownership.</p>
+  <p>Five buildings whose one constant is the <b>managing agent</b> — Anya Levitov / <b>Verus Real Estate</b>,
+    named on every registration. The recorded owners and apparent controllers all differ, and the owners even
+    file from <em>different</em> offices (33 West 60th St; 240 Riverside Blvd CU2) — so the shared thread is
+    <em>management</em>, not ownership.</p>
   <table><thead><tr><th>Building</th><th>Recorded owner <span class="badge s">sourced</span></th><th>Apparent controller <span class="badge i">inferred</span></th><th>Manager <span class="badge s">sourced</span></th></tr></thead><tbody>
     <tr><td class="k">349 West 53 St</td><td>Gates Overseas NYC</td><td>Michael Schwarz</td><td>Verus Real Estate</td></tr>
     <tr><td class="k">418 MacDonough St</td><td>Michael Schwarz</td><td>Michael Schwarz</td><td>Verus Real Estate</td></tr>
@@ -126,6 +127,72 @@
     by their apparent <em>owners</em>, and keeps the shared operator only in the management layer. If it
     had merged them, it would almost certainly have been wrong — the deeds name five unrelated parties.
     <b>Layer:</b> management ≠ ownership.</p>
+  <figure style="margin:16px 0 2px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 4px;overflow-x:auto">
+    <svg viewBox="0 0 960 600" style="width:100%;height:auto;display:block;min-width:640px" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+      <rect x="0" y="0" width="960" height="600" fill="#ffffff"/>
+      <text x="40" y="42" font-size="25" font-weight="700" fill="#0a1629">One manager, five buildings — three owners</text>
+      <text x="40" y="66" font-size="13.5" fill="#5c6b80">Verus / Levitov cluster · the managing agent is the only common thread; the owner-identity layer abstains</text>
+      <rect x="678" y="80" width="262" height="120" rx="8" fill="#ffffff" stroke="#d8dee7"/>
+      <text x="690" y="99" font-size="11.5" font-weight="700" fill="#12243f">Edges by layer</text>
+      <line x1="690" y1="117" x2="716" y2="117" stroke="#c8971c" stroke-width="3"/>
+      <text x="722" y="121" font-size="10.5" fill="#1b2430">MANAGED_BY — management (sourced)</text>
+      <line x1="690" y1="139" x2="716" y2="139" stroke="#b26a00" stroke-width="2.5" stroke-dasharray="5 3"/>
+      <text x="722" y="143" font-size="10.5" fill="#1b2430">APPARENT_CONTROL — control (inferred)</text>
+      <line x1="690" y1="161" x2="716" y2="161" stroke="#1f6fb0" stroke-width="2.5" stroke-dasharray="5 3"/>
+      <text x="722" y="165" font-size="10.5" fill="#1b2430">CONNECTED_BY_ADDRESS — shared office</text>
+      <line x1="690" y1="183" x2="716" y2="183" stroke="#aab3c2" stroke-width="2.5" stroke-dasharray="2 3"/>
+      <text x="722" y="187" font-size="10.5" fill="#1b2430">IN_OWNER_GROUP — identity (absent)</text>
+      <rect x="52"  y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+      <rect x="388" y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+      <rect x="724" y="192" width="150" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+      <text x="186" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-67385</text>
+      <text x="522" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-11</text>
+      <text x="799" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-73027</text>
+      <g stroke="#c8971c" stroke-width="2" opacity="0.5" fill="none">
+        <path d="M480,146 L126,298"/><path d="M480,146 L250,298"/><path d="M480,146 L462,298"/><path d="M480,146 L586,298"/><path d="M480,146 L799,298"/>
+      </g>
+      <g stroke="#b26a00" stroke-width="2" stroke-dasharray="5 3" fill="none">
+        <path d="M188,250 L126,298"/><path d="M188,250 L250,298"/><path d="M524,250 L462,298"/><path d="M524,250 L586,298"/><path d="M799,250 L799,298"/>
+      </g>
+      <g stroke="#1f6fb0" stroke-width="2" stroke-dasharray="5 3" fill="none">
+        <path d="M126,344 Q188,378 250,344"/><path d="M462,344 Q524,378 586,344"/>
+      </g>
+      <text x="188" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 33 W 60th St</text>
+      <text x="524" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 240 Riverside CU2</text>
+      <rect x="366" y="98" width="228" height="50" rx="10" fill="#0a1629"/>
+      <text x="480" y="119" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">VERUS REAL ESTATE</text>
+      <text x="480" y="136" font-size="10" fill="#c8971c" text-anchor="middle">managing agent (Anya Levitov) · MANAGED_BY</text>
+      <g>
+        <rect x="113" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+        <text x="188" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Michael Schwarz</text>
+        <text x="188" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+        <rect x="449" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+        <text x="524" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Dmitry Sokolov</text>
+        <text x="524" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+        <rect x="724" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
+        <text x="799" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Oleg Evdokimenko</text>
+        <text x="799" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
+      </g>
+      <g font-size="11.5" font-weight="600" fill="#12243f" text-anchor="middle">
+        <rect x="70"  y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+        <text x="126" y="320">349 W 53 St</text><text x="126" y="335" font-size="9" font-weight="400" fill="#8290a3">Manhattan</text>
+        <rect x="194" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+        <text x="250" y="320">418 MacDonough</text><text x="250" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+        <rect x="406" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+        <text x="462" y="320">1239 Putnam Ave</text><text x="462" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+        <rect x="530" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+        <text x="586" y="320">1111 Jefferson</text><text x="586" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+        <rect x="743" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
+        <text x="799" y="320">124 South 2 St</text><text x="799" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+      </g>
+      <rect x="230" y="424" width="500" height="34" rx="8" fill="#f2f3f6" stroke="#c7cdd8" stroke-dasharray="4 3"/>
+      <text x="480" y="446" font-size="11.5" fill="#8290a3" text-anchor="middle">⊘  IN_OWNER_GROUP — no owner group spans the five · the identity layer abstains</text>
+      <rect x="40" y="486" width="880" height="74" rx="10" fill="#0a1629"/>
+      <text x="60" y="516" font-size="16" font-weight="700" fill="#ffffff">Management connects all five buildings. Owner-identity connects none.</text>
+      <text x="60" y="540" font-size="12.5" fill="#c7d2e2">Three separate owners behind one managing agent — the graph refuses to let “same manager” become “same owner.”</text>
+    </svg>
+    <figcaption style="font-size:.8rem;color:var(--muted);padding:6px 4px 8px">Every edge is drawn from the graph: <b>MANAGED_BY</b> ties all five to Verus; <b>CONNECTED_BY_ADDRESS</b> glues each owner's own office; no <b>IN_OWNER_GROUP</b> spans them. <span style="color:var(--faint)">Control/ownership links are inferred — leads, not verdicts.</span></figcaption>
+  </figure>
 </div>
 
 <div class="takeaway" style="margin-top:26px;font-size:.94rem">
