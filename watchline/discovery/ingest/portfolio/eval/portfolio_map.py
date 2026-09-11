@@ -488,6 +488,55 @@ def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT
             "singletons": sum(1 for v in labels.values() if v["singleton"]), "out": str(out)}
 
 
+def owner_group_bbls(driver, owner_group_id: str) -> list[str]:
+    with driver.session(database=NEO4J_DISCOVERY_DATABASE) as s:
+        r = s.run("MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup {owner_group_id:$g}) "
+                  "UNWIND l.bbls AS bbl RETURN collect(DISTINCT bbl) AS bbls", g=owner_group_id).single()
+    return [str(b).strip() for b in (r["bbls"] if r else [])]
+
+
+def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
+    """Forward map keyed on an OWNER GROUP (owner identity), not a Portfolio: one owner's buildings,
+    colored by how Who Owns What splits them. Matches the demo's owner-identity number exactly
+    (e.g. Croman's OG = 127 buildings, vs his nexus Portfolio's 135). WatchlineNYC = one owner."""
+    driver = neo4j_driver()
+    pgc = pg_conn()
+    try:
+        bbls = owner_group_bbls(driver, owner_group_id)
+        if not bbls:
+            raise SystemExit(f"No owner group with id {owner_group_id}")
+        points = points_for_bbls(driver, bbls)
+        if not points:
+            raise SystemExit(f"No geocoded buildings for owner group {owner_group_id}")
+        pt_bbls = [p["bbl"] for p in points]
+        bbl2pf, labels = wow_split(pgc, pt_bbls)
+        hpd = hpd_officers(pgc, pt_bbls)
+    finally:
+        driver.close()
+        pgc.close()
+
+    pf_color = _assign_colors(bbl2pf, points)
+    counts = Counter(bbl2pf[p["bbl"]] for p in points if p["bbl"] in bbl2pf)
+    majority_pf = counts.most_common(1)[0][0] if counts else None
+    geojson = build_geojson(points, bbl2pf, pf_color, majority_pf, hpd=hpd)
+    _, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], len(points))
+    one_legend = (f'<div class="row"><span class="dot" style="background:{PALETTE[0]}"></span>'
+                  f'One owner · {len(points)} buildings</div>')
+    n_wow = len(pf_color)
+    sub = (f"{len(points)} buildings · WatchlineNYC = 1 owner · "
+           f"Who Owns What = {n_wow} portfolio{'s' if n_wow != 1 else ''}")
+    html = render_html(
+        owner_group_id, geojson, one_legend, wow_legend, PALETTE[0], n_wow, len(points),
+        basemap=basemap, heading="One owner, scattered across the record", subhead=sub,
+        btn_one="WatchlineNYC", btn_split="Who Owns What", split_tip_label="WoW portfolio",
+        default_view="wl")   # open on the unified owner; toggle reveals WoW's fragments
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html)
+    return {"buildings": len(points), "wow_portfolios": n_wow,
+            "unplaced": sum(1 for p in points if p["bbl"] not in bbl2pf), "out": str(out)}
+
+
 def render_png(html_path: Path, scale: int = 2, width: int = 1600, height: int = 1200, *,
                views: tuple[tuple[str, str], ...] = (("wl", "watchline"), ("wow", "wow"))) -> list[Path]:
     """Headless-render both views of an emitted map HTML to slide-ready PNGs (needs Playwright).
@@ -531,6 +580,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Render a WoW-vs-WatchlineNYC portfolio comparison map.")
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--portfolio", help="WatchlineNYC portfolio_id (merge view: 1 WL portfolio vs WoW's split)")
+    src.add_argument("--owner-group", dest="owner_group",
+                     help="WatchlineNYC owner_group_id (merge view keyed on owner IDENTITY: 1 owner vs WoW's split)")
     src.add_argument("--wow-portfolio", dest="wow_portfolio",
                      help="WoW orig_id (inverse view: 1 WoW portfolio vs WatchlineNYC's owner split)")
     ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<id>.html)")
@@ -546,6 +597,11 @@ def main() -> None:
         info = generate_wow_split(args.wow_portfolio, out, basemap=args.basemap)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, "
               f"WatchlineNYC = {info['owner_groups']} owner(s), {info['singletons']} singleton(s))")
+    elif args.owner_group:
+        out = args.out or Path("eval_out/maps") / f"{args.owner_group}.html"
+        info = generate_owner_group(args.owner_group, out, basemap=args.basemap)
+        print(f"wrote {info['out']}  ({info['buildings']} buildings, WatchlineNYC = 1 owner, "
+              f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     else:
         out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
         info = generate(args.portfolio, out, basemap=args.basemap)
