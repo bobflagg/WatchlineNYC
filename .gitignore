@@ -32,3 +32,11 @@ dumps/
 
 # Local Claude Code guidance — kept locally, untracked (all CLAUDE.md, root and nested)
 CLAUDE.md
+
+# Eval outputs — regenerable; and eval_out/blinding_key.jsonl must NEVER be committed
+# (it defends the blind-eval's integrity). Keep the whole tree out of git.
+eval_out/
+
+# Local scratch
+/portfolio-defragmentation-*.html
+ignore-this-folder/
