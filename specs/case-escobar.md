@@ -261,6 +261,43 @@ RETURN type(r) AS rel, r.method AS method, count(*) ORDER BY rel;
 SELECT orig_id, array_length(bbls,1) FROM wow.wow_portfolios WHERE orig_id IN (50057,44728);
 ```
 
+## See the split in Neo4j — WoW's WCCs vs. the merge
+
+The WoW 24+2 isn't materialized in the graph (both `:Portfolio` and `:OwnerGroup` already merge it),
+but it is **latent**: show only WoW's *own* edges (`CONNECTED_BY_NAME` + `CONNECTED_BY_ADDRESS`, hiding
+splink/deed) and the owner group breaks back into WoW's two weakly-connected components. Buildings are
+drawn via `REGISTERED_FOR` **restricted to each landlord's own `bbls`** — that recovers the 24/1/1
+partition exactly (the merged-portfolio anchor's `APPARENT_CONTROL` would wrongly show it holding all 26,
+and raw `REGISTERED_FOR` is noisier still).
+
+```cypher
+// A) WoW's edges only -> two WCCs = WoW's 24 + 2
+MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup {owner_group_id:'OG-93013'})
+OPTIONAL MATCH pB = (l)-[:REGISTERED_FOR]->(b:Building) WHERE b.bbl IN l.bbls   // 24 / 1 / 1
+OPTIONAL MATCH pE = (l)-[:CONNECTED_BY_NAME|CONNECTED_BY_ADDRESS]-(m:Landlord)
+  WHERE (m)-[:IN_OWNER_GROUP]->(og)
+RETURN l, b, m, pB, pE;
+// -> Component 1: ACT-LL-93014 + 24 buildings  (= WoW 77822)
+//    Component 2: ACT-LL-93013 -[CONNECTED_BY_NAME]- ACT-LL-93015, 1 building each
+//                 (= WoW 77821, the two Creston Ave parcels)
+//    93014 floats free — NO name/address edge reaches the typo'd variants. That gap IS the split.
+
+// B) Add the identity edges -> the two components fuse into the 26-building owner group
+MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup {owner_group_id:'OG-93013'})
+OPTIONAL MATCH pB     = (l)-[:REGISTERED_FOR]->(b:Building) WHERE b.bbl IN l.bbls
+OPTIONAL MATCH pWoW   = (l)-[:CONNECTED_BY_NAME|CONNECTED_BY_ADDRESS]-(m:Landlord)
+  WHERE (m)-[:IN_OWNER_GROUP]->(og)
+OPTIONAL MATCH pIdent = (l)-[:CONNECTED_BY_SPLINK|CONNECTED_BY_DEED]-(m2:Landlord)
+  WHERE (m2)-[:IN_OWNER_GROUP]->(og) AND l.actor_id < m2.actor_id
+RETURN l, b, m, m2, pB, pWoW, pIdent;
+```
+
+Toggling A → B is the architecture in one view: **WoW's weakly-connected components vs. what the
+name-free deed and the Splink model merge.** In Browser, set the `Landlord` caption to `actor_id` (all
+three read "RAMON ESCOBAR") and color the `SPLINK`/`DEED` edges distinctly so the reuniting links stand
+out. This *reconstructs* WoW's portfolios from the graph's name/address edges — matched here because it's
+a clean two-component case; the authoritative membership is still `wow.wow_portfolios`.
+
 ## Show it (map + blind review page)
 
 Two views make the case in a talk — the **map** shows what each system concluded;
