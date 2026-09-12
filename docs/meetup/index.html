@@ -985,13 +985,13 @@
 
       <!-- BACKUP — Escobar address-variant fragmentation (WoW under-merge) -->
       <section>
-        <span class="kicker">Backup · why exact-address matching fragments one owner</span>
+        <span class="kicker">Backup · why exact-key matching fragments one owner</span>
         <h2>One office, a dozen keys <span
             style="color:var(--muted);font-weight:400;font-size:.46em">Ramon Escobar · 2432 Grand Concourse #504</span></h2>
         <hr class="rule">
         <p style="font-size:.84em">Every string below is the <em>same</em> Bronx office as filed in HPD. Who Owns What
-          links landlords on the <strong>exact</strong> business address — so each variant is its own node, and each
-          peels buildings off into a separate portfolio.</p>
+          links landlords only on an <strong>exact</strong> match — same street <em>and</em> same ZIP — so each variant is
+          its own node, splitting the portfolio.</p>
         <div class="masks">
           <div class="chip">2432 GRAND CONCOURSE 504</div>
           <div class="chip">2432 GRAND CONCOURS 504</div>
@@ -1002,11 +1002,12 @@
           <div class="chip">(blank)</div>
           <div class="chip">+ 4 city spellings · 3 ZIPs</div>
         </div>
-        <div class="pull" style="font-size:.92em"><strong>Who Owns What: 24 + 2.</strong> Watchline reunites all
-          <strong>26</strong> — because it keys on resolved owner identity and the <strong>name-free deed</strong>, never
-          the raw string. The famous "GRAND COURSE" typo is just one member of the family.</div>
-        <span class="src">Source: raw HPD <code>hpd_contacts</code>. Miller was WoW <em>over</em>-merging on a shared
-          office; this is the opposite — WoW <em>under</em>-merging on address noise.</span>
+        <div class="pull" style="font-size:.9em"><strong>The real killer isn't the typo.</strong> WoW demands an
+          <strong>exact ZIP</strong> on every link, and two of these buildings standardized to a <em>blank</em> ZIP — so
+          even the perfectly-spelled <code>GRAND CONCOURSE</code> is exiled. <strong>WoW splits 24 + 2; Watchline reunites
+          all 26</strong> — keying on resolved identity and the name-free deed, never the raw string.</div>
+        <span class="src">Source: raw HPD + WoW <code>wow_landlords</code>. Miller was WoW <em>over</em>-merging on a
+          shared office; this is the opposite — WoW <em>under</em>-merging on brittle exact-key matching.</span>
         <aside class="notes">(~40s backup) Miller was Who Owns What OVER-merging — ten owners fused on a shared office.
           Here's the opposite failure, under-merging. Ramon Escobar runs 26 Bronx buildings from one office, 2432 Grand
           Concourse suite 504. But look how HPD records that single address — GRAND CONCOURSE, then GRAND COURSE with the
@@ -1014,8 +1015,11 @@
           even the correct spelling arrives in three ZIPs and four cities. Who Owns What links on the exact
           business-address string, so each of these is a different node, and Escobar's portfolio shatters into 24 plus 2.
           Watchline reunites all 26 because it never trusts the string: it resolves identity by name-matching and the
-          name-free deed. The "GRAND COURSE" typo the case study cites is just one member of a dozen-way family — which
-          is exactly why brittle exact-string matching fails, and why the resolution layer earns its place.</aside>
+          name-free deed. And the sharpest version of the point: Who Owns What requires an EXACT ZIP match on every
+          link — and the two split-off buildings standardized to a BLANK ZIP. So it's not even the typo that does the
+          splitting: one of the two is spelled perfectly, GRAND CONCOURSE, same suite — but with no ZIP it can't attach
+          to the 24-building node, because a blank never equals 10458. A missing key meeting a brittle exact-key rule.
+          That's why the resolution layer, which keys on identity and never touches the ZIP field, earns its place.</aside>
       </section>
 
       <!-- BACKUP — the deed veil-pierce (Haight) -->
