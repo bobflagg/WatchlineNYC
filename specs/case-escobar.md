@@ -82,6 +82,41 @@ across every one of these forms — which is why the three landlord nodes (`ACT-
 two split-off singletons `ACT-LL-93013` and `ACT-LL-93015`) collapse into one owner group
 (`OG-93013`).
 
+### The precise mechanism — an exact-ZIP gate meets a *missing* ZIP
+
+Under the variant noise sits a sharper cause. WoW's `landlords_with_connections` builds a node per
+unique `(name, standardized street, apt, ZIP)` tuple, and **both** of its edge rules hard-require an
+exact ZIP match:
+
+- **name edge** — exact name **and equal ZIP** and street trigram-similarity > 0.9 (or > 0.8 with the
+  same apartment number);
+- **address edge** — *exact* street **and equal ZIP** and compatible apartment.
+
+The three `RAMON ESCOBAR` nodes, as WoW standardized them (`wow_landlords`):
+
+| Node | building | street | apt | ZIP |
+|---|---|---|---|---|
+| `ACT-LL-93014` (24) | canonical | `2432 GRAND CONCOURSE` | 504 | `10458` |
+| `ACT-LL-93013` (1) | 2031 Creston | `2432 GRAND CONCOURSE` | 504 | *(empty)* |
+| `ACT-LL-93015` (1) | 2070 Creston | `2432 GRAND COURSE` (typo) | 504 | *(empty)* |
+
+- **93014 ↔ 93013** is *byte-identical* on name, street and apartment — the **only** difference is the
+  ZIP (`10458` vs empty), and the ZIP gate alone fails both rules. A *missing ZIP*, not the typo,
+  exiles the correctly-spelled 93013 from the 24-building node.
+- **93014 ↔ 93015** fails twice over — the ZIP mismatch **and** the `GRAND COURSE` typo breaking the
+  address rule's *exact*-street requirement.
+- **93013 ↔ 93015** connect only because `'' = ''`: two *empty* ZIPs pass the very gate that excludes
+  93014, and then the name rule fires on street-similarity ≈ 0.86 (> 0.8) with a matching apartment.
+  That reproduces the `CONNECTED_BY_NAME` weight exactly: **`3.54 = (0.86 + 0.5 + 1) × 1.5`**
+  (street-sim + apt-bonus + base, × the name-weight multiplier).
+
+The Creston registrations standardized to a **blank ZIP** because their raw records carried
+inconsistent city/ZIP noise (`White Plains`, `10607`, `10459`) the geocoder couldn't resolve to a clean
+Bronx ZIP. So "the typo" is the headline, but the operative fracture is **brittle exact-key matching
+meeting a missing key** — WoW joins nothing across a ZIP mismatch. Watchline's identity edges (the
+Splink model, `registered-llc`, and the deed) don't read the ZIP field at all, so none of this reaches
+them.
+
 ## Why WatchlineNYC gets it right
 
 The `acris-deed` signal keys on **recorded ACRIS conveyances**, not on
@@ -233,6 +268,20 @@ WHERE upper(btrim(c.firstname||' '||c.lastname)) = 'RAMON ESCOBAR'
 GROUP BY 1,2,3 ORDER BY rows DESC;
 -- -> GRAND CONCOURSE 504 / CONCOURS 504 / COURSE 504 / COCNOURSE 504 / CONCOURSE (no apt);
 --    city BRONX/Bronx/BX/White Plains/GRAND CONCOURSE; zip 10458/10459/10607 — each its own key.
+```
+
+```sql
+-- The ZIP-gate: WoW's standardized (street, apt, ZIP) for the three nodes' representative buildings.
+-- 93014 has ZIP 10458; the two Creston singletons standardized to a BLANK ZIP — and WoW's name AND
+-- address rules both hard-require an exact ZIP match, so neither can join the 24-building node.
+SELECT bbl, name, bizhousestreet, regexp_replace(bizapt,'\D','','g') AS bizaptnum, bizzip
+FROM wow_landlords
+WHERE bbl IN ('2023730043','2031600005',   -- in ACT-LL-93014 (24): CONCOURSE / 504 / 10458
+              '2028070067',                -- ACT-LL-93013 (2031 Creston): CONCOURSE / 504 / '' (empty)
+              '2031600009')                -- ACT-LL-93015 (2070 Creston): GRAND COURSE / 504 / '' (empty)
+ORDER BY bbl;
+-- 93013 differs from 93014 ONLY on ZIP (blank vs 10458) -> a missing ZIP, not the typo, splits it.
+-- The two blanks match each other ('' = ''), so 93013<->93015 still connect by name.
 ```
 
 ```cypher
