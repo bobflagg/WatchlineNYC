@@ -79,13 +79,24 @@
 <h2 id="escobar">1 · One owner, split by a typo <span class="tag merge">merge</span><span class="rule"></span></h2>
 <div class="case">
   <p>Who Owns What splits landlord <b>Ramon Escobar</b>'s Bronx portfolio into <b>two</b> portfolios that
-    carry the <em>identical</em> name and business address — because a single registration-address typo
-    (<code>2432 GRAND COURSE 504</code> vs <code>…CONCOURSE…</code>) fractured its connection graph.
-    Watchline keeps all <b>26 buildings</b> together as one owner.</p>
+    carry the <em>identical</em> name and business address — because that one office
+    (<b>2432&nbsp;Grand&nbsp;Concourse&nbsp;#504</b>) is recorded in the registration data a dozen
+    inconsistent ways, and Who Owns What links on the <em>exact</em> address string. Watchline keeps all
+    <b>26 buildings</b> together as one owner.</p>
   <table><thead><tr><th></th><th>Grouping</th><th>Buildings</th><th>Label</th></tr></thead><tbody>
     <tr><td class="k">WatchlineNYC</td><td>1 owner</td><td>26</td><td>one Bronx portfolio</td></tr>
     <tr><td class="k">Who Owns What</td><td>2 portfolios</td><td>2 + 24</td><td>both "RAMON ESCOBAR @ 2432 GRAND CONCOURSE #504"</td></tr>
   </tbody></table>
+  <div class="takeaway"><b>One office, ~a dozen keys.</b> Every form below is the same
+    <code>2432 Grand Concourse #504</code> as filed in HPD; each distinct string is its own node in Who
+    Owns What's graph, so each peels a building off —
+    <span style="display:block;margin:.55em 0 .25em;line-height:2.1">
+      <code>GRAND CONCOURSE 504</code> <code>GRAND CONCOURS 504</code> <code>GRAND <b>COURSE</b> 504</code>
+      <code>GRAND COCNOURSE 504</code> <code>GRAND CONCOURSE</code> <code>105 SHERMAN AVE</code> <code>(blank)</code>
+    </span>
+    — and even the correct spelling varies by city (<code>BRONX</code> / <code>BX</code> /
+    <code>White&nbsp;Plains</code>) and ZIP (<code>10458</code> / <code>10459</code> / <code>10607</code>).
+    Watchline never keys on the string — it reunites them by name-resolution and the name-free deed.</div>
   <p>Three adjacent Creston Avenue buildings, all deed-owned by the same entity, land in different WoW
     portfolios purely on the typo. The ACRIS held-deed signal <span class="badge s">sourced</span> plus
     name-anchored resolution reunites them. <b>Layer:</b> owner-identity <em>de-fragmentation</em>.
