@@ -52,20 +52,22 @@
 <div class="titlebar"><div class="wrap">
   <div class="kicker">Case studies</div>
   <h1>The layers in practice</h1>
-  <div class="sub">Three worked examples of the owner-identity layer doing its job — merging one owner
-    the record splits, and (twice) refusing to merge parties the record only appears to connect. The
-    answer, in data, to "doesn't it just merge everything?"</div>
+  <div class="sub">Four worked examples of the owner-identity layer doing its job — merging owners the
+    record splits (a typo; a shared deed), and refusing to merge parties it only appears to connect
+    (a shared office; a shared manager). The answer, in data, to "doesn't it just merge everything?"</div>
 </div></div>
 <div class="note"><div class="wrap"><b>Leads, not verdicts.</b> Ownership and control links below are
   algorithmic <b>inferences</b> from public records — investigative leads to verify, not determinations
-  of legal ownership. Recorded owners, court records, and managing agents are directly sourced. The two
-  "un-merge" cases below <em>separate</em> parties the record only appears to connect — the favorable,
-  cautious direction. All names are drawn from public NYC filings.</div></div>
+  of legal ownership. Recorded owners, deeds, court records, and managing agents are directly sourced;
+  who <em>controls</em> or <em>owns</em> across them is inferred. Where a case <em>merges</em> parties
+  (Escobar, Haight), that a shared origin means one present owner is a lead an investigator confirms —
+  never a verdict. All names are drawn from public NYC filings.</div></div>
 
 <nav class="toc"><div class="wrap">
   <a href="#escobar">1 · Escobar (merge)</a>
   <a href="#miller">2 · Miller (un-merge: address)</a>
   <a href="#levitov">3 · Levitov (un-merge: manager)</a>
+  <a href="#haight">4 · Haight (merge: deed)</a>
 </div></nav>
 
 <div class="wrap">
@@ -195,11 +197,35 @@
   </figure>
 </div>
 
+<!-- HAIGHT -->
+<h2 id="haight">4 · One block, six owners, one deed <span class="tag merge">merge · deed</span><span class="rule"></span></h2>
+<div class="case">
+  <p>Nine identical 4-unit townhouses on one Flushing block (41-09 → 41-27 Haight Street, Queens). Who
+    Owns What reads them as <b>six separate owners</b> — six registration head officers (Chan, Xu, Ho,
+    Lin, Li, Chen) and <b>nine</b> different DOF owner-of-record LLCs. Nothing it keys on is shared, so
+    it splits the block six ways. Watchline reunites all nine into <b>one owner group</b> — on evidence
+    Who Owns What never reads.</p>
+  <table><thead><tr><th></th><th>Grouping</th><th>What connects them</th></tr></thead><tbody>
+    <tr><td class="k">Who Owns What</td><td>6 portfolios · 6 names · 9 LLCs</td><td>nothing it can see</td></tr>
+    <tr><td class="k">WatchlineNYC</td><td>1 owner group · 9 buildings</td><td>a single ACRIS deed</td></tr>
+  </tbody></table>
+  <p>The tie is a transaction. In <b>2020</b> a Chapter 11 bankruptcy trustee sold the entire row —
+    <b>all nine parcels on one deed</b> <span class="badge s">sourced</span> — for <b>$18.6M</b> to a
+    single buyer, <code>41 Haight Street Townhouse Owner, LLC</code>. That buyer then re-deeded seven of
+    the parcels, one at a time, into <b>single-purpose shells</b> (one was never moved). Watchline's
+    <code>CONNECTED_BY_DEED</code> veil-pierce <span class="badge i">inferred</span> recovers the common
+    origin the re-titling obscured. <b>Layer:</b> owner identity, read from the deed record.</p>
+  <div class="takeaway">Here Who Owns What isn't wrong — it's <b>blind</b>: the only tie is a transaction,
+    and it reads no deeds. <span style="color:var(--faint)">A shared 2020 origin and a consistent
+    re-deeding-from-the-parent pattern are strong common-control signals — a lead to verify, not proof of
+    one present beneficial owner.</span></div>
+</div>
+
 <div class="takeaway" style="margin-top:26px;font-size:.94rem">
-  <b>One message across all three:</b> the owner-identity layer is <em>precision-first</em>. It keeps
+  <b>One message across all four:</b> the owner-identity layer is <em>precision-first</em>. It keeps
   <b>who owns</b> cleanly separate from <b>who operates through this office</b> and <b>who manages the
-  building</b> — merging a true owner the record fragments, and declining to merge parties the record
-  only appears to connect.
+  building</b> — merging a true owner the record fragments (even when the only trace is a deed), and
+  declining to merge parties the record only appears to connect.
 </div>
 
 <footer>
