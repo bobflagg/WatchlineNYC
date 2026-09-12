@@ -29,3 +29,6 @@ ignore-contents-of-this-directory/
 
 # Neo4j dumps built for deployment seeding (make dump)
 dumps/
+
+# Local Claude Code guidance — kept locally, untracked (root file only, not nested ones)
+/CLAUDE.md
