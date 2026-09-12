@@ -53,6 +53,35 @@ HPD record for this owner is full of the same class of noise: `RAMON ESCOBAR` /
 COCNOURSE`; city as `Bronx` / `BX` / `White Plains`. Registration-string matching
 is brittle against exactly this.
 
+### The full variant family — one office recorded ~a dozen ways
+
+Pulled fresh from HPD `hpd_contacts` (2026-09-12): across the 26 buildings, every
+`RAMON ESCOBAR` registration resolves to a **single Bronx office — 2432 Grand Concourse,
+Suite 504, Bronx NY 10458** — but the raw record enters that one address in a whole *family*
+of inconsistent keys, and WoW's exact-address matching shatters on each. The street/apartment
+spellings actually on file for this owner:
+
+| As filed | The corruption |
+|---|---|
+| `2432 GRAND CONCOURSE 504` | canonical |
+| `2432 GRAND CONCOURS 504` | dropped **E** |
+| `2432 GRAND COURSE 504` | dropped **CON** — the headline typo (on building `2031600009`) |
+| `2432 GRAND COCNOURSE 504` | transposed letters |
+| `2432 GRAND CONCOURSE` | apartment (`504`) dropped |
+| `105 SHERMAN AVENUE` | a stray, unrelated address |
+| *(blank)* | no address filed |
+
+And even the *canonical* spelling fractures further on **city** (`BRONX` / `Bronx` / `BX` /
+`White Plains` / even `GRAND CONCOURSE` filed as the city) and **ZIP** (`10458` / `10459` /
+`10607`) — each distinct combination its own node in WoW's connection graph, and a single
+building often carries several of these across its registration history. So "the typo" is really
+a *dozen-way smear* of one office; `GRAND COURSE` is merely the variant the headline names.
+WatchlineNYC is immune because it never keys on the registration string: the name-anchored Splink
+model, the exact-legal-name `registered-llc` edge, and the **name-free** ACRIS deed all bridge
+across every one of these forms — which is why the three landlord nodes (`ACT-LL-93014` plus the
+two split-off singletons `ACT-LL-93013` and `ACT-LL-93015`) collapse into one owner group
+(`OG-93013`).
+
 ## Why WatchlineNYC gets it right
 
 The `acris-deed` signal keys on **recorded ACRIS conveyances**, not on
@@ -191,6 +220,19 @@ SELECT DISTINCT orig_id, upper(l.name), upper(l.bizaddr)   -- shows the GRAND CO
 FROM (SELECT 77821 oid, unnest(bbls) bbl FROM wow.wow_portfolios WHERE orig_id=77821
       UNION ALL SELECT 77822, unnest(bbls) FROM wow.wow_portfolios WHERE orig_id=77822) pf
 JOIN wow.wow_landlords l ON l.bbl=pf.bbl GROUP BY orig_id, upper(l.name), upper(l.bizaddr);
+```
+
+```sql
+-- The full address-variant family behind case A: one office (2432 Grand Concourse #504)
+-- recorded ~a dozen ways, which is what shatters WoW's exact-address graph.
+SELECT concat_ws(' ', businesshousenumber, businessstreetname, businessapartment) AS address_as_filed,
+       upper(businesscity) AS city, businesszip, count(*) AS rows
+FROM hpd_registrations r JOIN hpd_contacts c USING (registrationid)
+WHERE upper(btrim(c.firstname||' '||c.lastname)) = 'RAMON ESCOBAR'
+  AND upper(c.businessstreetname) LIKE 'GRAND%'
+GROUP BY 1,2,3 ORDER BY rows DESC;
+-- -> GRAND CONCOURSE 504 / CONCOURS 504 / COURSE 504 / COCNOURSE 504 / CONCOURSE (no apt);
+--    city BRONX/Bronx/BX/White Plains/GRAND CONCOURSE; zip 10458/10459/10607 — each its own key.
 ```
 
 ```cypher
