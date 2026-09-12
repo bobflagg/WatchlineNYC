@@ -45,13 +45,14 @@ verify, not determinations of legal ownership.)*
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
   actually are — a more accurate, disaggregated view of the same public records.
 
-Three worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
-owner-identity layer deciding in **both** directions: merging one owner Who Owns What splits on a
-typo (Escobar — 26 buildings reunited), and twice *declining* to merge parties that share only an
-office (Miller — one Lakewood suite, seven owners) or a managing agent (Levitov — one operator, five
-separate owners). Together they are the answer, in data, to *"doesn't it just merge everything?"* —
-every ownership link labeled an inference to verify, not a legal determination, and drawn from the
-public record.
+Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
+owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
+fractured by a typo (Escobar — 26 buildings reunited), and one WoW can't see at all: nine buildings
+tied only by a shared ACRIS deed (Haight — a Queens block that reads as six owners but was one bulk
+purchase). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
+seven owners) or a managing agent (Levitov — one operator, five separate owners). Together they are
+the answer, in data, to *"doesn't it just merge everything?"* — every ownership link labeled an
+inference to verify, not a legal determination, and drawn from the public record.
 
 New to the project or skeptical of the approach? The
 [**FAQ**](https://bobflagg.github.io/WatchlineNYC/docs/faq/) gives straight answers on what the
