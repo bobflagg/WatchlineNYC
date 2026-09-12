@@ -983,6 +983,41 @@
           from WoW in both directions.</aside>
       </section>
 
+      <!-- BACKUP — Escobar address-variant fragmentation (WoW under-merge) -->
+      <section>
+        <span class="kicker">Backup · why exact-address matching fragments one owner</span>
+        <h2>One office, a dozen keys <span
+            style="color:var(--muted);font-weight:400;font-size:.46em">Ramon Escobar · 2432 Grand Concourse #504</span></h2>
+        <hr class="rule">
+        <p style="font-size:.84em">Every string below is the <em>same</em> Bronx office as filed in HPD. Who Owns What
+          links landlords on the <strong>exact</strong> business address — so each variant is its own node, and each
+          peels buildings off into a separate portfolio.</p>
+        <div class="masks">
+          <div class="chip">2432 GRAND CONCOURSE 504</div>
+          <div class="chip">2432 GRAND CONCOURS 504</div>
+          <div class="chip">2432 GRAND <b>COURSE</b> 504</div>
+          <div class="chip">2432 GRAND COCNOURSE 504</div>
+          <div class="chip">2432 GRAND CONCOURSE</div>
+          <div class="chip">105 SHERMAN AVE</div>
+          <div class="chip">(blank)</div>
+          <div class="chip">+ 4 city spellings · 3 ZIPs</div>
+        </div>
+        <div class="pull" style="font-size:.92em"><strong>Who Owns What: 24 + 2.</strong> Watchline reunites all
+          <strong>26</strong> — because it keys on resolved owner identity and the <strong>name-free deed</strong>, never
+          the raw string. The famous "GRAND COURSE" typo is just one member of the family.</div>
+        <span class="src">Source: raw HPD <code>hpd_contacts</code>. Miller was WoW <em>over</em>-merging on a shared
+          office; this is the opposite — WoW <em>under</em>-merging on address noise.</span>
+        <aside class="notes">(~40s backup) Miller was Who Owns What OVER-merging — ten owners fused on a shared office.
+          Here's the opposite failure, under-merging. Ramon Escobar runs 26 Bronx buildings from one office, 2432 Grand
+          Concourse suite 504. But look how HPD records that single address — GRAND CONCOURSE, then GRAND COURSE with the
+          CON dropped, GRAND COCNOURSE transposed, the suite number dropped, a stray Sherman Avenue, a blank row — and
+          even the correct spelling arrives in three ZIPs and four cities. Who Owns What links on the exact
+          business-address string, so each of these is a different node, and Escobar's portfolio shatters into 24 plus 2.
+          Watchline reunites all 26 because it never trusts the string: it resolves identity by name-matching and the
+          name-free deed. The "GRAND COURSE" typo the case study cites is just one member of a dozen-way family — which
+          is exactly why brittle exact-string matching fails, and why the resolution layer earns its place.</aside>
+      </section>
+
       <!-- BACKUP — the deed veil-pierce (Haight) -->
       <section>
         <span class="kicker">Backup · the question WoW can't answer</span>
