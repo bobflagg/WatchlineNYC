@@ -24,7 +24,7 @@ resolution, the three-layer ownership model (management vs. operational nexus vs
 identity), and the reliability tagging that labels every answer as sourced or inferred.
 Press **S** in the deck for speaker notes.
 
-Three interactive comparison maps show how Watchline's owner-identity layer diverges from
+Four interactive comparison maps show how Watchline's owner-identity layer diverges from
 Who Owns What — in **both** directions. Toggle between the two systems; hover a building
 for details. *(These groupings are algorithmic inferences from public records — leads to
 verify, not determinations of legal ownership.)*
@@ -36,6 +36,10 @@ verify, not determinations of legal ownership.)*
   Who Owns What splits landlord Ramon Escobar's Bronx portfolio into two on a single
   registration-address typo (`GRAND CONCOURSE` vs `GRAND COURSE`); Watchline keeps all 26
   buildings together as one owner.
+- **[Haight Street — one block, six owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/haight.html):**
+  Nine identical townhouses on one Queens block that Who Owns What reads as six separate owners;
+  Watchline reunites them via a single 2020 bulk deed — a veil-pierce from the ACRIS record that
+  registration-based grouping cannot see. Toggle to watch one contiguous row turn six colors.
 - **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
   Who Owns What groups 27 buildings as a single owner because they share one registration
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
