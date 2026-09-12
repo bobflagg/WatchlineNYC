@@ -359,7 +359,7 @@ map.on("load", ()=>{
   // fit to all buildings
   const b = new maplibregl.LngLatBounds();
   DATA.features.forEach(f=>b.extend(f.geometry.coordinates));
-  if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:15});
+  if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:__MAX_ZOOM__});
   setView(DEFAULT_VIEW);   // paints + legend + button state for the opening view
 
   // Hover tooltip with building details.
@@ -393,6 +393,7 @@ def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: st
                 heading: str = "One owner, two answers", subhead: str | None = None,
                 btn_one: str = "WatchlineNYC", btn_split: str = "Who Owns What",
                 split_tip_label: str = "WoW portfolio", default_view: str = "wl",
+                max_zoom: int = 15,
                 split_note: str = "WoW assignment: justfix <code>wow.wow_portfolios</code>.") -> str:
     """Render the shared map template. Defaults reproduce the merge view (one WatchlineNYC portfolio
     vs WoW's split). The keyword args flip the framing for the inverse view (one WoW portfolio vs
@@ -420,12 +421,13 @@ def render_html(portfolio_id: str, geojson: dict, wl_legend: str, wow_legend: st
             .replace("__SPLIT_TIP_LABEL__", split_tip_label)
             .replace("__DEFAULT_VIEW__", default_view)
             .replace("__SPLIT_NOTE__", split_note)
+            .replace("__MAX_ZOOM__", str(max_zoom))
             .replace("__BM_SOURCES__", json.dumps(bm["sources"]))
             .replace("__BM_LAYERS__", json.dumps(bm["layers"]))
             .replace("__BM_NOTE__", bm["note"]))
 
 
-def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
+def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15) -> dict:
     driver = neo4j_driver()
     try:
         points = building_points(driver, portfolio_id)
@@ -448,7 +450,7 @@ def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> di
     geojson = build_geojson(points, bbl2pf, pf_color, majority_pf, hpd=hpd)
     wl_legend, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], len(points))
     html = render_html(portfolio_id, geojson, wl_legend, wow_legend, PALETTE[0],
-                       len(pf_color), len(points), basemap=basemap)
+                       len(pf_color), len(points), basemap=basemap, max_zoom=max_zoom)
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
@@ -456,7 +458,7 @@ def generate(portfolio_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> di
             "unplaced": sum(1 for p in points if p["bbl"] not in bbl2pf), "out": str(out)}
 
 
-def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
+def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15) -> dict:
     """Inverse of :func:`generate`: start from ONE WoW portfolio and show how WatchlineNYC's
     owner-identity layer splits it into distinct owners. The 'divergence runs both ways' view —
     for cases where WoW over-merges unrelated owners on a shared address (e.g. Abraham Miller /
@@ -489,6 +491,7 @@ def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT
         basemap=basemap, heading="One portfolio, many owners", subhead=sub,
         btn_one="Who Owns What", btn_split="WatchlineNYC", split_tip_label="WatchlineNYC owner",
         default_view="wow",   # open on the reveal: WatchlineNYC's multi-owner split
+        max_zoom=max_zoom,
         split_note="Owner identity: discovery graph <code>IN_OWNER_GROUP</code>.")
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -504,7 +507,7 @@ def owner_group_bbls(driver, owner_group_id: str) -> list[str]:
     return [str(b).strip() for b in (r["bbls"] if r else [])]
 
 
-def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP) -> dict:
+def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15) -> dict:
     """Forward map keyed on an OWNER GROUP (owner identity), not a Portfolio: one owner's buildings,
     colored by how Who Owns What splits them. Matches the demo's owner-identity number exactly
     (e.g. Croman's OG = 127 buildings, vs his nexus Portfolio's 135). WatchlineNYC = one owner."""
@@ -538,7 +541,7 @@ def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_
         owner_group_id, geojson, one_legend, wow_legend, PALETTE[0], n_wow, len(points),
         basemap=basemap, heading="One owner, scattered across the record", subhead=sub,
         btn_one="WatchlineNYC", btn_split="Who Owns What", split_tip_label="WoW portfolio",
-        default_view="wl")   # open on the unified owner; toggle reveals WoW's fragments
+        default_view="wl", max_zoom=max_zoom)   # open on the unified owner; toggle reveals WoW's fragments
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
@@ -599,21 +602,24 @@ def main() -> None:
                          "file:// without a Referer if osm shows 403)")
     ap.add_argument("--png", action="store_true", help="also export slide-ready PNGs of both views (Playwright)")
     ap.add_argument("--scale", type=int, default=2, help="PNG device-scale factor (default 2 = retina)")
+    ap.add_argument("--max-zoom", dest="max_zoom", type=int, default=15,
+                    help="fitBounds max zoom (default 15; raise to ~18-19 for a single-block cluster so "
+                         "adjacent buildings separate — pair with --basemap esri-street/osm for tiles at that zoom)")
     args = ap.parse_args()
 
     if args.wow_portfolio:
         out = args.out or Path("eval_out/maps") / f"wow-{args.wow_portfolio}.html"
-        info = generate_wow_split(args.wow_portfolio, out, basemap=args.basemap)
+        info = generate_wow_split(args.wow_portfolio, out, basemap=args.basemap, max_zoom=args.max_zoom)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, "
               f"WatchlineNYC = {info['owner_groups']} owner(s), {info['singletons']} singleton(s))")
     elif args.owner_group:
         out = args.out or Path("eval_out/maps") / f"{args.owner_group}.html"
-        info = generate_owner_group(args.owner_group, out, basemap=args.basemap)
+        info = generate_owner_group(args.owner_group, out, basemap=args.basemap, max_zoom=args.max_zoom)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, WatchlineNYC = 1 owner, "
               f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     else:
         out = args.out or Path("eval_out/maps") / f"{args.portfolio}.html"
-        info = generate(args.portfolio, out, basemap=args.basemap)
+        info = generate(args.portfolio, out, basemap=args.basemap, max_zoom=args.max_zoom)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, "
               f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     if args.png:
