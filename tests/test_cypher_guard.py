@@ -465,10 +465,13 @@ class TestEveryCypherLiteralInTheRepoIsAllowed:
     Cypher statement. Over-refusal is the failure mode this catches, and it
     catches it in code nobody thought to add to a list.
 
-    Two things are excluded, both deliberately. Files listed in
+    Three things are excluded, all deliberately. Files listed in
     :data:`INTENTIONAL_REFUSALS` exist to prove writes *are* refused, so their
-    Cypher is supposed to fail. And f-string parts are skipped, since a
-    fragment is not a statement.
+    Cypher is supposed to fail. The ``watchline/discovery/ingest/`` tree is the
+    privileged build/write pipeline (developer-authored Cypher run by a
+    schema-capable user), not the agent's read-only workload this guard governs,
+    so its legitimate ``CREATE``/``MERGE``/``SET`` queries are out of scope. And
+    f-string parts are skipped, since a fragment is not a statement.
 
     The literal must also *start* with a Cypher keyword. Searching for "MATCH"
     anywhere matched prose — ``geocode.py``'s docstring says "must match the
@@ -511,6 +514,10 @@ class TestEveryCypherLiteralInTheRepoIsAllowed:
             ]
         ):
             if path.name in cls.INTENTIONAL_REFUSALS:
+                continue
+            # The ingest/build pipeline is the privileged WRITE path, not the agent
+            # read-only workload this guard governs — its CREATE/MERGE/SET is out of scope.
+            if path.relative_to(repo_root).as_posix().startswith("watchline/discovery/ingest/"):
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
