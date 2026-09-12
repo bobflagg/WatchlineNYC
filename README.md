@@ -35,7 +35,7 @@ court record across it, and the public enforcement history. Ownership links are 
 *inferred* (leads to verify, not legal determinations); conditions and enforcement figures are
 directly sourced public records.
 
-[Slides from a recent presentation](https://bobflagg.github.io/WatchlineNYC/docs/meetup/) walk
+A [slide deck](https://bobflagg.github.io/WatchlineNYC/docs/meetup/) walks
 through the approach — precision-first owner resolution, the three-layer ownership model
 (management vs. operational nexus vs. owner identity), and the reliability tagging that labels
 every answer as sourced or inferred.
