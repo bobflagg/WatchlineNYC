@@ -212,7 +212,12 @@ LLC edges (`llc_edges`). `CONNECTED_BY_DEED` (`deed_edges`) is a **separate** ty
   distinct multi-parcel deeds is a serial co-investor whose transitive links would over-merge unrelated
   parties (the deed analogue of the aggregator megaoffice) → dropped from the cliques (precision-safe).
   One clique per deed over the co-conveyed buildings' landlord nodes (bbl→nodeid explode-join, same
-  as `llc_edges`). Feeds the **OWNERSHIP layer only** — `owner_groups` reads
+  as `llc_edges`). **Recall limit — registration-less buildings are unreachable:** because the clique is
+  over *landlord* nodes, a co-conveyed building with no landlord node (e.g. an **unregistered** building —
+  no HPD registration ⇒ no `Actor`/`Landlord`) has nothing to attach the deed edge to and drops out
+  silently, even with the deed evidence present. WoW misses it too (it is registration-based), so such a
+  parcel sits in *neither* system. Worked example: the 10th townhouse (41-23) in the Haight deed cluster,
+  `specs/case-haight.md`. Feeds the **OWNERSHIP layer only** — `owner_groups` reads
   `CONNECTED_BY_SPLINK|CONNECTED_BY_DEED`; NOT projected into the address-nexus Portfolio (deeds are
   ownership evidence, not an operational nexus). Deterministic + name-free → excluded from the model
   cross-surname/scatter hard gates (shows on the `[info]` lines). SPECIALIST + sparse by design

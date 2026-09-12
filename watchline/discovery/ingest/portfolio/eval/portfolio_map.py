@@ -41,6 +41,7 @@ from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE,
 # Categorical palette. Index 0 is the "majority / WatchlineNYC" blue; the rest mark WoW strays.
 PALETTE = ["#2563eb", "#dc2626", "#d97706", "#059669", "#7c3aed", "#0891b2", "#db2777", "#65a30d"]
 NO_PF_COLOR = "#9ca3af"  # a building WoW never placed in any portfolio
+FLAG_FILL, FLAG_STROKE = "#eef0f3", "#7a8595"  # ghosted context dots: in neither system (must match the JS consts)
 
 # Keyless raster basemaps, selectable with --basemap. Each is a MapLibre style fragment
 # (sources + layers) injected verbatim. NOTE: OSM's CDN 403s tile requests that carry no Referer,
@@ -232,15 +233,18 @@ def _assign_colors(bbl2pf: dict[str, str], points: list[dict]) -> dict[str, str]
 
 def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str, str],
                   majority_pf: str | None, hpd: dict[str, dict] | None = None,
-                  pf_label: dict[str, str] | None = None) -> dict:
+                  pf_label: dict[str, str] | None = None,
+                  flagged_bbls: set[str] | None = None, flag_note: str = "") -> dict:
     """`pf_label` optionally maps a group key to a friendlier tooltip label (e.g. an owner-group
     id -> the owner name); default shows the key itself. The property stays named ``wow_pf`` so the
     template is shared, but it means "the splitting system's group" in either direction."""
     hpd = hpd or {}
+    flagged_bbls = flagged_bbls or set()
     feats = []
     for p in points:
         pf = bbl2pf.get(p["bbl"])
         h = hpd.get(p["bbl"], {})
+        is_flagged = p["bbl"] in flagged_bbls
         feats.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [p["lon"], p["lat"]]},
@@ -256,6 +260,8 @@ def build_geojson(points: list[dict], bbl2pf: dict[str, str], pf_color: dict[str
                 "wow_pf": ((pf_label or {}).get(pf, pf) if pf else None) or "—",
                 "wow_color": pf_color.get(pf, NO_PF_COLOR) if pf else NO_PF_COLOR,
                 "stray": bool(majority_pf) and pf != majority_pf,  # the split system carved it off
+                "flagged": is_flagged,   # shown for context; in neither system (e.g. unregistered)
+                "flag_note": flag_note if is_flagged else "",
             },
         })
     return {"type": "FeatureCollection", "features": feats}
@@ -327,6 +333,7 @@ _TEMPLATE = """<!doctype html>
 <script>
 const DATA = __GEOJSON__;
 const WL_COLOR = "__WL_COLOR__";
+const FLAG_FILL = "#eef0f3", FLAG_STROKE = "#7a8595";   // context-only buildings (in neither system)
 const LEGEND = {wl: `__WL_LEGEND__`, wow: `__WOW_LEGEND__`};
 const DEFAULT_VIEW = "__DEFAULT_VIEW__";   // which view opens first: "wl" (single) or "wow" (split)
 
@@ -341,14 +348,16 @@ function setView(v){
   document.getElementById("b-wl").classList.toggle("on", v==="wl");
   document.getElementById("b-wow").classList.toggle("on", v==="wow");
   document.getElementById("legend").innerHTML = LEGEND[v];
-  const color = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const base = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const color = ["case",["get","flagged"], FLAG_FILL, base];
   const radius = v==="wow"
     ? ["interpolate",["linear"],["zoom"], 10,["case",["get","stray"],7,5], 15,["case",["get","stray"],13,9]]
     : ["interpolate",["linear"],["zoom"], 10,5, 15,9];
-  const stroke = v==="wow" ? ["case",["get","stray"],2.2,1] : 1;
+  const stroke = ["case",["get","flagged"],2.4, (v==="wow" ? ["case",["get","stray"],2.2,1] : 1)];
   map.setPaintProperty("pts","circle-color",color);
   map.setPaintProperty("pts","circle-radius",radius);
   map.setPaintProperty("pts","circle-stroke-width",stroke);
+  map.setPaintProperty("pts","circle-stroke-color",["case",["get","flagged"], FLAG_STROKE, "#fff"]);
 }
 
 map.on("load", ()=>{
@@ -368,14 +377,18 @@ map.on("load", ()=>{
   map.on("mousemove","pts",e=>{
     map.getCanvas().style.cursor="pointer";
     const p = e.features[0].properties;
+    const flagged = (p.flagged===true||p.flagged==="true");
     const stray = (p.stray===true||p.stray==="true") ? ' <span class="tag">split-off</span>' : '';
+    const lastRow = flagged
+      ? `<div class="mrow" style="color:#7a8595">${p.flag_note}</div>`
+      : `<div class="mrow">__SPLIT_TIP_LABEL__: ${p.wow_pf}${stray}</div>`;
     tip.setLngLat(e.lngLat).setHTML(
       `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
       `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
       `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
       `<div class="mrow">HPD head officer: ${p.officer}</div>`+
       `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
-      `<div class="mrow">__SPLIT_TIP_LABEL__: ${p.wow_pf}${stray}</div>`
+      lastRow
     ).addTo(map);
   });
   map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
@@ -507,10 +520,15 @@ def owner_group_bbls(driver, owner_group_id: str) -> list[str]:
     return [str(b).strip() for b in (r["bbls"] if r else [])]
 
 
-def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15) -> dict:
+def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15,
+                         flag_bbls: list[str] | None = None, flag_note: str = "") -> dict:
     """Forward map keyed on an OWNER GROUP (owner identity), not a Portfolio: one owner's buildings,
     colored by how Who Owns What splits them. Matches the demo's owner-identity number exactly
-    (e.g. Croman's OG = 127 buildings, vs his nexus Portfolio's 135). WatchlineNYC = one owner."""
+    (e.g. Croman's OG = 127 buildings, vs his nexus Portfolio's 135). WatchlineNYC = one owner.
+
+    ``flag_bbls`` overlays extra buildings that are in NEITHER system (e.g. on the deed but
+    unregistered) as ghosted context dots — the honest recall caveat, shown on the map."""
+    flag_bbls = [str(b).strip() for b in (flag_bbls or [])]
     driver = neo4j_driver()
     pgc = pg_conn()
     try:
@@ -522,21 +540,34 @@ def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_
             raise SystemExit(f"No geocoded buildings for owner group {owner_group_id}")
         pt_bbls = [p["bbl"] for p in points]
         bbl2pf, labels = wow_split(pgc, pt_bbls)
-        hpd = hpd_officers(pgc, pt_bbls)
+        flag_points = [p for p in points_for_bbls(driver, flag_bbls) if p["bbl"] not in set(pt_bbls)]
+        hpd = hpd_officers(pgc, pt_bbls + [p["bbl"] for p in flag_points])
     finally:
         driver.close()
         pgc.close()
 
+    n_group = len(points)
+    flagged_set = {p["bbl"] for p in flag_points}
+    all_points = points + flag_points
     pf_color = _assign_colors(bbl2pf, points)
     counts = Counter(bbl2pf[p["bbl"]] for p in points if p["bbl"] in bbl2pf)
     majority_pf = counts.most_common(1)[0][0] if counts else None
-    geojson = build_geojson(points, bbl2pf, pf_color, majority_pf, hpd=hpd)
-    _, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], len(points))
+    geojson = build_geojson(all_points, bbl2pf, pf_color, majority_pf, hpd=hpd,
+                            flagged_bbls=flagged_set, flag_note=flag_note)
+    _, wow_legend = _legend_html(pf_color, labels, majority_pf, PALETTE[0], n_group)
     one_legend = (f'<div class="row"><span class="dot" style="background:{PALETTE[0]}"></span>'
-                  f'One owner · {len(points)} buildings</div>')
+                  f'One owner · {n_group} buildings</div>')
+    if flag_points:
+        flag_rows = "\n".join(
+            f'<div class="row"><span class="dot" style="background:{FLAG_FILL};'
+            f'border:2px solid {FLAG_STROKE}"></span>{p["address"] or p["bbl"]} · {flag_note}</div>'
+            for p in flag_points)
+        one_legend += "\n" + flag_rows
+        wow_legend += "\n" + flag_rows
     n_wow = len(pf_color)
-    sub = (f"{len(points)} buildings · WatchlineNYC = 1 owner · "
-           f"Who Owns What = {n_wow} portfolio{'s' if n_wow != 1 else ''}")
+    extra = f" · +{len(flag_points)} on the deed, in neither system" if flag_points else ""
+    sub = (f"{n_group} buildings · WatchlineNYC = 1 owner · "
+           f"Who Owns What = {n_wow} portfolio{'s' if n_wow != 1 else ''}{extra}")
     html = render_html(
         owner_group_id, geojson, one_legend, wow_legend, PALETTE[0], n_wow, len(points),
         basemap=basemap, heading="One owner, scattered across the record", subhead=sub,
@@ -605,6 +636,11 @@ def main() -> None:
     ap.add_argument("--max-zoom", dest="max_zoom", type=int, default=15,
                     help="fitBounds max zoom (default 15; raise to ~18-19 for a single-block cluster so "
                          "adjacent buildings separate — pair with --basemap esri-street/osm for tiles at that zoom)")
+    ap.add_argument("--flag-bbl", dest="flag_bbls", action="append", default=[],
+                    help="(owner-group maps) overlay an extra BBL as a ghosted context dot — a building in "
+                         "NEITHER system (e.g. on the deed but unregistered). Repeatable.")
+    ap.add_argument("--flag-note", dest="flag_note", default="on the deed, but in neither system",
+                    help="label for --flag-bbl dots (legend + tooltip)")
     args = ap.parse_args()
 
     if args.wow_portfolio:
@@ -614,7 +650,8 @@ def main() -> None:
               f"WatchlineNYC = {info['owner_groups']} owner(s), {info['singletons']} singleton(s))")
     elif args.owner_group:
         out = args.out or Path("eval_out/maps") / f"{args.owner_group}.html"
-        info = generate_owner_group(args.owner_group, out, basemap=args.basemap, max_zoom=args.max_zoom)
+        info = generate_owner_group(args.owner_group, out, basemap=args.basemap, max_zoom=args.max_zoom,
+                                    flag_bbls=args.flag_bbls, flag_note=args.flag_note)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, WatchlineNYC = 1 owner, "
               f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
     else:

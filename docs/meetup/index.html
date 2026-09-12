@@ -993,30 +993,33 @@
         </div>
         <div style="display:flex;gap:18px;align-items:stretch;margin:.2em 0 .35em">
           <img src="haight-map.png"
-            alt="Map of nine adjacent townhouses on one block of Haight Street, Queens — each a colored dot; Who Owns What paints the single contiguous row in six colors (six separate owners)"
+            alt="Map of ten adjacent townhouses on one block of Haight Street, Queens — each a dot; Who Owns What paints nine of them in six colors (six separate owners), and the missed tenth, 41-23, shows as a hollow ghost dot mid-row"
             style="height:396px;width:auto;max-width:58%;border:1px solid var(--line);border-radius:8px;">
           <div class="card" style="border-top:5px solid var(--gold);flex:1">
             <div class="cl" style="color:var(--gold)">Six colors, one row → one owner</div>
             <ul class="tight" style="margin-top:.35em">
-              <li>Who Owns What paints one contiguous row of identical townhouses in <strong>six colors</strong>: <strong>Chan · Xu · Ho · Lin · Li · Chen</strong> — six head officers, <strong>nine</strong> owner-LLCs, nothing shared.</li>
-              <li><strong>One deed, 2020</strong> — a Chapter 11 trustee sold all <strong>9 townhouses</strong> for <strong>$18.6M</strong> to a single buyer, who then re-deeded each into a <strong>single-purpose shell</strong>.</li>
-              <li>Watchline reunites them — <strong>one owner group, 9 buildings</strong> (<code>CONNECTED_BY_DEED</code>) — from evidence WoW never reads.</li>
+              <li>Who Owns What paints one contiguous row of identical townhouses in <strong>six colors</strong>: <strong>Chan · Xu · Ho · Lin · Li · Chen</strong> — six head officers, nine owner-LLCs, nothing shared.</li>
+              <li><strong>One deed, 2020</strong> — a Chapter 11 trustee sold all <strong>10 townhouses</strong> for <strong>$18.6M</strong> to a single buyer, who then re-deeded them into <strong>single-purpose shells</strong>.</li>
+              <li>Watchline reunites <strong>9 of the 10</strong> into one owner group (<code>CONNECTED_BY_DEED</code>). The <strong>10th (41-23)</strong> is unregistered → in <em>neither</em> system (the ghost dot).</li>
             </ul>
           </div>
         </div>
         <div class="pull" style="font-size:.8em">Here WoW isn't wrong — it's <strong>blind</strong>: the only tie is a transaction, and it reads no deeds. <span style="color:var(--muted)">Common ownership is <strong>inferred from the deed record — a lead to verify, not a determination.</strong></span></div>
-        <span class="src">Owner group <code>OG-51705</code> · deed <code>2020092500293001</code> ($18.6M · 9 parcels · Ch. 11 sale) · composition <code>deed_only</code>. See <code>specs/case-haight.md</code>.</span>
-        <aside class="notes">My sharpest backup for "what does this do that Who Owns What can't?" A block of nine
-          identical townhouses on Haight Street in Flushing. Who Owns What reads six separate owners — six different
-          people on the registrations, nine different owner LLCs on the tax roll — nothing it links on is shared, so
-          it splits the block six ways. But pull the deed record: in 2020 a bankruptcy trustee sold the entire row —
-          all nine — on ONE deed, for $18.6 million, to a single buyer. That buyer then re-deeded the parcels one at a
-          time into single-purpose LLCs — buy together, then scatter the title. Watchline reunites all nine into one
-          owner group, and the tie is pure deed — no name, no address. This is the case WoW can't reach even in
-          principle: it uses no deed data, and no registration snapshot can say "these were one purchase two years
-          ago." Say the honest limit out loud: shared origin and a consistent re-deeding pattern are strong
-          common-control signals, but the onward sales carry real prices — so this is a lead to verify, not a verdict
-          that names one owner. That's the whole ethos in one slide.</aside>
+        <span class="src">Owner group <code>OG-51705</code> · deed <code>2020092500293001</code> ($18.6M · <strong>10 parcels</strong> · Ch. 11 sale) · composition <code>deed_only</code> · 9 of 10 reunited. See <code>specs/case-haight.md</code>.</span>
+        <aside class="notes">My sharpest backup for "what does this do that Who Owns What can't?" A block of ten
+          identical townhouses on Haight Street in Flushing. Who Owns What reads the registered ones as six separate
+          owners — six different people on the registrations, nine different owner LLCs on the tax roll — nothing it
+          links on is shared, so it splits the block six ways. But pull the deed record: in 2020 a bankruptcy trustee
+          sold the entire row — all ten — on ONE deed, for $18.6 million, to a single buyer, who then re-deeded them
+          one at a time into single-purpose LLCs: buy together, then scatter the title. Watchline reunites nine of the
+          ten into one owner group, and the tie is pure deed — no name, no address. This is the case WoW can't reach
+          even in principle: it uses no deed data, and no registration snapshot can say "these were one purchase two
+          years ago." Then the honesty beat — point at the ghost dot: the tenth townhouse, 41-23, is on the same deed
+          but has NO HPD registration at all, so there's no landlord record for the deed link to hang on — it falls
+          through my system AND Who Owns What. I show the miss on purpose: precision-first, with a real recall limit,
+          not magic. And the whole thing is a lead to verify — shared origin and a consistent re-deeding pattern are
+          strong signals, but the onward sales carry real prices, so it points an investigator at a question; it
+          doesn't name one owner. That's the ethos in one slide.</aside>
       </section>
 
       <!-- BACKUP — likely pushback (SQL / AI) -->

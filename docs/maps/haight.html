@@ -33,7 +33,7 @@
 <body>
 <div id="map"></div>
 <div class="card">
-  <h1>One owner, scattered across the record<small>9 buildings · WatchlineNYC = 1 owner · Who Owns What = 6 portfolios</small></h1>
+  <h1>One owner, scattered across the record<small>9 buildings · WatchlineNYC = 1 owner · Who Owns What = 6 portfolios · +1 on the deed, in neither system</small></h1>
   <div class="toggle">
     <button id="b-wl" class="on" onclick="setView('wl')">WatchlineNYC</button>
     <button id="b-wow" onclick="setView('wow')">Who Owns What</button>
@@ -43,14 +43,17 @@
     WoW assignment: justfix <code>wow.wow_portfolios</code>. Base map tiles © Esri.</div>
 </div>
 <script>
-const DATA = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.833991, 40.7551451]}, "properties": {"bbl": "4050630045", "address": "41-27 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT STREET TOWNHOUSE OWNER, LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340054, 40.7551945]}, "properties": {"bbl": "4050630046", "address": "41-25 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT GROUP LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340376, 40.7552961]}, "properties": {"bbl": "4050630048", "address": "41-21 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "888 HAIGHT LLC", "officer": "Shi Lin", "bizaddr": "10160 MOSAIC WAY, Elk Grove CA 95757", "wow_pf": "85276", "wow_color": "#dc2626", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340519, 40.7553483]}, "properties": {"bbl": "4050630049", "address": "41-19 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41-19 LIYANG INC.", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340698, 40.7553977]}, "properties": {"bbl": "4050630050", "address": "41-17 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "C & L 17 FAMILY LLC", "officer": "Jane Chan", "bizaddr": "41-17 HAIGHT STREET APT4F, Flushing NY 11355", "wow_pf": "44533", "wow_color": "#d97706", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340841, 40.7554499]}, "properties": {"bbl": "4050630051", "address": "41-15 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "4115 HAIGHT ST INC.", "officer": "ZHIFENG CHEN", "bizaddr": "41-02 DELONG STREET, FLUSHINg NY 11355", "wow_pf": "97074", "wow_color": "#059669", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340984, 40.7554993]}, "properties": {"bbl": "4050630052", "address": "41-13 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "AVERY AVENUE 168 LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341164, 40.7555515]}, "properties": {"bbl": "4050630053", "address": "41-11 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "HT ELEVEN REALTY LLC", "officer": "NICOLE HO", "bizaddr": "41-11 HAIGHT STREET 4R, Flushing NY 11355", "wow_pf": "72258", "wow_color": "#7c3aed", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341307, 40.7556009]}, "properties": {"bbl": "4050630055", "address": "41-09 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "NEW YUN REALTY LLC", "officer": "YUN LI", "bizaddr": "13833 60TH AVENUE, Flushing NY 11355", "wow_pf": "96365", "wow_color": "#0891b2", "stray": true}}]};
+const DATA = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.833991, 40.7551451]}, "properties": {"bbl": "4050630045", "address": "41-27 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT STREET TOWNHOUSE OWNER, LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340054, 40.7551945]}, "properties": {"bbl": "4050630046", "address": "41-25 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT GROUP LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340376, 40.7552961]}, "properties": {"bbl": "4050630048", "address": "41-21 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "888 HAIGHT LLC", "officer": "Shi Lin", "bizaddr": "10160 MOSAIC WAY, Elk Grove CA 95757", "wow_pf": "85276", "wow_color": "#dc2626", "stray": true, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340519, 40.7553483]}, "properties": {"bbl": "4050630049", "address": "41-19 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41-19 LIYANG INC.", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340698, 40.7553977]}, "properties": {"bbl": "4050630050", "address": "41-17 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "C & L 17 FAMILY LLC", "officer": "Jane Chan", "bizaddr": "41-17 HAIGHT STREET APT4F, Flushing NY 11355", "wow_pf": "44533", "wow_color": "#d97706", "stray": true, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340841, 40.7554499]}, "properties": {"bbl": "4050630051", "address": "41-15 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "4115 HAIGHT ST INC.", "officer": "ZHIFENG CHEN", "bizaddr": "41-02 DELONG STREET, FLUSHINg NY 11355", "wow_pf": "97074", "wow_color": "#059669", "stray": true, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340984, 40.7554993]}, "properties": {"bbl": "4050630052", "address": "41-13 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "AVERY AVENUE 168 LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341164, 40.7555515]}, "properties": {"bbl": "4050630053", "address": "41-11 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "HT ELEVEN REALTY LLC", "officer": "NICOLE HO", "bizaddr": "41-11 HAIGHT STREET 4R, Flushing NY 11355", "wow_pf": "72258", "wow_color": "#7c3aed", "stray": true, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341307, 40.7556009]}, "properties": {"bbl": "4050630055", "address": "41-09 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "NEW YUN REALTY LLC", "officer": "YUN LI", "bizaddr": "13833 60TH AVENUE, Flushing NY 11355", "wow_pf": "96365", "wow_color": "#0891b2", "stray": true, "flagged": false, "flag_note": ""}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340233, 40.7552467]}, "properties": {"bbl": "4050630047", "address": "41-23 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41-23 L&Y INC.", "officer": "\u2014", "bizaddr": "\u2014", "wow_pf": "\u2014", "wow_color": "#9ca3af", "stray": true, "flagged": true, "flag_note": "on the deed, but unregistered \u2014 in neither system"}}]};
 const WL_COLOR = "#2563eb";
-const LEGEND = {wl: `<div class="row"><span class="dot" style="background:#2563eb"></span>One owner · 9 buildings</div>`, wow: `<div class="row"><span class="dot" style="background:#2563eb"></span>WoW #48699 · 4 bldgs<br><span class="nm">JOHN JUN XU</span><br><span class="addr">36-60 MAIN STREET 3 FL, QUEENS NY</span></div>
+const FLAG_FILL = "#eef0f3", FLAG_STROKE = "#7a8595";   // context-only buildings (in neither system)
+const LEGEND = {wl: `<div class="row"><span class="dot" style="background:#2563eb"></span>One owner · 9 buildings</div>
+<div class="row"><span class="dot" style="background:#eef0f3;border:2px solid #7a8595"></span>41-23 HAIGHT STREET · on the deed, but unregistered — in neither system</div>`, wow: `<div class="row"><span class="dot" style="background:#2563eb"></span>WoW #48699 · 4 bldgs<br><span class="nm">JOHN JUN XU</span><br><span class="addr">36-60 MAIN STREET 3 FL, QUEENS NY</span></div>
 <div class="row"><span class="dot" style="background:#dc2626"></span>WoW #85276 · 1 bldgs · split-off<br><span class="nm">SHI LIN</span><br><span class="addr">10160 MOSAIC WAY, E G CA</span></div>
 <div class="row"><span class="dot" style="background:#d97706"></span>WoW #44533 · 1 bldgs · split-off<br><span class="nm">JANE CHAN</span><br><span class="addr">41-17 HAIGHT STREET APT4F, QUEENS NY</span></div>
 <div class="row"><span class="dot" style="background:#059669"></span>WoW #97074 · 1 bldgs · split-off<br><span class="nm">ZHIFENG CHEN</span><br><span class="addr">41-02 DELONG STREET, QUEENS NY</span></div>
 <div class="row"><span class="dot" style="background:#7c3aed"></span>WoW #72258 · 1 bldgs · split-off<br><span class="nm">NICOLE HO</span><br><span class="addr">41-11 HAIGHT STREET 4R, QUEENS NY</span></div>
-<div class="row"><span class="dot" style="background:#0891b2"></span>WoW #96365 · 1 bldgs · split-off<br><span class="nm">YUN LI</span><br><span class="addr">138-33 60 AVENUE, QUEENS NY</span></div>`};
+<div class="row"><span class="dot" style="background:#0891b2"></span>WoW #96365 · 1 bldgs · split-off<br><span class="nm">YUN LI</span><br><span class="addr">138-33 60 AVENUE, QUEENS NY</span></div>
+<div class="row"><span class="dot" style="background:#eef0f3;border:2px solid #7a8595"></span>41-23 HAIGHT STREET · on the deed, but unregistered — in neither system</div>`};
 const DEFAULT_VIEW = "wl";   // which view opens first: "wl" (single) or "wow" (split)
 
 const map = new maplibregl.Map({
@@ -64,14 +67,16 @@ function setView(v){
   document.getElementById("b-wl").classList.toggle("on", v==="wl");
   document.getElementById("b-wow").classList.toggle("on", v==="wow");
   document.getElementById("legend").innerHTML = LEGEND[v];
-  const color = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const base = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const color = ["case",["get","flagged"], FLAG_FILL, base];
   const radius = v==="wow"
     ? ["interpolate",["linear"],["zoom"], 10,["case",["get","stray"],7,5], 15,["case",["get","stray"],13,9]]
     : ["interpolate",["linear"],["zoom"], 10,5, 15,9];
-  const stroke = v==="wow" ? ["case",["get","stray"],2.2,1] : 1;
+  const stroke = ["case",["get","flagged"],2.4, (v==="wow" ? ["case",["get","stray"],2.2,1] : 1)];
   map.setPaintProperty("pts","circle-color",color);
   map.setPaintProperty("pts","circle-radius",radius);
   map.setPaintProperty("pts","circle-stroke-width",stroke);
+  map.setPaintProperty("pts","circle-stroke-color",["case",["get","flagged"], FLAG_STROKE, "#fff"]);
 }
 
 map.on("load", ()=>{
@@ -91,14 +96,18 @@ map.on("load", ()=>{
   map.on("mousemove","pts",e=>{
     map.getCanvas().style.cursor="pointer";
     const p = e.features[0].properties;
+    const flagged = (p.flagged===true||p.flagged==="true");
     const stray = (p.stray===true||p.stray==="true") ? ' <span class="tag">split-off</span>' : '';
+    const lastRow = flagged
+      ? `<div class="mrow" style="color:#7a8595">${p.flag_note}</div>`
+      : `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`;
     tip.setLngLat(e.lngLat).setHTML(
       `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
       `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
       `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
       `<div class="mrow">HPD head officer: ${p.officer}</div>`+
       `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
-      `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`
+      lastRow
     ).addTo(map);
   });
   map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
