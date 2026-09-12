@@ -4,12 +4,29 @@ Watchline is **accountability infrastructure for New York City housing** — it 
 journalists, tenant advocates, watchdog agencies, and the public investigate housing
 conditions and ownership accountability using evidence from the city's public record.
 
-It builds on the foundational work of [JustFix](https://www.justfix.org/en/), adding
-an AI interface so anyone can ask a question in plain English and get an
-evidence-based answer. The AI is an **orchestrator, not a reasoner**: it translates a
-question into structured queries, retrieves evidence from a knowledge graph, applies
-explicit rules, and explains the result in plain language — making public housing
-data accessible to everyone without sacrificing transparency or accountability.
+It builds on the foundational work of [JustFix](https://www.justfix.org/en/) and its Who
+Owns What, and pushes past the limits every registration-based ownership tool inherits.
+Watchline adds three things:
+
+- **Precision-first record linkage** (probabilistic entity resolution with
+  [Splink](https://moj-analytical-services.github.io/splink/)) that resolves one owner across
+  dozens of differently-named LLCs — reuniting portfolios that a single name or address typo
+  fractures, without fusing two different people.
+- A **deed veil-pierce** built from the ACRIS record (`CONNECTED_BY_DEED`) that catches
+  shell-LLC ownership registrations hide — including the shell game's signature move: buy a
+  block together, then re-deed each building into its own single-purpose LLC.
+- A **three-layer model** that keeps three questions ownership data routinely conflates
+  cleanly apart — who **owns** a building, what operational network it **runs through**, and
+  who **manages** it.
+
+Every ownership link is labeled **sourced or inferred** — a lead to verify, never a legal
+determination.
+
+On top of that sits a **conversational interface** so anyone can ask a question in plain
+English and get an evidence-based, cited answer. The AI is an **orchestrator, not a reasoner**:
+it turns a question into structured queries, retrieves evidence from the knowledge graph,
+applies the reliability rules, and explains the result — it never asserts anything the records
+don't. If you don't trust the AI, ignore it and read the sourced records it points you to.
 
 A [live demonstration](https://bobflagg.github.io/WatchlineNYC/) — a **referral-ready case
 file** on landlord Steven Croman — is assembled from the Watchline knowledge graph: one owner
