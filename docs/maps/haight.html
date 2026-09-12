@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio map · OG-51705</title>
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root{--ink:#1a2129;--soft:#5b6570;--line:#d9ddd6;--panel:#fff;}
+  html,body{margin:0;height:100%;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);}
+  #map{position:absolute;inset:0;}
+  .card{position:absolute;top:12px;left:12px;z-index:2;background:var(--panel);border:1px solid var(--line);
+        border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.12);max-width:320px;overflow:hidden;}
+  .card h1{font-size:.95rem;margin:0;padding:11px 14px;border-bottom:1px solid var(--line);}
+  .card h1 small{display:block;color:var(--soft);font-weight:400;font-size:.72rem;margin-top:2px;}
+  .toggle{display:flex;padding:10px 14px 6px;gap:8px;}
+  .toggle button{flex:1;font:inherit;font-size:.8rem;padding:7px 4px;border:1px solid var(--line);
+        background:#f6f7f4;color:var(--ink);border-radius:6px;cursor:pointer;}
+  .toggle button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .legend{padding:4px 14px 12px;max-height:46vh;overflow-y:auto;}
+  .legend .row{font-size:.78rem;margin:8px 0;padding-left:20px;position:relative;color:var(--ink);}
+  .legend .dot{position:absolute;left:0;top:2px;width:12px;height:12px;border-radius:50%;
+        border:1px solid rgba(0,0,0,.35);}
+  .legend .nm{color:var(--ink);font-weight:600;}
+  .legend .addr{color:var(--soft);font-family:ui-monospace,monospace;font-size:.72rem;}
+  .note{padding:0 14px 12px;font-size:.72rem;color:var(--soft);}
+  .maplibregl-popup-content{font:13px/1.4 -apple-system,sans-serif;padding:9px 12px;border-radius:7px;
+        box-shadow:0 2px 10px rgba(0,0,0,.18);}
+  .maplibregl-popup-content b{font-size:.85rem;}
+  .pp{color:#5b6570;font-family:ui-monospace,monospace;font-size:.72rem;}
+  .tip .mrow{margin-top:4px;font-size:.78rem;color:var(--ink);}
+  .tip .tag{background:var(--flag,#b23a2e);color:#fff;font-size:.66rem;padding:1px 5px;border-radius:3px;}
+</style></head>
+<body>
+<div id="map"></div>
+<div class="card">
+  <h1>One owner, scattered across the record<small>9 buildings · WatchlineNYC = 1 owner · Who Owns What = 6 portfolios</small></h1>
+  <div class="toggle">
+    <button id="b-wl" class="on" onclick="setView('wl')">WatchlineNYC</button>
+    <button id="b-wow" onclick="setView('wow')">Who Owns What</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="note"><b>These groupings are algorithmic inferences from public records — leads to verify, not determinations of legal ownership. Data as of 2026-09-12.</b><br>Coordinates: NYC DOF/PLUTO via the discovery graph.
+    WoW assignment: justfix <code>wow.wow_portfolios</code>. Base map tiles © Esri.</div>
+</div>
+<script>
+const DATA = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.833991, 40.7551451]}, "properties": {"bbl": "4050630045", "address": "41-27 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT STREET TOWNHOUSE OWNER, LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340054, 40.7551945]}, "properties": {"bbl": "4050630046", "address": "41-25 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41 HAIGHT GROUP LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340376, 40.7552961]}, "properties": {"bbl": "4050630048", "address": "41-21 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "888 HAIGHT LLC", "officer": "Shi Lin", "bizaddr": "10160 MOSAIC WAY, Elk Grove CA 95757", "wow_pf": "85276", "wow_color": "#dc2626", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340519, 40.7553483]}, "properties": {"bbl": "4050630049", "address": "41-19 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "41-19 LIYANG INC.", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340698, 40.7553977]}, "properties": {"bbl": "4050630050", "address": "41-17 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "C & L 17 FAMILY LLC", "officer": "Jane Chan", "bizaddr": "41-17 HAIGHT STREET APT4F, Flushing NY 11355", "wow_pf": "44533", "wow_color": "#d97706", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340841, 40.7554499]}, "properties": {"bbl": "4050630051", "address": "41-15 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "4115 HAIGHT ST INC.", "officer": "ZHIFENG CHEN", "bizaddr": "41-02 DELONG STREET, FLUSHINg NY 11355", "wow_pf": "97074", "wow_color": "#059669", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8340984, 40.7554993]}, "properties": {"bbl": "4050630052", "address": "41-13 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "AVERY AVENUE 168 LLC", "officer": "JOHN JUN XU", "bizaddr": "3660 MAIN STREET 3FLOOR, Flushing NY 11354", "wow_pf": "48699", "wow_color": "#2563eb", "stray": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341164, 40.7555515]}, "properties": {"bbl": "4050630053", "address": "41-11 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "HT ELEVEN REALTY LLC", "officer": "NICOLE HO", "bizaddr": "41-11 HAIGHT STREET 4R, Flushing NY 11355", "wow_pf": "72258", "wow_color": "#7c3aed", "stray": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.8341307, 40.7556009]}, "properties": {"bbl": "4050630055", "address": "41-09 HAIGHT STREET", "bldgclass": "S4", "units": 4, "year": 2015, "owner": "NEW YUN REALTY LLC", "officer": "YUN LI", "bizaddr": "13833 60TH AVENUE, Flushing NY 11355", "wow_pf": "96365", "wow_color": "#0891b2", "stray": true}}]};
+const WL_COLOR = "#2563eb";
+const LEGEND = {wl: `<div class="row"><span class="dot" style="background:#2563eb"></span>One owner · 9 buildings</div>`, wow: `<div class="row"><span class="dot" style="background:#2563eb"></span>WoW #48699 · 4 bldgs<br><span class="nm">JOHN JUN XU</span><br><span class="addr">36-60 MAIN STREET 3 FL, QUEENS NY</span></div>
+<div class="row"><span class="dot" style="background:#dc2626"></span>WoW #85276 · 1 bldgs · split-off<br><span class="nm">SHI LIN</span><br><span class="addr">10160 MOSAIC WAY, E G CA</span></div>
+<div class="row"><span class="dot" style="background:#d97706"></span>WoW #44533 · 1 bldgs · split-off<br><span class="nm">JANE CHAN</span><br><span class="addr">41-17 HAIGHT STREET APT4F, QUEENS NY</span></div>
+<div class="row"><span class="dot" style="background:#059669"></span>WoW #97074 · 1 bldgs · split-off<br><span class="nm">ZHIFENG CHEN</span><br><span class="addr">41-02 DELONG STREET, QUEENS NY</span></div>
+<div class="row"><span class="dot" style="background:#7c3aed"></span>WoW #72258 · 1 bldgs · split-off<br><span class="nm">NICOLE HO</span><br><span class="addr">41-11 HAIGHT STREET 4R, QUEENS NY</span></div>
+<div class="row"><span class="dot" style="background:#0891b2"></span>WoW #96365 · 1 bldgs · split-off<br><span class="nm">YUN LI</span><br><span class="addr">138-33 60 AVENUE, QUEENS NY</span></div>`};
+const DEFAULT_VIEW = "wl";   // which view opens first: "wl" (single) or "wow" (split)
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {version: 8, sources: {"esristreet": {"type": "raster", "tileSize": 256, "maxzoom": 19, "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"], "attribution": "Tiles \u00a9 Esri \u2014 Esri, DeLorme, NAVTEQ"}}, layers: [{"id": "esristreet", "type": "raster", "source": "esristreet"}]},
+  center:[-73.9,40.84], zoom:11
+});
+map.addControl(new maplibregl.NavigationControl({showCompass:false}), "top-right");
+
+function setView(v){
+  document.getElementById("b-wl").classList.toggle("on", v==="wl");
+  document.getElementById("b-wow").classList.toggle("on", v==="wow");
+  document.getElementById("legend").innerHTML = LEGEND[v];
+  const color = v==="wl" ? WL_COLOR : ["get","wow_color"];
+  const radius = v==="wow"
+    ? ["interpolate",["linear"],["zoom"], 10,["case",["get","stray"],7,5], 15,["case",["get","stray"],13,9]]
+    : ["interpolate",["linear"],["zoom"], 10,5, 15,9];
+  const stroke = v==="wow" ? ["case",["get","stray"],2.2,1] : 1;
+  map.setPaintProperty("pts","circle-color",color);
+  map.setPaintProperty("pts","circle-radius",radius);
+  map.setPaintProperty("pts","circle-stroke-width",stroke);
+}
+
+map.on("load", ()=>{
+  map.addSource("pts",{type:"geojson",data:DATA});
+  map.addLayer({id:"pts",type:"circle",source:"pts",
+    paint:{"circle-color":WL_COLOR,"circle-radius":6,
+           "circle-stroke-width":1,"circle-stroke-color":"#fff","circle-opacity":.92}});
+  // fit to all buildings
+  const b = new maplibregl.LngLatBounds();
+  DATA.features.forEach(f=>b.extend(f.geometry.coordinates));
+  if(!b.isEmpty()) map.fitBounds(b,{padding:70,maxZoom:19});
+  setView(DEFAULT_VIEW);   // paints + legend + button state for the opening view
+
+  // Hover tooltip with building details.
+  const tip = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12,
+                                    className:"tip", maxWidth:"280px"});
+  map.on("mousemove","pts",e=>{
+    map.getCanvas().style.cursor="pointer";
+    const p = e.features[0].properties;
+    const stray = (p.stray===true||p.stray==="true") ? ' <span class="tag">split-off</span>' : '';
+    tip.setLngLat(e.lngLat).setHTML(
+      `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
+      `<div class="mrow">class ${p.bldgclass} · ${p.units} res units · built ${p.year}</div>`+
+      `<div class="mrow">PLUTO owner: ${p.owner}</div>`+
+      `<div class="mrow">HPD head officer: ${p.officer}</div>`+
+      `<div class="mrow">Business addr: <span class="pp">${p.bizaddr}</span></div>`+
+      `<div class="mrow">WoW portfolio: ${p.wow_pf}${stray}</div>`
+    ).addTo(map);
+  });
+  map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor=""; tip.remove();});
+  window._mapReady = true;   // hook for headless PNG export
+});
+// resolves once the map has finished rendering (tiles + paint settled)
+window.mapIdle = () => new Promise(res => map.once("idle", res));
+</script>
+</body></html>
