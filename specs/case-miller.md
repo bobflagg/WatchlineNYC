@@ -138,8 +138,10 @@ uv run --extra ingest python -m watchline.discovery.ingest.portfolio.eval.portfo
 Pairs with Escobar's forward map (`--portfolio <PF-id>`), which shows the merge direction. Same
 tool, both directions.
 
-**The trilogy:** [`case-escobar.md`](case-escobar.md) = *merge* what WoW split (owner identity,
+**The quartet:** [`case-escobar.md`](case-escobar.md) = *merge* what WoW split (owner identity,
 one typo); this file = *un-merge* what WoW conflated on a shared **address** (operational nexus);
-[`case-levitov.md`](case-levitov.md) = *un-merge* on a shared **manager** (management ≠ ownership).
-Three cases, one message: the owner-identity layer is *precision-first*, and it keeps *who owns*
-cleanly separate from *who operates through this office* and *who manages the building*.
+[`case-levitov.md`](case-levitov.md) = *un-merge* on a shared **manager** (management ≠ ownership);
+[`case-haight.md`](case-haight.md) = *merge* what WoW is **blind** to — nine buildings tied only by an
+ACRIS **deed** (the veil-pierce). One message: the owner-identity layer is *precision-first*, keeps
+*who owns* separate from *who operates through this office* and *who manages the building*, and reads the
+transaction record WoW does not.

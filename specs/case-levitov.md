@@ -1,7 +1,7 @@
 # Case study — Anya Levitov (the "shared manager, not shared owner" cluster)
 
-The third in the trilogy with [`case-escobar.md`](case-escobar.md) and
-[`case-miller.md`](case-miller.md). Escobar is the merge WatchlineNYC gets right that WoW
+The third in the series with [`case-escobar.md`](case-escobar.md),
+[`case-miller.md`](case-miller.md), and [`case-haight.md`](case-haight.md). Escobar is the merge WatchlineNYC gets right that WoW
 *splits* (owner identity). Miller is the split WatchlineNYC gets right that WoW *conflates*
 on a shared **address** (operational nexus ≠ ownership). Levitov is the cleanest
 illustration of the **management layer**: one operator ties five buildings together, but
@@ -148,8 +148,10 @@ Read-only. Vintage 2026-09-11.
 #     APPARENT_CONTROL over ALL its buildings; here a 1-vs-1 BBL tie broke arbitrarily to Sokolov.
 ```
 
-**Pairing (the trilogy):** `case-escobar.md` = merge what WoW split (owner identity, one typo).
+**The quartet:** `case-escobar.md` = merge what WoW split (owner identity, one typo).
 `case-miller.md` = un-merge what WoW conflated on a shared **address** (operational nexus).
-`case-levitov.md` = un-merge on a shared **manager** (management ≠ ownership). Three cases,
-one message: the owner-identity layer is precision-first, and it keeps *who owns* cleanly
-separate from *who operates through this office* and *who manages the building*.
+`case-levitov.md` = un-merge on a shared **manager** (management ≠ ownership).
+[`case-haight.md`](case-haight.md) = merge what WoW is **blind** to — nine buildings tied only by an
+ACRIS **deed** (the veil-pierce). One message: the owner-identity layer is precision-first, keeps *who
+owns* cleanly separate from *who operates through this office* and *who manages the building*, and reads
+the transaction record WoW does not.

@@ -253,9 +253,10 @@ cd ../owner-review && REVIEW_QUEUE=../WatchlineNYC/eval_out/offeval/review_queue
 
 ---
 
-**The trilogy:** this file = *merge* what WoW split (owner identity, one typo);
+**The quartet:** this file = *merge* what WoW split (owner identity, one typo);
 [`case-miller.md`](case-miller.md) = *un-merge* what WoW conflated on a shared **address**
 (operational nexus); [`case-levitov.md`](case-levitov.md) = *un-merge* on a shared **manager**
-(management ≠ ownership). Three cases, one message: the owner-identity layer is
-*precision-first*, and it keeps *who owns* cleanly separate from *who operates through this
-office* and *who manages the building*.
+(management ≠ ownership); [`case-haight.md`](case-haight.md) = *merge* what WoW is **blind** to —
+nine buildings tied only by an ACRIS **deed** (the veil-pierce). One message: the owner-identity layer is
+*precision-first*, keeps *who owns* cleanly separate from *who operates through this office* and *who
+manages the building*, and reads the transaction record WoW does not.
