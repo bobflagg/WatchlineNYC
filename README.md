@@ -48,10 +48,10 @@ verify, not determinations of legal ownership.)*
 - **[Croman — 127 buildings, one owner](https://bobflagg.github.io/WatchlineNYC/docs/maps/croman.html):**
   Watchline unifies Steven Croman's 127 buildings that Who Owns What splits across six
   portfolios on a one-character address typo (`4 WEST 51` vs `424 WEST 51`).
-- **[Escobar — 26 buildings, split by a typo](https://bobflagg.github.io/WatchlineNYC/docs/maps/escobar.html):**
-  Who Owns What splits landlord Ramon Escobar's Bronx portfolio into two on a single
-  registration-address typo (`GRAND CONCOURSE` vs `GRAND COURSE`); Watchline keeps all 26
-  buildings together as one owner.
+- **[Escobar — 26 buildings, one owner split in two](https://bobflagg.github.io/WatchlineNYC/docs/maps/escobar.html):**
+  Ramon Escobar's single Bronx office is filed a dozen inconsistent ways (misspellings, and two
+  records with a blank ZIP), and Who Owns What links only on an *exact* address match — so his
+  Bronx portfolio fractures into two. Watchline keeps all 26 buildings together as one owner.
 - **[Haight Street — one block, six owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/haight.html):**
   Nine identical townhouses on one Queens block that Who Owns What reads as six separate owners;
   Watchline reunites them via a single 2020 bulk deed — a veil-pierce from the ACRIS record that
@@ -63,7 +63,7 @@ verify, not determinations of legal ownership.)*
 
 Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
 owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
-fractured by a typo (Escobar — 26 buildings reunited), and one WoW can't see at all: nine buildings
+fractured by brittle address matching (Escobar — 26 buildings reunited), and one WoW can't see at all: nine buildings
 tied only by a shared ACRIS deed (Haight — a Queens block that reads as six owners but was one bulk
 purchase). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
 seven owners) or a managing agent (Levitov — one operator, five separate owners). Together they are
