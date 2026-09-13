@@ -695,10 +695,18 @@
 
       <h2 class="doctitle">One Operator, Five Nodes — How Address Noise Fragments a Landlord</h2>
       <p class="lead"><code>landlords_with_connections</code> holds <strong>one node per distinct
-        <em>(name, standardized business address)</em></strong>. WoW picks a single owner contact per building — here
-        always the <strong>HeadOfficer</strong> — standardizes its address, and groups on it. Ramon Escobar's owner
-        address resolves to exactly <strong>five</strong> standardized values, so he becomes five nodes — and
-        <strong>three of them are the same real office</strong>, split only by a ZIP typo and a street misspelling.</p>
+        <em>(name, standardized business address)</em></strong>. WoW standardizes each owner filing (via Geosupport)
+        before grouping. Ramon Escobar's owner address resolves to exactly <strong>five</strong> standardized values, so
+        he becomes five nodes — and <strong>three of them are the same real office</strong>, split only by a
+        <strong>blanked ZIP</strong> and a street misspelling.</p>
+
+      <div class="callout interp" style="margin-top:6px">
+        <span class="tag">The crux — standardized, not raw, ZIP</span>
+        The split turns on WoW's <em>standardized</em> ZIP (column <code>bizzip</code> in <code>wow_landlords</code>),
+        <strong>not</strong> the ZIP as filed. Geosupport <strong>blanks</strong> any ZIP it can't validate, so four of
+        the five nodes carry a <strong>blank</strong> standardized ZIP; only the clean 10458 filing keeps one. Those
+        blanks — not the raw digits — are what key the nodes and gate WoW's edges.
+      </div>
 
       <nav class="toc" aria-label="Contents">
         <b>Contents</b>
@@ -719,18 +727,18 @@
           <div class="stat"><div class="n">31</div><div class="l">Buildings split across them</div></div>
           <div class="stat"><div class="n">3</div><div class="l">Nodes that are the same Grand Concourse office</div></div>
           <div class="stat"><div class="n">26</div><div class="l">Grand Concourse buildings that should be one node</div></div>
-          <div class="stat"><div class="n">10607</div><div class="l">Stray ZIP that stranded a building</div></div>
+          <div class="stat"><div class="n">4 <small>/ 5</small></div><div class="l">Nodes WoW left with a <em>blank</em> standardized ZIP</div></div>
           <div class="stat"><div class="n">3 <small>&rarr;</small> 1</div><div class="l">City spellings folded (Bronx / BRONX / BX)</div></div>
         </div>
         <div class="tablewrap">
           <table class="metrics">
-            <thead><tr><th>node</th><th>Standardized address</th><th>ZIP</th><th>Buildings</th><th>Why separate</th></tr></thead>
+            <thead><tr><th>node</th><th>Standardized address</th><th>ZIP (WoW)</th><th>Buildings</th><th>Why separate</th></tr></thead>
             <tbody>
-              <tr><td>93015</td><td>2432 GRAND CONCOURSE #504, Bronx</td><td>10458</td><td>24</td><td>the real office</td></tr>
-              <tr><td>93018</td><td>PO BOX 370, New York</td><td>10040</td><td>4</td><td>distinct address (P.O. box)</td></tr>
-              <tr><td>93014</td><td>2432 GRAND CONCOURSE #504, Bronx</td><td><strong>10607</strong></td><td>1</td><td>ZIP typo — same office</td></tr>
-              <tr><td>93016</td><td>2432 GRAND <strong>COURSE</strong> #504, Bronx</td><td>10458</td><td>1</td><td>street misspelling — same office</td></tr>
-              <tr><td>93017</td><td>374 MCLEAN AVENUE, Yonkers</td><td>10705</td><td>1</td><td>distinct address</td></tr>
+              <tr><td>93015</td><td>2432 GRAND CONCOURSE #504, Bronx</td><td>10458</td><td>24</td><td>the real office — the one valid ZIP</td></tr>
+              <tr><td>93018</td><td>PO BOX 370, New York</td><td><em>blank</em></td><td>4</td><td>distinct address (P.O. box)</td></tr>
+              <tr><td>93014</td><td>2432 GRAND CONCOURSE #504, Bronx</td><td><strong>blank</strong></td><td>1</td><td>ZIP blanked (raw 10607 rejected) — same office</td></tr>
+              <tr><td>93016</td><td>2432 GRAND <strong>COURSE</strong> #504, Bronx</td><td><em>blank</em></td><td>1</td><td>street misspelling (ZIP also blanked) — same office</td></tr>
+              <tr><td>93017</td><td>374 MCLEAN AVENUE, Yonkers</td><td><em>blank</em></td><td>1</td><td>distinct address</td></tr>
             </tbody>
           </table>
         </div>
@@ -739,33 +747,36 @@
       <section id="map">
         <h3 class="section"><span class="num">I.</span> The fragmentation map</h3>
         <p>One person, one main office — scattered into five nodes. The three cards in the gold box are the
-          <em>same</em> office at 2432 Grand Concourse; the two below are genuinely different addresses.</p>
+          <em>same</em> office at 2432 Grand Concourse; the two below are genuinely different addresses. Only node
+          93015 carries a valid standardized ZIP.</p>
 
         <div class="person">
           <div class="nm">RAMON ESCOBAR</div>
-          <div class="sub">one operator · owner (HeadOfficer) of 31 buildings</div>
+          <div class="sub">one operator · owner of 31 buildings</div>
         </div>
         <div class="stem"></div>
 
         <div class="groupbox">
-          <div class="glabel">One real office — 2432 Grand Concourse #504 — fragmented into 3 nodes (26 buildings)</div>
+          <div class="glabel">One real office — 2432 Grand Concourse #504 — fragmented into 3 nodes (26 buildings).<br>
+            WoW re-links the two blank-ZIP nodes (93014 + 93016) into a 2-building portfolio by name, but the valid-ZIP
+            node (93015) can't join them &rarr; two WoW portfolios, 24 + 2.</div>
           <div class="nodes">
             <div class="node">
               <div class="bn">24 <small>BLDGS</small></div>
               <div class="ad">2432 Grand Concourse #504, Bronx</div>
               <div class="zp">ZIP 10458 · node 93015</div>
-              <div class="why main">canonical node</div>
+              <div class="why main">canonical node · valid ZIP</div>
             </div>
             <div class="node">
               <div class="bn">1 <small>BLDG</small></div>
               <div class="ad">2432 Grand Concourse #504, Bronx</div>
-              <div class="zp">ZIP 10607 · node 93014</div>
-              <div class="why bad">ZIP typo → split</div>
+              <div class="zp">blank ZIP · node 93014</div>
+              <div class="why bad">raw 10607 rejected → split</div>
             </div>
             <div class="node">
               <div class="bn">1 <small>BLDG</small></div>
               <div class="ad">2432 Grand <strong>Course</strong> #504, Bronx</div>
-              <div class="zp">ZIP 10458 · node 93016</div>
+              <div class="zp">blank ZIP · node 93016</div>
               <div class="why bad">street misspelling → split</div>
             </div>
           </div>
@@ -776,13 +787,13 @@
           <div class="node" style="max-width:280px">
             <div class="bn">4 <small>BLDGS</small></div>
             <div class="ad">PO BOX 370, New York</div>
-            <div class="zp">ZIP 10040 · node 93018</div>
+            <div class="zp">blank ZIP · node 93018</div>
             <div class="why sep">distinct address</div>
           </div>
           <div class="node" style="max-width:280px">
             <div class="bn">1 <small>BLDG</small></div>
             <div class="ad">374 McLean Avenue, Yonkers</div>
-            <div class="zp">ZIP 10705 · node 93017</div>
+            <div class="zp">blank ZIP · node 93017</div>
             <div class="why sep">distinct address</div>
           </div>
         </div>
@@ -791,28 +802,27 @@
       <section id="mechanism">
         <h3 class="section"><span class="num">II.</span> How the node key works</h3>
         <p>Each row in <code>landlords_with_connections</code> is a <strong>landlord node</strong> — a distinct
-          <code>(name, standardized&nbsp;business&nbsp;address)</code>. Building it takes two steps:</p>
-        <ul class="keys">
-          <li><strong>Pick one owner per building.</strong> Of the many contact types on a registration
-            (HeadOfficer, Officer, Agent, Shareholder, SiteManager&hellip;), WoW selects the owner-priority contact.
-            For Ramon Escobar that is always the <strong>HeadOfficer</strong>.</li>
-          <li><strong>Standardize that contact's business address, then group.</strong> Every building sharing a
-            standardized owner address becomes one node.</li>
-        </ul>
-        <p>Counting Ramon's HeadOfficer buildings, grouped by house&nbsp;/&nbsp;street&nbsp;/&nbsp;ZIP, reproduces the
-          five nodes and their building counts <strong>exactly</strong> — this is the whole story, not a coincidence:</p>
+          <code>(name, standardized&nbsp;business&nbsp;address)</code>. WoW derives it from <code>wow_landlords</code>,
+          which standardizes each owner contact's address <em>before</em> grouping. That standardized table
+          (<code>bizhousestreet</code> · <code>bizapt</code> · <code>bizzip</code>) shows Ramon's owner address taking
+          exactly five values — reproducing the five nodes and their building counts:</p>
         <div class="tablewrap">
           <table class="metrics">
-            <thead><tr><th>HeadOfficer address (house · street · ZIP)</th><th>Distinct buildings</th><th>City spellings folded</th></tr></thead>
+            <thead><tr><th>Standardized owner address (street · apt · ZIP)</th><th>Buildings</th><th>Raw filings folded in</th></tr></thead>
             <tbody>
-              <tr><td>2432 · GRAND CONCOURSE · 10458</td><td>24</td><td>Bronx · BRONX · BX</td></tr>
-              <tr><td>PO · BOX 370TH · 10040</td><td>4</td><td>New York</td></tr>
-              <tr><td>2432 · GRAND CONCOURSE · 10607</td><td>1</td><td>BRONX</td></tr>
-              <tr><td>2432 · GRAND COURSE · 10458</td><td>1</td><td>BRONX</td></tr>
-              <tr><td>374 · MCLEAN AVENUE · 10705</td><td>1</td><td>Yonkers</td></tr>
+              <tr><td>2432 GRAND CONCOURSE · 504 · <strong>10458</strong></td><td>24</td><td>Bronx · BRONX · BX (city case)</td></tr>
+              <tr><td>PO BOX 370 · — · <em>blank</em></td><td>4</td><td>—</td></tr>
+              <tr><td>2432 GRAND CONCOURSE · 504 · <em>blank</em></td><td>1</td><td>filed under ZIP 10607 (rejected)</td></tr>
+              <tr><td>2432 GRAND COURSE · 504 · <em>blank</em></td><td>1</td><td>"GRAND COURSE" typo (ungeocodable)</td></tr>
+              <tr><td>374 MCLEAN AVENUE · — · <em>blank</em></td><td>1</td><td>Yonkers</td></tr>
             </tbody>
           </table>
         </div>
+        <p>Only the clean <code>10458</code> filing keeps a ZIP. Standardization <strong>blanks the other four</strong> —
+          including the stray <code>10607</code> (a White Plains code on a Bronx street) and the ungeocodable
+          <code>GRAND COURSE</code> typo. Because the ZIP is part of the node key, the blank-ZIP building at 2432 Grand
+          Concourse (node 93014) can't share a key with the valid-ZIP node 93015 — even though their address strings are
+          <em>identical</em> — so it strands into its own node.</p>
       </section>
 
       <section id="folds">
@@ -827,7 +837,7 @@
           </div>
           <div class="callout critical">
             <span class="tag">NOT folded — why it's 5, not fewer</span>
-            <strong>Different ZIP</strong> (10458 vs 10607), a <strong>street misspelling</strong>
+            A <strong>blanked ZIP</strong> (10458 vs blank on the same street), a <strong>street misspelling</strong>
             (<code>GRAND COURSE</code>, a dropped substring standardization can't repair), and
             <strong>two genuinely different addresses</strong> (McLean Ave / Yonkers; the P.O. box).
           </div>
@@ -841,24 +851,28 @@
           <span class="tag">The display trap</span>
           Nodes <strong>93014</strong> and <strong>93015</strong> print an <em>identical</em> <code>bizaddr</code> —
           &ldquo;2432 GRAND CONCOURSE 504, BRONX NY&rdquo; — because the display string <strong>drops the ZIP</strong>.
-          They look like duplicates in the table but are keyed on different ZIPs (10607 vs 10458). That omission is the
-          only reason two rows look the same.
+          They look like duplicates in the table but are keyed on different <em>standardized</em> ZIPs:
+          <strong>10458 vs blank</strong> (WoW blanked the stray 10607 that one building was filed under). That
+          omission is the only reason two rows look the same.
         </div>
 
         <div class="callout interp">
-          <span class="tag">Why it matters</span>
+          <span class="tag">Why it matters — and how WoW clusters it</span>
           Three of these five nodes are the <strong>same person at the same office</strong>, split apart by data-entry
-          noise. WoW's node key is exact-match-on-standardized-string, so it cannot merge them — this is the
-          fragmentation the <code>CONNECTED_BY_SPLINK</code> edge exists to repair: fuzzy matching would bridge
-          <code>GRAND COURSE</code> &harr; <code>GRAND CONCOURSE</code> and tolerate the stray ZIP, folding all 26
-          Grand Concourse buildings into one operator.
+          noise. WoW then re-links the two <strong>blank-ZIP</strong> nodes (93014 + 93016) to each other by
+          <code>CONNECTED_BY_NAME</code> — but that edge is ZIP-gated, so it can't reach the valid-ZIP node (93015):
+          WoW ends up with <strong>two portfolios</strong> (24 + 2). This is the fragmentation the
+          <code>CONNECTED_BY_SPLINK</code> edge exists to repair — identity edges that never read the ZIP fold all
+          <strong>26</strong> Grand Concourse buildings into one owner. <span style="color:var(--faint)">(This is the same
+          case shown on the <a href="index.html#escobar">case-studies page</a>.)</span>
         </div>
 
         <div class="callout critical">
           <span class="tag">A live example of &ldquo;ZIP is noisy&rdquo;</span>
-          A single wrong ZIP — <strong>10607</strong>, a White Plains code entered for a Bronx address — manufactures an
-          entire spurious node. This is precisely why the Splink linkage keeps ZIP only as a <em>weak</em> feature and
-          never inside a composite address key.
+          A single wrong ZIP — <strong>10607</strong>, a White Plains code entered for a Bronx address — is <em>rejected
+          by standardization and blanked</em>; that blank, no longer matching the valid 10458, manufactures a spurious
+          node (and then links it to the <em>other</em> blank-ZIP node rather than the real office). Precisely why the
+          Splink linkage keeps ZIP only as a <em>weak</em> feature and never inside a composite address key.
         </div>
       </section>
 
@@ -866,21 +880,26 @@
         <h3 class="section"><span class="num">V.</span> Method &amp; provenance</h3>
         <div class="chips">
           <span class="chip">table: landlords_with_connections</span>
-          <span class="chip">source: hpd_contacts + hpd_registrations</span>
+          <span class="chip">standardized source: wow_landlords (bizzip)</span>
+          <span class="chip">raw source: hpd_contacts + hpd_registrations</span>
           <span class="chip">nodes 93014–93018</span>
-          <span class="chip">owner pick: HeadOfficer</span>
         </div>
         <ul class="keys">
-          <li>Listed the 5 <code>RAMON ESCOBAR</code> rows in <code>landlords_with_connections</code> (nodeid, bizaddr, bbls).</li>
-          <li>Traced each node's BBLs back through <code>hpd_registrations &rarr; hpd_contacts</code> to the raw owner
-            address (house, street, apartment, city, ZIP).</li>
-          <li>Grouped Ramon's <code>HeadOfficer</code> contacts by house&nbsp;/&nbsp;street&nbsp;/&nbsp;ZIP; the distinct
-            building counts (24&nbsp;/&nbsp;4&nbsp;/&nbsp;1&nbsp;/&nbsp;1&nbsp;/&nbsp;1) match the five nodes exactly.</li>
+          <li>Listed the 5 <code>RAMON ESCOBAR</code> rows in <code>landlords_with_connections</code> (nodeid, bizaddr,
+            bbls, and the <code>name_match_info</code> edge that links 93014&harr;93016).</li>
+          <li>Read the <strong>standardized</strong> owner address per node from <code>wow_landlords</code>
+            (<code>bizhousestreet</code> · <code>bizapt</code> · <code>bizzip</code>): only 93015 keeps ZIP 10458; the
+            other four are blank.</li>
+          <li>Traced the raw filings back through <code>hpd_registrations &rarr; hpd_contacts</code> to confirm what
+            standardization rejected (e.g. the stray 10607, the <code>GRAND COURSE</code> typo).</li>
         </ul>
         <div class="caveats" style="margin-top:1rem">
           <div class="cav">Counts reflect the current WoW dataset (a snapshot; they drift as HPD registrations update).
             &ldquo;31 buildings&rdquo; sums the five nodes' distinct BBLs; 26 of them sit at the single 2432 Grand
             Concourse office.</div>
+          <div class="cav">&ldquo;ZIP (WoW)&rdquo; is the <em>standardized</em> <code>bizzip</code> that keys the node and
+            gates WoW's name edge — not the ZIP as filed. Several nodes were filed with a raw ZIP (10607, 10040, 10705)
+            that standardization could not validate and therefore blanked.</div>
         </div>
       </section>
 
