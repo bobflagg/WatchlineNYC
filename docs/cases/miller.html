@@ -751,13 +751,13 @@
         </div>
         <div class="tablewrap">
           <table class="metrics">
-            <thead><tr><th>Owner</th><th>Resolved entity</th><th>Buildings</th><th>Merged name variants</th></tr></thead>
+            <thead><tr><th>Owner</th><th>OwnerGroup</th><th>Buildings</th><th>Merged name variants</th></tr></thead>
             <tbody>
-              <tr><td>Joe Nebenzahl</td><td>RE-55820</td><td>7</td><td><code>JOE</code> + <code>JOSEPH NEBENZAHL</code></td></tr>
-              <tr><td>Abraham Miller</td><td>RE-233</td><td>7</td><td><code>ABRAHAM</code> + <code>ABARAHAM MILLER</code></td></tr>
-              <tr><td>Jeanette Padilla</td><td>RE-52916</td><td>4</td><td><code>PADILLA</code> / <code>PADILLa</code></td></tr>
-              <tr><td>Nathan Obstfeld</td><td>RE-85030</td><td>4</td><td></td></tr>
-              <tr><td>Vanessa Soria</td><td>RE-110200</td><td>3</td><td><code>VANESSA</code> + <code>VANEESA SORIA</code></td></tr>
+              <tr><td>Joe Nebenzahl</td><td>OG-55820</td><td>7</td><td><code>JOE</code> + <code>JOSEPH NEBENZAHL</code></td></tr>
+              <tr><td>Abraham Miller</td><td>OG-233</td><td>7</td><td><code>ABRAHAM</code> + <code>ABARAHAM MILLER</code></td></tr>
+              <tr><td>Jeanette Padilla</td><td>OG-52916</td><td>4</td><td><code>PADILLA</code> / <code>PADILLa</code></td></tr>
+              <tr><td>Nathan Obstfeld</td><td>OG-85030</td><td>4</td><td></td></tr>
+              <tr><td>Vanessa Soria</td><td>OG-110200</td><td>3</td><td><code>VANESSA</code> + <code>VANEESA SORIA</code></td></tr>
               <tr><td>Nathan Obtfeld*</td><td><em>singleton</em></td><td>1</td><td>* <code>OBTFELD</code> typo, didn't merge with Obstfeld</td></tr>
               <tr><td>Benyomin Fisch</td><td><em>singleton</em></td><td>1</td><td></td></tr>
             </tbody>
@@ -798,7 +798,7 @@
         <p>The correction is subtler than "delete the shared address." The office <em>does</em> wire these owners
           together in the graph — there are <strong>55 <code>CONNECTED_BY_ADDRESS</code> edges</strong> among them,
           <strong>51 of which cross owner boundaries</strong>. Watchline's owner-identity layer
-          (<code>ResolvedEntityV2</code>) simply <strong>declines every one of the 51</strong>:</p>
+          (<code>OwnerGroup</code>) simply <strong>declines every one of the 51</strong>:</p>
         <div class="callout interp">
           <span class="tag">A high-degree office is non-probative</span>
           The resolver treats an address shared by dozens of landlords as an <em>operational nexus</em>, not evidence
@@ -811,8 +811,8 @@
           <span class="tag">Mind the layer</span>
           The KG holds <em>both</em> answers. The <code>Portfolio</code> / <code>APPARENT_CONTROL</code> layer is built
           by connected-components over those 55 address edges, so it <strong>still over-merges</strong> (it reports one
-          "Abraham Miller" controlling all 27) — mirroring WoW. Only <code>ResolvedEntityV2</code> makes the
-          correction. Read owner identity from the resolved-entity layer, never from the raw address edges.
+          "Abraham Miller" controlling all 27) — mirroring WoW. Only <code>OwnerGroup</code> makes the
+          correction. Read owner identity from the owner-group layer, never from the raw address edges.
         </div>
       </section>
 
@@ -844,7 +844,7 @@
         <div class="chips">
           <span class="chip">office: 235 RIVER AVE #220, Lakewood NJ</span>
           <span class="chip">27 buildings · 1 WoW portfolio (wow #183)</span>
-          <span class="chip">owner identity: ResolvedEntityV2</span>
+          <span class="chip">owner identity: OwnerGroup</span>
         </div>
         <ul class="keys">
           <li><strong>The tie (raw HPD):</strong> all 27 buildings' head-officer contacts in <code>hpd_contacts</code>
@@ -852,7 +852,7 @@
           <li><strong>WoW's over-merge:</strong> <code>wow_portfolios</code> places all 27 in one portfolio, spanning
             10 distinct name slots — linked purely by the shared business address.</li>
           <li><strong>Watchline's split:</strong> grouping the 27 buildings' registered landlords by
-            <code>IN_RESOLVED_ENTITY_V2</code> yields <strong>7 owner units</strong> (5 resolved entities + 2
+            <code>IN_OWNER_GROUP</code> yields <strong>7 owner units</strong> (5 owner groups + 2
             singletons); the <strong>51 cross-owner <code>CONNECTED_BY_ADDRESS</code> edges are declined.</strong></li>
           <li><strong>Explore:</strong> the <a href="../maps/miller.html">interactive map</a> — toggle Who Owns What's
             one portfolio ↔ Watchline's seven owners.</li>
@@ -874,7 +874,7 @@
           so the query <strong>synthesizes a virtual <code>:Office</code> hub</strong> (in-memory, nothing written) and
           wires every landlord to it with a <code>FILES_FROM</code> edge. It returns the 27 buildings, their 11
           landlords all <code>MEMBER_OF</code> one over-merged <code>Portfolio</code>, the shared-office web of
-          <code>CONNECTED_BY_ADDRESS</code> edges, and the <code>ResolvedEntityV2</code> split.</p>
+          <code>CONNECTED_BY_ADDRESS</code> edges, and the <code>OwnerGroup</code> split.</p>
         <pre class="cypher">// === Miller over-merge subgraph + synthesized shared-office hub — 235 River Ave #220 ===
 // The office is NOT a KG node (it's the Landlord.bizaddr property behind the
 // CONNECTED_BY_ADDRESS edges), so we create a VIRTUAL :Office node and wire every
@@ -890,15 +890,15 @@ CALL apoc.create.vNode(['Office'], {name:'235 River Ave #220, Lakewood NJ', owne
 UNWIND lls AS l
 CALL apoc.create.vRelationship(l, 'FILES_FROM', {}, office) YIELD rel AS files
 OPTIONAL MATCH (l)-[rf:REGISTERED_FOR]->(b:Building)          WHERE b.bbl IN bbls
-OPTIONAL MATCH (l)-[inre:IN_RESOLVED_ENTITY_V2]->(re:ResolvedEntityV2)
+OPTIONAL MATCH (l)-[inre:IN_OWNER_GROUP]->(re:OwnerGroup)
 OPTIONAL MATCH (l)-[mem:MEMBER_OF]->(p:Portfolio)
 OPTIONAL MATCH (l)-[conn:CONNECTED_BY_ADDRESS|CONNECTED_BY_NAME|CONNECTED_BY_SPLINK|CONNECTED_BY_DEED]-(l2:Landlord)
   WHERE l2 IN lls
 RETURN office, files, l, rf, b, inre, re, mem, p, conn, l2</pre>
         <p style="font-size:.9rem;color:var(--muted)">Renders ~44 nodes: 27 <code>Building</code> · 11
-          <code>Landlord</code> · 5 <code>ResolvedEntityV2</code> (+ 2 unattached singletons) · 1 <code>Portfolio</code>
+          <code>Landlord</code> · 5 <code>OwnerGroup</code> (+ 2 unattached singletons) · 1 <code>Portfolio</code>
           · 1 virtual <code>:Office</code>. Colour relationships by type to see the <code>CONNECTED_BY_ADDRESS</code>
-          tangle crossing the resolved-entity clusters.</p>
+          tangle crossing the owner-group clusters.</p>
       </section>
 
     </main>
