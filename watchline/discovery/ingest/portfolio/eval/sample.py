@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import random
-import subprocess
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -22,6 +21,7 @@ import pandas as pd
 
 from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE, pg_conn
 from watchline.discovery.ingest.portfolio import deed_edges
+from watchline.discovery.ingest.portfolio.eval import manifest as _manifest
 
 SEED = 42
 AGG_DEGREE = 25                  # a business address shared by more landlords than this = aggregator-ish
@@ -110,6 +110,7 @@ def build(out_dir: Path) -> dict:
         owner_of = {r["nodeid"]: r["og"] for r in s.run(Q_OWNERGRP)}
         agg_groups = [r["ls"] for r in s.run(Q_AGG_ADDR, deg=AGG_DEGREE)]
         surname_groups = [r["ls"] for r in s.run(Q_SURNAME)]
+    snap = _manifest.snapshot_D(drv, NEO4J_DISCOVERY_DATABASE)
     drv.close()
 
     pgc = pg_conn()
@@ -158,12 +159,24 @@ def build(out_dir: Path) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "review_queue.jsonl").write_text("\n".join(json.dumps(p) for p in queue) + "\n")
     (out_dir / "blinding_key.jsonl").write_text("\n".join(json.dumps(k) for k in key) + "\n")
-    try:
-        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-    except Exception:
-        sha = "unknown"
-    fm = {"as_of_date": date.today().isoformat(), "pipeline_git_sha": sha, "seed": SEED,
-          "aggregator_degree": AGG_DEGREE, "strata": manifest}
+    sha = _manifest.git_sha()
+    fm = {
+        "frame": "accuracy-eval-4-strata",
+        "description": ("Protocol §2 method-accuracy frame: S1a/S1b deed, S2 model, S3 aggregator, "
+                        "S4 hard-negatives. Built by eval/sample.py (stratified pair sampler)."),
+        "snapshot_D": snap,
+        "frame_build": {
+            "built_at": date.today().isoformat(),
+            "builder_commit": sha,
+            "builder": "watchline/discovery/ingest/portfolio/eval/sample.py",
+            "note": ("Build date (was previously the top-level 'as_of_date'); this is NOT the data "
+                     "snapshot D — see snapshot_D above."),
+        },
+        "pipeline_git_sha": sha,
+        "seed": SEED,
+        "aggregator_degree": AGG_DEGREE,
+        "strata": manifest,
+    }
     (out_dir / "frame_manifest.json").write_text(json.dumps(fm, indent=2) + "\n")
     return fm
 

@@ -19,9 +19,11 @@ import argparse
 import json
 import random
 from collections import Counter, defaultdict
+from datetime import date
 from pathlib import Path
 
 from watchline.shared.connections import neo4j_driver, NEO4J_DISCOVERY_DATABASE
+from watchline.discovery.ingest.portfolio.eval import manifest as _manifest
 
 SEED = 42
 LARGE_MIN = 8            # v2 entities with >= this many members are over-weighted (census-included) in S2
@@ -140,6 +142,43 @@ def build(driver, *, database: str, run_id: str, out_dir: Path) -> dict:
                     "run_id": run_id})
     (out_dir / "review_queue.jsonl").write_text("\n".join(json.dumps(r) for r in queue) + "\n")
     (out_dir / "cutover_key.jsonl").write_text("\n".join(json.dumps(r) for r in key) + "\n")
+
+    with driver.session(database=database) as s:
+        gen = s.run("MATCH (e:ResolvedEntityV2 {run_id:$r}) "
+                    "RETURN min(e.generated_at) AS g, count(*) AS n", r=run_id).single()
+    fm = {
+        "frame": "track-a-cutover",
+        "description": ("Track-A (§8.1) OwnerGroup→ResolvedEntityV2 cutover adjudication frame: "
+                        "S1 splits census + S2 retained merges, paired noninferiority. "
+                        "Built by eval/cutover_frame.py."),
+        "snapshot_D": _manifest.snapshot_D(driver, database),
+        "resolution": {
+            "run_id": run_id,
+            "generated_at": str(gen["g"]) if gen and gen["g"] is not None else None,
+            "entities": gen["n"] if gen else None,
+            "note": "generated_at is the RESOLUTION build time, not the data snapshot D.",
+        },
+        "frame_build": {
+            "built_at": date.today().isoformat(),
+            "builder_commit": _manifest.git_sha(),
+            "builder": ("watchline/discovery/ingest/portfolio/eval/cutover_frame.py "
+                        f"--run-id {run_id}"),
+        },
+        "strata": {
+            "S1_split": {"decision_type": "split", "v2_decision": "DIFFERENT", "pairs": len(s1),
+                         "sampling": "census (all v2 splits of legacy OwnerGroups)"},
+            "S2_retained_merge": {"decision_type": "merge", "v2_decision": "SAME", "pairs": len(s2),
+                                  "sampling": "selected retained merges"},
+        },
+        "total_pairs": len(queue),
+        "artifacts": {
+            "review_queue.jsonl": "BLINDED reviewer input — pair_id + a/b {ref,name,bbls} only.",
+            "cutover_key.jsonl": ("PRIVATE key — stratum, decision_type, v2_decision, owner_group_id, "
+                                  "run_id, node ids. Rejoined by eval/score.py."),
+            "frame_qa.jsonl": "LEAD-FACING triage; MUST NOT be fed into the blind owner-review tool.",
+        },
+    }
+    (out_dir / "frame_manifest.json").write_text(json.dumps(fm, indent=2) + "\n")
     return {"s1_split_pairs": len(s1), "s2_retained_pairs": len(s2), "total": len(queue),
             "out": str(out_dir)}
 
