@@ -669,6 +669,9 @@
     .officebox .oa{font-family:var(--mono);font-size:.9rem;color:#7a4a00;font-weight:600}
     .officebox .od{font-family:var(--sans);font-size:.72rem;color:#8a5a00;text-transform:uppercase;
       letter-spacing:.06em;margin-top:.4rem}
+    pre.cypher{background:var(--navy);color:#e6edf6;border-left:4px solid var(--gold);border-radius:10px;
+      padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.76rem;line-height:1.55;
+      margin:14px 0;white-space:pre;-webkit-text-size-adjust:100%}
 </style>
 </head>
 
@@ -709,6 +712,7 @@
           <li><a href="#watchline">How Watchline corrects it</a></li>
           <li><a href="#mirror">The mirror of Escobar</a></li>
           <li><a href="#method">Method &amp; provenance</a></li>
+          <li><a href="#graph">See it in the graph (Cypher)</a></li>
         </ol>
       </nav>
 
@@ -861,6 +865,40 @@
             #183 and #210); the stable anchors are the office address and the BBL set. Ownership links are algorithmic
             inferences from public records — leads to verify, not determinations of legal ownership.</div>
         </div>
+      </section>
+
+      <section id="graph">
+        <h3 class="section"><span class="num">VI.</span> See it in the graph (Cypher)</h3>
+        <p>The exact subgraph behind this analysis, ready to paste into Neo4j Browser. The shared office isn't a
+          KG node — it's the <code>Landlord.bizaddr</code> property behind the <code>CONNECTED_BY_ADDRESS</code> edges —
+          so the query <strong>synthesizes a virtual <code>:Office</code> hub</strong> (in-memory, nothing written) and
+          wires every landlord to it with a <code>FILES_FROM</code> edge. It returns the 27 buildings, their 11
+          landlords all <code>MEMBER_OF</code> one over-merged <code>Portfolio</code>, the shared-office web of
+          <code>CONNECTED_BY_ADDRESS</code> edges, and the <code>ResolvedEntityV2</code> split.</p>
+        <pre class="cypher">// === Miller over-merge subgraph + synthesized shared-office hub — 235 River Ave #220 ===
+// The office is NOT a KG node (it's the Landlord.bizaddr property behind the
+// CONNECTED_BY_ADDRESS edges), so we create a VIRTUAL :Office node and wire every
+// landlord to it with a virtual FILES_FROM edge (in-memory; nothing is written).
+WITH ['1004360028','1004360029','1004360129','1004370027','1019880024','1020700019',
+      '2032780028','2032780054','2032790006','2032830022','2032890032','2032930142',
+      '2032930144','2032930146','2033010063','3003050032','3003930043','3012680001',
+      '3012820053','3027570036','3027890011','3032210031','3032370001','3050880046',
+      '3051890045','3052150042','4031040070'] AS bbls
+MATCH (b0:Building)&lt;-[:REGISTERED_FOR]-(l0:Landlord) WHERE b0.bbl IN bbls
+WITH bbls, collect(DISTINCT l0) AS lls
+CALL apoc.create.vNode(['Office'], {name:'235 River Ave #220, Lakewood NJ', owners_on_file:45}) YIELD node AS office
+UNWIND lls AS l
+CALL apoc.create.vRelationship(l, 'FILES_FROM', {}, office) YIELD rel AS files
+OPTIONAL MATCH (l)-[rf:REGISTERED_FOR]->(b:Building)          WHERE b.bbl IN bbls
+OPTIONAL MATCH (l)-[inre:IN_RESOLVED_ENTITY_V2]->(re:ResolvedEntityV2)
+OPTIONAL MATCH (l)-[mem:MEMBER_OF]->(p:Portfolio)
+OPTIONAL MATCH (l)-[conn:CONNECTED_BY_ADDRESS|CONNECTED_BY_NAME|CONNECTED_BY_SPLINK|CONNECTED_BY_DEED]-(l2:Landlord)
+  WHERE l2 IN lls
+RETURN office, files, l, rf, b, inre, re, mem, p, conn, l2</pre>
+        <p style="font-size:.9rem;color:var(--muted)">Renders ~44 nodes: 27 <code>Building</code> · 11
+          <code>Landlord</code> · 5 <code>ResolvedEntityV2</code> (+ 2 unattached singletons) · 1 <code>Portfolio</code>
+          · 1 virtual <code>:Office</code>. Colour relationships by type to see the <code>CONNECTED_BY_ADDRESS</code>
+          tangle crossing the resolved-entity clusters.</p>
       </section>
 
     </main>
