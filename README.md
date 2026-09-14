@@ -48,6 +48,8 @@ verify, not determinations of legal ownership.)*
 - **[Croman — 127 buildings, one owner](https://bobflagg.github.io/WatchlineNYC/docs/maps/croman.html):**
   Watchline unifies Steven Croman's 127 buildings that Who Owns What splits across six
   portfolios on a one-character address typo (`4 WEST 51` vs `424 WEST 51`).
+  ([Full de-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/croman.html) —
+  WoW's six portfolios reunited into one.)
 - **[Escobar — 26 buildings, one owner split in two](https://bobflagg.github.io/WatchlineNYC/docs/maps/escobar.html):**
   Ramon Escobar's single Bronx office is filed a dozen inconsistent ways (misspellings, and two
   records with a blank ZIP), and Who Owns What links only on an *exact* address match — so his
