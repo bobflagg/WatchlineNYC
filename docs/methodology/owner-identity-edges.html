@@ -775,7 +775,7 @@
             <dt>How built</dt><dd>Every entity owning ≥2 buildings emits a clique between those buildings' landlord nodes. <em>Same legal-entity name == same owner, definitionally</em> — precision-1 by construction.</dd>
             <dt>Guard</dt><dd>Must match an entity marker (<code>LLC</code>/<code>CORP</code>/<code>REALTY</code>…, whole-word); institutional owners (HDFC/NYCHA/City) excluded; degree cap of 100 lots (above = placeholder/nominee).</dd>
             <dt>Weight</dt><dd>100.</dd>
-            <dt>Consumed by</dt><dd>Portfolio · OwnerGroup. <strong>Excluded from ResolvedEntityV2's identity</strong> — name-only LLC links co-officers (distinct people) of one entity; only an id+jurisdiction <code>registered-llc-id</code> counts as identity there. It's <strong>reclassified as an owner-association</strong> (a separate relationship layer), not dropped.</dd>
+            <dt>Consumed by</dt><dd>Portfolio · OwnerGroup. <strong>Not read by ResolvedEntityV2</strong> — a name-only LLC match links co-officers (distinct people) of one entity, so it isn't a same-party signal (only an id+jurisdiction <code>registered-llc-id</code> would be). The edges still exist and drive the Portfolio and OwnerGroup layers; ResolvedEntityV2's identity clustering simply ignores them.</dd>
           </dl>
         </div>
 
@@ -797,7 +797,7 @@
             <dt>How built</dt><dd>Two sources unioned per deed: <strong>(A) held-since</strong> — buildings whose <em>latest</em> deed is a shared multi-parcel deed (staleness guard); <strong>(B) linked-successor</strong> — joint purchases the grantee later re-deeded into per-building shell LLCs. One clique per deed.</dd>
             <dt>Guard</dt><dd>Latest-deed rule (no stale merges); successor must be a shell (≤3 buildings, else an arms-length sale); 2–25 parcels (mega-deeds excluded); <strong>deed-hub cap</strong> drops serial co-investors (>20 deeds).</dd>
             <dt>Weight</dt><dd>100.</dd>
-            <dt>Consumed by</dt><dd><strong>OwnerGroup only</strong> — never the Portfolio (a deed is ownership evidence, not an operational nexus), and excluded from ResolvedEntityV2 (deed identity is unioned only in the OwnerGroup layer). There a deed is <strong>reclassified as an owner-association</strong> (a separate relationship layer), not dropped.</dd>
+            <dt>Consumed by</dt><dd><strong>OwnerGroup only</strong> — never the Portfolio (a deed is ownership evidence, not an operational nexus), and <strong>not read by ResolvedEntityV2</strong> (deed is unioned into identity only in the OwnerGroup layer). The <code>CONNECTED_BY_DEED</code> edges remain in the graph; ResolvedEntityV2's identity clustering ignores them.</dd>
           </dl>
         </div>
       </section>
@@ -833,9 +833,9 @@
           It applies a precedence — <code>curated-same-owner</code> &gt; <code>registered-llc-id</code> (not yet in the
           graph) &gt; <code>splink-fellegi-sunter</code> — and deliberately <strong>excludes</strong> both name-only
           <code>registered-llc</code> (it links co-officers, i.e. distinct people, of one LLC) and
-          <code>CONNECTED_BY_DEED</code> (unioned only in the older OwnerGroup layer). Both are
-          <strong>reclassified as owner-associations</strong> in a separate relationship layer — excluded from
-          identity, not discarded. So the <em>same</em> <code>CONNECTED_BY_SPLINK</code> relationship is read
+          <code>CONNECTED_BY_DEED</code> (unioned into identity only in the older OwnerGroup layer). Those edges
+          stay in the graph and drive the Portfolio/OwnerGroup layers — ResolvedEntityV2's identity clustering
+          simply doesn't read them. So the <em>same</em> <code>CONNECTED_BY_SPLINK</code> relationship is read
           differently depending on its <code>method</code>.
         </div>
       </section>
