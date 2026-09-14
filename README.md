@@ -52,6 +52,8 @@ verify, not determinations of legal ownership.)*
   Ramon Escobar's single Bronx office is filed a dozen inconsistent ways (misspellings, and two
   records with a blank ZIP), and Who Owns What links only on an *exact* address match — so his
   Bronx portfolio fractures into two. Watchline keeps all 26 buildings together as one owner.
+  ([Full node-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/escobar.html) —
+  why the raw table holds five nodes.)
 - **[Haight Street — one block, six owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/haight.html):**
   Nine identical townhouses on one Queens block that Who Owns What reads as six separate owners;
   Watchline reunites them via a single 2020 bulk deed — a veil-pierce from the ACRIS record that
