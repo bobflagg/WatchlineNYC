@@ -115,15 +115,14 @@ def wow_portfolio_bbls(pgc, orig_id: int | str) -> list[str]:
     return [str(b).strip() for b in (row[0] or [])] if row else []
 
 
-# For each BBL, the WatchlineNYC owner unit: its ResolvedEntityV2, or the singleton landlord (its
-# own owner). A BBL touched by several landlords takes the dominant one (grouped first, then larger).
-# ResolvedEntityV2 carries no name of its own, so the display name comes from the member landlord.
+# For each BBL, the WatchlineNYC owner unit: its OwnerGroup, or the singleton landlord (its own
+# owner). A BBL touched by several landlords takes the dominant one (grouped first, then larger).
 _Q_OWNERGROUP_SPLIT = (
     "UNWIND $bbls AS bbl MATCH (l:Landlord) WHERE bbl IN l.bbls "
-    "OPTIONAL MATCH (l)-[:IN_RESOLVED_ENTITY_V2]->(e:ResolvedEntityV2) "
-    "RETURN bbl AS bbl, (e IS NOT NULL) AS grouped, "
-    "  coalesce(e.resolution_id, 'ACT:'+l.actor_id) AS gid, "
-    "  l.name AS name, coalesce(e.building_count, size(l.bbls)) AS gsize"
+    "OPTIONAL MATCH (l)-[:IN_OWNER_GROUP]->(og:OwnerGroup) "
+    "RETURN bbl AS bbl, (og IS NOT NULL) AS grouped, "
+    "  coalesce(og.owner_group_id, 'ACT:'+l.actor_id) AS gid, "
+    "  coalesce(og.name, l.name) AS name, coalesce(og.building_count, size(l.bbls)) AS gsize"
 )
 
 
@@ -506,7 +505,7 @@ def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT
         btn_one="Who Owns What", btn_split="WatchlineNYC", split_tip_label="WatchlineNYC owner",
         default_view="wow",   # open on the reveal: WatchlineNYC's multi-owner split
         max_zoom=max_zoom,
-        split_note="Owner identity: discovery graph <code>IN_RESOLVED_ENTITY_V2</code>.")
+        split_note="Owner identity: discovery graph <code>IN_OWNER_GROUP</code>.")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
@@ -514,19 +513,18 @@ def generate_wow_split(wow_orig_id: int | str, out: Path, basemap: str = DEFAULT
             "singletons": sum(1 for v in labels.values() if v["singleton"]), "out": str(out)}
 
 
-def owner_group_bbls(driver, resolved_entity_id: str) -> list[str]:
+def owner_group_bbls(driver, owner_group_id: str) -> list[str]:
     with driver.session(database=NEO4J_DISCOVERY_DATABASE) as s:
-        r = s.run("MATCH (l:Landlord)-[:IN_RESOLVED_ENTITY_V2]->(:ResolvedEntityV2 {resolution_id:$g}) "
-                  "UNWIND l.bbls AS bbl RETURN collect(DISTINCT bbl) AS bbls", g=resolved_entity_id).single()
+        r = s.run("MATCH (l:Landlord)-[:IN_OWNER_GROUP]->(:OwnerGroup {owner_group_id:$g}) "
+                  "UNWIND l.bbls AS bbl RETURN collect(DISTINCT bbl) AS bbls", g=owner_group_id).single()
     return [str(b).strip() for b in (r["bbls"] if r else [])]
 
 
-def generate_owner_group(resolved_entity_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15,
+def generate_owner_group(owner_group_id: str, out: Path, basemap: str = DEFAULT_BASEMAP, max_zoom: int = 15,
                          flag_bbls: list[str] | None = None, flag_note: str = "") -> dict:
-    """Forward map keyed on a RESOLVED ENTITY (owner identity, ResolvedEntityV2), not a Portfolio:
-    one owner's buildings, colored by how Who Owns What splits them. Matches the demo's
-    owner-identity number exactly (e.g. Croman's resolved entity = 127 buildings, vs his nexus
-    Portfolio's 135). WatchlineNYC = one owner.
+    """Forward map keyed on an OWNER GROUP (owner identity), not a Portfolio: one owner's buildings,
+    colored by how Who Owns What splits them. Matches the demo's owner-identity number exactly
+    (e.g. Croman's OG = 127 buildings, vs his nexus Portfolio's 135). WatchlineNYC = one owner.
 
     ``flag_bbls`` overlays extra buildings that are in NEITHER system (e.g. on the deed but
     unregistered) as ghosted context dots — the honest recall caveat, shown on the map."""
@@ -534,12 +532,12 @@ def generate_owner_group(resolved_entity_id: str, out: Path, basemap: str = DEFA
     driver = neo4j_driver()
     pgc = pg_conn()
     try:
-        bbls = owner_group_bbls(driver, resolved_entity_id)
+        bbls = owner_group_bbls(driver, owner_group_id)
         if not bbls:
-            raise SystemExit(f"No resolved entity with id {resolved_entity_id}")
+            raise SystemExit(f"No owner group with id {owner_group_id}")
         points = points_for_bbls(driver, bbls)
         if not points:
-            raise SystemExit(f"No geocoded buildings for resolved entity {resolved_entity_id}")
+            raise SystemExit(f"No geocoded buildings for owner group {owner_group_id}")
         pt_bbls = [p["bbl"] for p in points]
         bbl2pf, labels = wow_split(pgc, pt_bbls)
         flag_points = [p for p in points_for_bbls(driver, flag_bbls) if p["bbl"] not in set(pt_bbls)]
@@ -571,7 +569,7 @@ def generate_owner_group(resolved_entity_id: str, out: Path, basemap: str = DEFA
     sub = (f"{n_group} buildings · WatchlineNYC = 1 owner · "
            f"Who Owns What = {n_wow} portfolio{'s' if n_wow != 1 else ''}{extra}")
     html = render_html(
-        resolved_entity_id, geojson, one_legend, wow_legend, PALETTE[0], n_wow, len(points),
+        owner_group_id, geojson, one_legend, wow_legend, PALETTE[0], n_wow, len(points),
         basemap=basemap, heading="One owner, scattered across the record", subhead=sub,
         btn_one="WatchlineNYC", btn_split="Who Owns What", split_tip_label="WoW portfolio",
         default_view="wl", max_zoom=max_zoom)   # open on the unified owner; toggle reveals WoW's fragments
@@ -625,9 +623,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Render a WoW-vs-WatchlineNYC portfolio comparison map.")
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--portfolio", help="WatchlineNYC portfolio_id (merge view: 1 WL portfolio vs WoW's split)")
-    src.add_argument("--resolved-entity", "--owner-group", dest="resolved_entity",
-                     help="WatchlineNYC ResolvedEntityV2 resolution_id, e.g. RE-105462 (merge view keyed on "
-                          "owner IDENTITY: 1 owner vs WoW's split). --owner-group is a back-compat alias.")
+    src.add_argument("--owner-group", dest="owner_group",
+                     help="WatchlineNYC owner_group_id (merge view keyed on owner IDENTITY: 1 owner vs WoW's split)")
     src.add_argument("--wow-portfolio", dest="wow_portfolio",
                      help="WoW orig_id (inverse view: 1 WoW portfolio vs WatchlineNYC's owner split)")
     ap.add_argument("--out", type=Path, default=None, help="output .html (default eval_out/maps/<id>.html)")
@@ -651,9 +648,9 @@ def main() -> None:
         info = generate_wow_split(args.wow_portfolio, out, basemap=args.basemap, max_zoom=args.max_zoom)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, "
               f"WatchlineNYC = {info['owner_groups']} owner(s), {info['singletons']} singleton(s))")
-    elif args.resolved_entity:
-        out = args.out or Path("eval_out/maps") / f"{args.resolved_entity}.html"
-        info = generate_owner_group(args.resolved_entity, out, basemap=args.basemap, max_zoom=args.max_zoom,
+    elif args.owner_group:
+        out = args.out or Path("eval_out/maps") / f"{args.owner_group}.html"
+        info = generate_owner_group(args.owner_group, out, basemap=args.basemap, max_zoom=args.max_zoom,
                                     flag_bbls=args.flag_bbls, flag_note=args.flag_note)
         print(f"wrote {info['out']}  ({info['buildings']} buildings, WatchlineNYC = 1 owner, "
               f"{info['wow_portfolios']} WoW portfolio(s), {info['unplaced']} not in any WoW portfolio)")
