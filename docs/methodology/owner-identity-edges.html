@@ -838,6 +838,25 @@
           simply doesn't read them. So the <em>same</em> <code>CONNECTED_BY_SPLINK</code> relationship is read
           differently depending on its <code>method</code>.
         </div>
+        <div class="callout interp">
+          <span class="tag">The deed distinction — the two identity layers are not the same edge set</span>
+          Both <code>OwnerGroup</code> and <code>ResolvedEntityV2</code> are owner-identity layers, but they do
+          <em>not</em> cluster over the same edges. They share only <code>splink-fellegi-sunter</code> +
+          <code>curated-same-owner</code>. <strong><code>OwnerGroup</code> additionally unions
+          <code>CONNECTED_BY_DEED</code></strong> (and the name-only <code>registered-llc</code> subtype);
+          <strong><code>ResolvedEntityV2</code> reads neither.</strong> So the accurate shorthand is
+          <code>OwnerGroup = SPLINK (all methods) ∪ DEED</code> versus
+          <code>ResolvedEntityV2 = curated-same-owner + splink-fellegi-sunter only</code>. The
+          <code>∪ DEED</code> clause belongs to <code>OwnerGroup</code> alone — do not attribute it to
+          <code>ResolvedEntityV2</code>.
+          <br><br>
+          When the two layers happen to <em>agree</em> — e.g. Miller's 7 owners — it is because the deciding
+          signal there is the <em>exclusion</em> of <code>CONNECTED_BY_ADDRESS</code>, which both layers share,
+          not because they read identical edges. Deed- and LLC-heavy portfolios are exactly where they diverge:
+          <code>OwnerGroup</code> merges on the deed/LLC evidence, <code>ResolvedEntityV2</code> does not — which is
+          why <code>ResolvedEntityV2</code> currently shows lower recall on those cases until an id-based
+          <code>registered-llc-id</code> edge is built.
+        </div>
       </section>
 
       <section id="shared">
