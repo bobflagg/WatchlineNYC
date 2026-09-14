@@ -64,6 +64,8 @@ verify, not determinations of legal ownership.)*
   Who Owns What groups 27 buildings as a single owner because they share one registration
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
   actually are — a more accurate, disaggregated view of the same public records.
+  ([Full over-merge analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/miller.html) —
+  the shared office, and why the seven owners stay apart.)
 
 Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
 owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
