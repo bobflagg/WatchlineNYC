@@ -178,6 +178,30 @@ tells you where to look; the primary records and the three checks decide what yo
 reading currency and per-side coverage on this line — "current &lt;date&gt; $&lt;amt&gt;" and the PLUTO-vs-deed
 caveat — is owner-review `e6d5e8c`; see phase-2 findings F11.)*
 
+### 3.2 Worked examples — both name *and* business address differ (accuracy frame)
+
+A node is keyed on `(name, standardized business address)`, so any two distinct nodes differ in ≥1 of
+those; the **both-differ** case is where WoW's name+address matching cannot help and the primary records
+decide. Two real frame pairs, one each way (BBLs abbreviated; the tool surfaces the deeds from them):
+
+**`P0133` (S1a/b deed) → `SAME`.** A `OSMAN ALI` @ *434 Leland Ave, Bronx* (lots 21/23/25/26) vs
+B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx* (lot 22) — different person, different office. But the five
+BBLs are adjacent lots on one Bronx block, and ACRIS deed `2013120600683001` (2013-08-09) conveys **all
+five to one grantee, `LELAND PROPERTY LLC`**, later carried on a single **$2.6M blanket mortgage**
+(`2016042800626001`). One owning entity on both sides → `SAME`, tier **T1** (shared deed grantee) + **T3**
+(shared mortgage) = **C1**. The two person-names are just alternating officers of the one LLC (the
+CUT-0029 pattern).
+
+**`P0464` (S4 hard-neg) → `DIFFERENT`.** A `EZRA ADJMI` @ *Long Branch NJ* (a Brooklyn building) vs
+B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a **shared, prominent surname**
+that tempts a merge. But the owners of record are distinct — A held personally by `ADJMI, EZRA` + `ADJMI,
+JACK` (2021 deed, $1.35M); B owned by `J T TAI & CO INC` (Robert Adjmi is only the HPD contact) — and
+across A's 22 and B's 13 ACRIS documents there are **zero shared deeds**. Distinct grantees, no linking
+conveyance → `DIFFERENT`, tier **T1**. A common surname is not ownership.
+
+Together they are the two error directions the frame guards: `P0133` tests whether the graph can **merge
+what name/address hide**; `P0464` tests whether it can **resist a tempting shared surname**.
+
 ## 4. Annotation process
 
 - **2 annotators**, independent, **blind** to which system (WatchlineNYC / WoW) produced any
