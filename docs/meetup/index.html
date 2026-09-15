@@ -452,8 +452,15 @@
       color: var(--faint);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    .deck-foot a { color: var(--faint); text-decoration: none; }
-    .deck-foot a:hover { color: var(--gold); }
+
+    .deck-foot a {
+      color: var(--faint);
+      text-decoration: none;
+    }
+
+    .deck-foot a:hover {
+      color: var(--gold);
+    }
   </style>
 </head>
 
@@ -470,11 +477,13 @@
         <div class="who">Robert Flagg — mathematician turned trustworthy-AI engineer
           <small>I make AI systems trustworthy by grounding them in knowledge graphs</small>
         </div>
-        <div class="built">An independent sabbatical project, built on JustFix's <strong>Who Owns What</strong></div>
-        <aside class="notes">(~25s) I'm here as an independent — this is a sabbatical project, and it stands on
-          JustFix's Who Owns What, which most of you know. My background is mathematics; these days I build trustworthy
+        <div class="built">An open source project, built on JustFix's <strong>Who Owns What</strong></div>
+        <aside class="notes">(~25s) I'm going to be talking about an open source project based on
+          JustFix's Who Owns What, which I'm sure most of you know better than I do. My background is mathematics; these
+          days I build trustworthy
           AI for a living, and the approach I work in is grounding models in knowledge graphs — so the system answers
-          from a structured, sourced record instead of free-associating. This project is me pointing that at NYC housing
+          from a structured, sourced record instead of hallucinating plausable sounding responses. This project is me
+          pointing that at NYC housing
           ownership. I'm new to the housing-data world, and I'm here looking for feedback and help on the project. [Nav:
           arrows to move · S for speaker notes · F fullscreen]</aside>
       </section>
@@ -521,235 +530,468 @@
         </aside>
       </section>
 
-      <!-- 3 — THESIS -->
+      <!-- 3 — HOW WOW BUILDS A PORTFOLIO TODAY -->
       <section>
-        <span class="kicker">The thesis</span>
-        <h2>The provenance bar is higher when the output is a <span class="em">person</span></h2>
+        <span class="kicker">Today — the Who Owns What baseline</span>
+        <h2>A WoW “portfolio” is a <em>connected component</em> of a landlord graph</h2>
         <hr class="rule">
-        <table>
-          <thead>
-            <tr>
-              <th>When the answer is a <b>statistic</b></th>
-              <th>When the answer is a <b>person</b> — who controls this building</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="fragment">
-              <td>ground truth is <strong>published</strong> — you look it up</td>
-              <td>ground truth is <strong>deliberately hidden</strong> (shell LLCs) — you must <strong>infer</strong> it
-              </td>
-            </tr>
-            <tr class="fragment">
-              <td>a wrong answer is an <strong>inaccuracy</strong></td>
-              <td>a wrong answer is a <strong>false accusation</strong></td>
-            </tr>
-            <tr class="fragment">
-              <td>it's meant to <strong>inform</strong></td>
-              <td>it's meant to be <strong>acted on</strong> — organizing, journalism, enforcement</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="pull fragment"><em>"Reasonably incorrect"</em> isn't a tolerable failure mode. Provenance,
-          precision, and <em>"leads, not verdicts"</em> are <strong>preconditions — not polish.</strong></div>
-        <aside class="notes">(~50s) Hold onto those 107 masks — they're the whole point. There's a real difference
-          between a conversational layer over AGGREGATE data and over OWNERSHIP data. If a number's off by a decimal,
-          you get a bad number — bounded, impersonal, correctable. Our unit isn't a statistic; it's a person — who
-          really controls this building. The ground truth isn't published, it's deliberately obscured behind shell LLCs,
-          so we have to INFER it. And the output is meant to be ACTED ON. Put those together and a wrong answer becomes
-          a false accusation about a named individual. So provenance isn't polish here — it's the precondition for
-          pointing an LLM at this data at all. LINE: "If an ownership tool is wrong, you don't get a bad number — you
-          get a false accusation about a real person."</aside>
-      </section>
-
-      <!-- 4 — THE STACK -->
-      <section>
-        <span class="kicker">The stack</span>
-        <h2>How it's built — one look</h2>
-        <h3>Every stage is sourced, or explicitly labeled <em>inferred</em></h3>
-        <hr class="rule">
-        <div class="pipe">
-          <div class="pbox">
-            <div class="pt">Knowledge graph</div>
-            <div class="pd">sourced facts — HPD · ACRIS · DOB · PLUTO</div>
+        <svg viewBox="0 0 1000 412" style="display:block;margin:.2em auto 0;max-width:100%;max-height:40vh;height:auto"
+          role="img"
+          aria-label="A Neo4j-style subgraph: four Landlord nodes linked by CONNECTED_BY_ADDRESS and CONNECTED_BY_NAME into one connected component, ringed as one portfolio, plus two outlier nodes forming a separate component">
+          <defs>
+            <marker id="rel" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#9aa4b2" />
+            </marker>
+          </defs>
+          <!-- dashed ring = the connected component (drawn behind everything) -->
+          <circle cx="360" cy="205" r="196" fill="#f3e6c4" fill-opacity="0.18" stroke="#c1901f" stroke-width="2"
+            stroke-dasharray="7 6" />
+          <text x="360" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="#12243f">one portfolio = one
+            connected component</text>
+          <!-- relationships -->
+          <g stroke="#9aa4b2" stroke-width="2">
+            <line x1="298" y1="110" x2="422" y2="110" marker-end="url(#rel)" /> <!-- A-B ADDRESS -->
+            <line x1="470" y1="158" x2="470" y2="252" marker-end="url(#rel)" /> <!-- B-D ADDRESS -->
+            <line x1="250" y1="158" x2="250" y2="252" marker-end="url(#rel)" /> <!-- A-C NAME -->
+            <line x1="786" y1="196" x2="808" y2="254" marker-end="url(#rel)" /> <!-- E-F ADDRESS (other component) -->
+          </g>
+          <!-- :Landlord nodes (Neo4j-style discs) -->
+          <g font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">
+            <circle cx="250" cy="110" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="250" y="114">134 Orchard</text>
+            <circle cx="470" cy="110" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="470" y="114">17 Gay</text>
+            <circle cx="250" cy="300" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="250" y="304">145 E 26</text>
+            <circle cx="470" cy="300" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="470" y="304">151 Rivington</text>
+            <!-- outliers: a separate component, outside the ring -->
+            <circle cx="770" cy="150" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="770" y="154">88 Pitt</text>
+            <circle cx="825" cy="300" r="48" fill="#40597c" stroke="#2e425f" stroke-width="2" />
+            <text x="825" y="304">12 Jones</text>
+          </g>
+          <!-- relationship-type captions (Neo4j-style) -->
+          <g font-size="9.5" font-weight="700" fill="#5c6b80" text-anchor="middle" letter-spacing="0.2">
+            <rect x="300" y="101" width="120" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" />
+            <text x="360" y="113">CONNECTED_BY_ADDRESS</text>
+            <rect x="410" y="196" width="120" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" />
+            <text x="470" y="208">CONNECTED_BY_ADDRESS</text>
+            <rect x="196" y="196" width="108" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" />
+            <text x="250" y="208">CONNECTED_BY_NAME</text>
+            <rect x="738" y="216" width="120" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" />
+            <text x="798" y="228">CONNECTED_BY_ADDRESS</text>
+          </g>
+          <text x="798" y="372" text-anchor="middle" font-size="11" font-style="italic" fill="#8290a3">…other landlords
+            · other portfolios</text>
+        </svg>
+        <div style="display:flex;gap:.7em;align-items:stretch;margin:.5em 0 .1em;font-size:.66em">
+          <div class="fragment" style="flex:1;border-left:4px solid #40597c;padding:.15em .6em">
+            <b>1 · Nodes</b> — one per building's owner/officer contact: a <b>(name, business&nbsp;address)</b>
+            drawn from HPD <code>registrations</code> → their <code>contacts</code> (head officer / owner).
           </div>
-          <div class="parrow">→</div>
-          <div class="pbox">
-            <div class="pt">Resolution</div>
-            <div class="pd">precision-first record linkage — who is one owner</div>
+          <div class="fragment" style="flex:1;border-left:4px solid #c1901f;padding:.15em .6em">
+            <b>2 · Edges</b> — <code>CONNECTED_BY_ADDRESS</code> (same business address) and
+            <code>CONNECTED_BY_NAME</code> (same name, corroborated by a nearby address).
           </div>
-          <div class="parrow">→</div>
-          <div class="pbox">
-            <div class="pt">Three layers</div>
-            <div class="pd">management · operational nexus · owner identity</div>
-          </div>
-          <div class="parrow">→</div>
-          <div class="pbox">
-            <div class="pt">Conversational agent</div>
-            <div class="pd">read-only · cites sources · labels certainty</div>
+          <div class="fragment" style="flex:1;border-left:4px solid #1c7c54;padding:.15em .6em">
+            <b>3 · Portfolio</b> — a <b>connected component</b>: everything transitively linked.
           </div>
         </div>
-        <div class="aud">↓ &nbsp; tenant · journalist · agency</div>
-        <div class="pull" style="font-size:.82em">Provenance runs the length of the pipeline — nothing downstream drops
-          the label of what it came from.</div>
-        <aside class="notes">(~35s) One map, then we go deep on the parts that matter. A single knowledge graph of
-          buildings, people, and events from the public record. A resolution step that figures out which messy records
-          are the SAME owner. On top, three separate layers — who MANAGES a building, the operational nexus, and who
-          OWNS it — kept distinct on purpose. And a conversational agent that only ever READS the graph and cites what
-          it found. Carry forward: provenance runs the full length — every stage knows whether it's a sourced fact or an
-          inference.</aside>
+        <div class="pull fragment" style="font-size:.78em">This captures the <b>operational nexus</b> — who registers
+          and
+          manages together — not title. A strong first pass, <em>and the origin of both failure modes this talk is
+            about.</em></div>
+        <span class="src">JustFix — Who Owns What (portfoliograph): HPD <code>registrations</code> +
+          <code>contacts</code>
+          → <code>landlords_with_connections</code> (self-join on shared name / business address) → connected
+          components.</span>
+        <aside class="notes">(~55s) The baseline everyone here knows — JustFix's Who Owns What, the open-source tool
+          this
+          builds on. The key thing to see is that it's a GRAPH problem. NODES first: every building files an HPD
+          registration, and each registration lists contacts — head officer, owner, agent. WoW takes the owner/officer
+          contact and makes a node keyed on that person's name plus their standardized business address — so a node is a
+          (name, business-address) pulled straight from the registrations and contacts tables. EDGES next: draw one
+          between two nodes on either of two rules — CONNECTED_BY_ADDRESS when they share a business office, or
+          CONNECTED_BY_NAME when they share a name backed by a nearby address. Then a "portfolio" is just a CONNECTED
+          COMPONENT of that graph — everything transitively linked, like the four ringed here; the two on the
+          right are a different component, a different portfolio. Notice what that component actually captures: an
+          OPERATIONAL NEXUS — who registers and manages together — not title. A genuinely strong first pass, and what
+          makes the invisible visible. But hold onto the mechanism, because it's exactly where it breaks: lean on a
+          shared
+          address and you fuse unrelated owners who merely use the same managing agent — a FALSE MERGE; require a shared
+          address or name and a real owner who leaves neither drops off the graph entirely — a FALSE SPLIT. Those two
+          are
+          the rest of the talk.</aside>
       </section>
 
-      <!-- 5 — RELIABILITY -->
+      <!-- 4 — TWO WAYS TO BE WRONG -->
       <section>
-        <span class="kicker">Credibility anchor #1</span>
-        <h2>A data layer that knows what it knows</h2>
-        <h3>Every element is tagged — directly <span class="tag s">sourced</span> or <span class="tag i">inferred</span>
-          — and every inference carries a caveat</h3>
+        <span class="kicker">The problem this talk is about</span>
+        <h2>Two ways to be wrong</h2>
         <hr class="rule">
-        <p style="font-size:.85em; margin:.3em 0"><strong>"Who owns 17 Gay Street?"</strong> — two answers, never
-          blurred:</p>
-        <div class="cards">
-          <div class="card s">
-            <div class="cl">Recorded owner · sourced</div>
-            <div class="cv">"17 GAY LLC"</div>
-            <div class="cd">straight from the deed &amp; registration — a fact (but a shell that tells you nothing)
+        <svg viewBox="0 0 1000 470" style="width:100%;height:auto;max-height:56vh;display:block;margin:.2em auto 0"
+          role="img"
+          aria-label="Left: a false merge — three buildings with different owners sharing one managing-agent office are fused by CONNECTED_BY_ADDRESS into one portfolio. Right: a false split — one owner's three shell buildings share no name or address, so there are no edges and the owner fragments into three portfolios.">
+          <defs>
+            <marker id="rel4" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#9aa4b2" />
+            </marker>
+          </defs>
+          <line x1="500" y1="76" x2="500" y2="444" stroke="#e3e7ee" stroke-width="1.5" stroke-dasharray="4 5" />
+
+          <!-- ===== PANEL A — FALSE MERGE ===== -->
+          <text x="235" y="36" text-anchor="middle" font-size="18" font-weight="800" fill="#b0261c">FALSE MERGE</text>
+          <text x="235" y="57" text-anchor="middle" font-size="11.5" fill="#5c6b80">one shared office fuses unrelated
+            owners</text>
+          <circle cx="235" cy="270" r="165" fill="#f3e6c4" fill-opacity="0.16" stroke="#c1901f" stroke-width="2"
+            stroke-dasharray="7 6" />
+          <text x="235" y="98" text-anchor="middle" font-size="12" font-weight="700" fill="#a6790f">WoW → one
+            “portfolio” ✗</text>
+          <g stroke="#9aa4b2" stroke-width="2">
+            <line x1="147" y1="215" x2="142" y2="295" marker-end="url(#rel4)" />
+            <line x1="179" y1="202" x2="291" y2="308" marker-end="url(#rel4)" />
+            <line x1="180" y1="335" x2="280" y2="335" marker-end="url(#rel4)" />
+          </g>
+          <g font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">
+            <circle cx="150" cy="175" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="150"
+              y="179">300 W 12</text>
+            <circle cx="140" cy="335" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="140" y="339">88
+              Pitt</text>
+            <circle cx="320" cy="335" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="320" y="339">7
+              Ave A</text>
+          </g>
+          <g text-anchor="middle">
+            <rect x="143" y="272" width="120" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" />
+            <text x="203" y="284" font-size="9.5" font-weight="700" fill="#5c6b80"
+              letter-spacing="0.2">CONNECTED_BY_ADDRESS</text>
+          </g>
+          <text x="235" y="456" text-anchor="middle" font-size="11.5" fill="#5c6b80">
+            <tspan font-weight="700" fill="#b0261c">over-counts</tspan> — 3 unrelated owners, one managing-agent office
+          </text>
+
+          <!-- ===== PANEL B — FALSE SPLIT ===== -->
+          <text x="760" y="36" text-anchor="middle" font-size="18" font-weight="800" fill="#b0261c">FALSE SPLIT</text>
+          <text x="760" y="57" text-anchor="middle" font-size="11.5" fill="#5c6b80">shells share no name and no
+            address</text>
+          <circle cx="760" cy="262" r="182" fill="#e7f4ee" fill-opacity="0.55" stroke="#1c7c54" stroke-width="2"
+            stroke-dasharray="7 6" />
+          <text x="760" y="104" text-anchor="middle" font-size="12" font-weight="700" fill="#1c7c54">truth → one
+            owner</text>
+          <text x="760" y="258" text-anchor="middle" font-size="11" font-style="italic" fill="#b0261c">no CONNECTED_BY_*
+            edges</text>
+          <g font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">
+            <circle cx="650" cy="180" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="650"
+              y="184">134 E 5</text>
+            <circle cx="870" cy="180" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="870" y="184">22
+              W 9</text>
+            <circle cx="760" cy="330" r="40" fill="#40597c" stroke="#2e425f" stroke-width="2" /><text x="760" y="334">5
+              Place</text>
+          </g>
+          <text x="760" y="456" text-anchor="middle" font-size="11.5" fill="#5c6b80">
+            <tspan font-weight="700" fill="#b0261c">misses it</tspan> — one owner split into 3 portfolios
+          </text>
+        </svg>
+        <div class="pull" style="font-size:.8em">Both come from the <b>same rule</b> — connect on shared attributes.
+          Lean on
+          it and you fuse strangers; require it and you lose real owners. <em>The rest of the talk: fix each without
+            breaking the other.</em></div>
+        <aside class="notes">(~45s) The same mechanism from the last slide breaks in exactly two directions. FALSE
+          MERGE,
+          on the left: three buildings with three different real owners all list the same business address — because
+          they
+          all use the same managing agent. WoW's CONNECTED_BY_ADDRESS rule links them, the connected component swallows
+          all three, and now one "portfolio" is really three owners — you over-count, and you can smear one owner's
+          violations onto another. FALSE SPLIT, on the right: one owner holds three buildings in three shell LLCs, each
+          with a different registered name and a different office — nothing to match on, so there are NO edges. WoW sees
+          three separate components — three portfolios — and the real owner is fragmented, effectively invisible. Same
+          rule, opposite failures: lean on shared attributes and you merge strangers; require them and you split a real
+          owner. The whole rest of the talk is how we fix each of these — WITHOUT trading one failure for the other.
+        </aside>
+      </section>
+
+      <!-- 5 — FALSE SPLIT IN THE WILD: CROMAN ON WHO OWNS WHAT -->
+      <section>
+        <span class="kicker">False split — in the wild</span>
+        <h2>One owner, <em>six</em> Who Owns What portfolios</h2>
+        <hr class="rule">
+        <div style="display:flex;gap:1em;align-items:stretch;margin-top:.3em">
+          <!-- LEFT: WoW map screenshot (drop-in) -->
+          <figure style="flex:1.25;margin:0">
+            <div
+              style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:320px;display:flex;align-items:center;justify-content:center">
+              <img src="croman-wow-map.png"
+                alt="Who Owns What map of Steven Croman's buildings, fragmented across six portfolios"
+                style="width:100%;display:block;max-height:46vh;object-fit:contain"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              <div style="display:none;padding:1.4em;text-align:center;color:var(--faint);font-size:.8em">▸ add
+                <code>docs/meetup/croman-wow-map.png</code><br>(Who Owns What — Croman screenshot, map + sidebar)
+              </div>
+            </div>
+            <figcaption style="font-size:.72em;color:var(--muted);margin-top:.35em">Who Owns What, as the site renders
+              “Croman” — the buildings scatter across separate portfolios.</figcaption>
+          </figure>
+          <!-- RIGHT: the breakdown -->
+          <div style="flex:.9;font-size:.8em">
+            <div style="font-weight:700;color:var(--navy);margin-bottom:.35em">“Croman” → 6 portfolios by name</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.92em">
+              <thead>
+                <tr style="color:var(--muted);text-align:left">
+                  <th style="padding:.15em .3em">WoW portfolio</th>
+                  <th style="padding:.15em .3em;text-align:right">Buildings</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#87259 <span style="color:var(--gold);font-weight:700">· main</span>
+                  </td>
+                  <td style="text-align:right">118</td>
+                </tr>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#87260</td>
+                  <td style="text-align:right">5</td>
+                </tr>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#46243</td>
+                  <td style="text-align:right">2</td>
+                </tr>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#87395</td>
+                  <td style="text-align:right">1</td>
+                </tr>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#87396</td>
+                  <td style="text-align:right">1</td>
+                </tr>
+                <tr style="border-top:1px solid var(--line)">
+                  <td style="padding:.2em .3em">#87397</td>
+                  <td style="text-align:right">1</td>
+                </tr>
+                <tr style="border-top:2px solid var(--line);font-weight:700">
+                  <td style="padding:.2em .3em">WoW total (by name)</td>
+                  <td style="text-align:right">128</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pull" style="font-size:.8em">Six differently-registered fragments of <b>one</b> operator (a name the
+          AG prosecuted) — because his offices differ by a typo and the shells share no address. <em>The most public
+            landlord in the city, split six ways.</em></div>
+        <span class="src">JustFix Who Owns What, “Croman” portfolios (2026-09-10 run; WoW ids renumber between
+          refreshes).
+          Watchline owner-identity layer (<code>OwnerGroup</code>). See <code>docs/cases/croman.html</code>.</span>
+        <aside class="notes">(~50s) Here's a false split you can't wave away as an edge case — it's the most notorious
+          landlord in New York. Ask Who Owns What for "Croman" and you don't get one portfolio, you get SIX: a main one
+          with 118 buildings, then a 5, a 2, and three singletons — 128 buildings by name, scattered. Why? Exactly the
+          mechanism from two slides ago: his management offices differ by small typos, and the single-purpose shells
+          don't share an address, so WoW's name and address rules can't bridge them — no edges, separate components,
+          six portfolios. If the graph fragments a landlord the Attorney General literally prosecuted, imagine the quiet
+          operators. Our owner-identity layer reunites the six into one owner of 127 buildings — and the next slides are
+          how. (Map on the left is the Who Owns What rendering; the sidebar is its own portfolio breakdown.)</aside>
+      </section>
+
+      <!-- 6 — THE IDENTITY ENGINE: SPLINK -->
+      <section>
+        <span class="kicker">The engine — fixing false splits</span>
+        <h2>Splink — probabilistic record linkage</h2>
+        <h3>Decide whether two records are the <em>same owner</em> from many partial clues — not one exact match</h3>
+        <hr class="rule">
+        <!-- worked micro-example: two of Croman's office registrations -->
+        <div style="display:flex;gap:.6em;margin:.35em 0 .25em;font-size:.78em">
+          <div style="flex:1;border:1px solid var(--line);border-radius:6px;padding:.35em .6em"><b>Record
+              A</b><br>CROMAN · 9 E 38 ST · 10016</div>
+          <div style="flex:1;border:1px solid var(--line);border-radius:6px;padding:.35em .6em"><b>Record
+              B</b><br>CROMAN · 9 EAST 38 STREET STE 600 · 10016</div>
+        </div>
+        <div style="font-size:.76em;text-align:center;color:var(--muted);margin-bottom:.35em">
+          last name <b style="color:var(--sourced)">exact &amp; rare ✓✓</b> · street <b>fuzzy ~</b> · zip <b
+            style="color:var(--sourced)">exact ✓</b>
+          &nbsp;→&nbsp; <b style="color:var(--navy)">match probability ≈ 0.99</b> &nbsp;→&nbsp; same owner
+          <span style="color:var(--faint)">(the exact-match rule would split these)</span>
+        </div>
+        <div class="num fragment"><span class="n">①</span><span class="t"><b>Compares field-by-field, in degrees</b> —
+            exact / fuzzy / mismatch on name, house number, street, zip — so <b>typos and variants still
+              match</b></span></div>
+        <div class="num fragment"><span class="n">②</span><span class="t"><b>Weighs the evidence (Fellegi–Sunter
+              model)</b> — agreement on a <em>rare</em> value counts more than a common one → a calibrated <b>match
+              probability</b>, with weights <b>learned unsupervised</b> (no labels)</span></div>
+        <div class="num fragment"><span class="n">③</span><span class="t"><b>Scales, with a precision dial</b> —
+            “blocking” compares only plausible pairs, so it runs over millions of records; we set the <b>threshold
+              high</b> — link only on strong evidence</span></div>
+        <div class="pull fragment" style="font-size:.8em">The open-source engine behind our
+          <code>CONNECTED_BY_SPLINK</code> edges — it links the fragments exact-match rules miss, <em>reuniting an owner
+            WoW splits.</em>
+        </div>
+        <span class="src">Splink — open-source probabilistic record linkage, UK Ministry of Justice ·
+          <code>moj-analytical-services.github.io/splink</code></span>
+        <aside class="notes">(~55s) So how do we fix that false split? The identity engine is Splink — an open-source
+          probabilistic record-linkage library from the UK Ministry of Justice. Not our invention; a well-established
+          tool. The idea: instead of demanding an exact name-and-address match like the baseline, it compares two
+          records
+          field by field in DEGREES — exact, fuzzy, or mismatch — and weighs each agreement by how much evidence it
+          actually carries. Agreeing on a rare surname is strong; agreeing on a common one is weak. It sums those into a
+          calibrated match PROBABILITY, and it learns those weights unsupervised — no labeled training data. Blocking
+          keeps it fast over millions of records. Look at Croman's two office registrations: "9 E 38 St" versus "9 East
+          38 Street Ste 600." The exact-match rule sees two different addresses and splits them; Splink sees the same
+          rare name, a fuzzy street match, the same zip, and says 0.99 — same owner. And it's a DIAL: we set the
+          threshold high, precision-first, so we only merge on strong evidence — which matters, because the other
+          failure
+          mode is merging strangers.</aside>
+      </section>
+
+      <!-- 7 — THE FIX: SPLINK EDGES REUNITE CROMAN -->
+      <section>
+        <span class="kicker">False split — resolved</span>
+        <h2>Add <code>CONNECTED_BY_SPLINK</code>, recompute the components — Croman is whole</h2>
+        <hr class="rule">
+        <figure style="margin:.2em 0 0">
+          <div
+            style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:300px;display:flex;align-items:center;justify-content:center">
+            <img src="croman-watchline-map.png"
+              alt="WatchlineNYC map: Steven Croman's 127 buildings resolved to one owner, versus Who Owns What's six portfolios"
+              style="display:block;max-width:100%;max-height:46vh;margin:0 auto;object-fit:contain"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+            <div style="display:none;padding:1.4em;text-align:center;color:var(--faint);font-size:.8em">▸ add
+              <code>docs/meetup/croman-watchline-map.png</code><br>(WatchlineNYC — Croman, one owner · 127 buildings)
             </div>
           </div>
-          <div class="card i">
-            <div class="cl">Apparent controller · inferred</div>
-            <div class="cv">"Steven Croman"</div>
-            <div class="cd">inferred from record linkage — a lead to verify, not a determination</div>
+        </figure>
+        <div class="pull" style="font-size:.82em">Same landlord graph, <b>one new edge type</b>. The Splink matches
+          bridge
+          the typo'd offices and name variants WoW's exact rules can't — one filed from <code>4 WEST 51</code>, another
+          from <code>424 WEST 51</code> — so the connected component now spans the lot:
+          <b>6 portfolios → 1 owner, 127 buildings.</b>
+        </div>
+        <span class="src">WatchlineNYC discovery graph — owner identity via connected components over
+          <code>CONNECTED_BY_NAME ∪ CONNECTED_BY_ADDRESS ∪ CONNECTED_BY_SPLINK</code>. Toggle vs. Who Owns What live on
+          the map.</span>
+        <aside class="notes">(~45s) Same graph as two slides ago — same nodes, same name and address edges — with ONE
+          addition: the CONNECTED_BY_SPLINK edges from the model we just met. Those edges do exactly what the
+          exact-match
+          rules couldn't: they bridge Croman's typo'd office variants and his name spellings, because Splink scores them
+          as the same owner with high probability. Add those edges and re-take connected components, and the six WoW
+          fragments collapse into a single component — one owner, 127 buildings. That's the whole false-split fix in one
+          picture: we didn't throw away WoW's signals, we added a probabilistic one on top, and the portfolio comes back
+          together. On the live map this is a toggle — Who Owns What's six colors on one side, our single owner on the
+          other.</aside>
+      </section>
+
+      <!-- 7b — FALSE SPLIT BY DEED: HAIGHT -->
+      <section>
+        <span class="kicker">False split — no name, no address to match</span>
+        <h2>When owners share only a <em>deed</em> — <code>CONNECTED_BY_DEED</code></h2>
+        <hr class="rule">
+        <div style="display:flex;gap:1em;align-items:stretch;margin-top:.3em">
+          <figure style="flex:1.1;margin:0">
+            <div
+              style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:240px;display:flex;align-items:center;justify-content:center">
+              <img src="haight-map.png"
+                alt="Ten adjacent townhouses on one block of Haight Street, Queens; Who Owns What paints nine of them in six colors as six separate owners, with the unregistered tenth shown as a hollow ghost dot"
+                style="display:block;max-width:100%;max-height:46vh;margin:0 auto;object-fit:contain"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              <div style="display:none;padding:1.2em;text-align:center;color:var(--faint);font-size:.8em">▸
+                <code>docs/meetup/haight-map.png</code>
+              </div>
+            </div>
+            <figcaption style="font-size:.72em;color:var(--muted);margin-top:.35em">41 Haight St, Queens — one
+              contiguous
+              row of identical townhouses, painted six colors by Who Owns What.</figcaption>
+          </figure>
+          <div style="flex:.9;font-size:.8em">
+            <div style="margin-bottom:.5em"><b style="color:#b0261c">WoW → 6 owners.</b> One row, six head officers —
+              Chan · Xu · Ho · Lin · Li · Chen — across nine owner-LLCs. Different names, different offices:
+              <b>nothing for name, address, or Splink to match on.</b>
+            </div>
+            <div style="margin-bottom:.5em"><b>The only tie is a transaction.</b> In 2020 a Chapter 11 trustee sold all
+              <b>10 townhouses on one deed for $18.6M</b> to a single buyer — who re-deeded them into single-purpose
+              shells.
+            </div>
+            <div style="padding:.4em .6em;border-left:4px solid #1c7c54;background:#e7f4ee;border-radius:4px"><b>▸
+                <code>CONNECTED_BY_DEED</code></b> reunites <b>9 of 10</b> into one owner. The 10th (41-23) is
+              unregistered → in <em>neither</em> system: the ghost dot.</div>
           </div>
         </div>
-        <p style="font-size:.8em"> The tool <strong>always returns both, labeled</strong> — and says so when they
-          diverge.</p>
-        <span class="src">Real record: BBL 1005930008 · every derived element carries this tag in the graph
-          itself.</span>
-        <aside class="notes">(~50s) The piece I'd most want you to take away. Underneath is a knowledge graph — but the
-          important part is that every element KNOWS WHAT IT IS: either a directly-sourced fact, or an inference — and
-          if it's an inference, it carries a caveat, automatically, everywhere it's used. Ask "who owns 17 Gay Street?"
-          A naïve tool picks one answer. Ours returns TWO and refuses to blur them. Recorded owner "17 Gay LLC" — a
-          sourced fact, and a shell that tells you nothing. Apparent controller Steven Croman — an INFERENCE, stamped: a
-          lead to verify, not a legal determination. When the two disagree, it says so. This isn't slideware — it's a
-          hard rule in the code: that question always returns both, labeled.</aside>
+        <div class="pull" style="font-size:.8em">Splink needs <em>some</em> shared field; a bulk buyer who scatters
+          title
+          leaves none. Here WoW isn't wrong — it's <b>blind: it reads no deeds.</b> ACRIS does.
+          <span style="color:var(--muted)">Common ownership inferred from the deed — a lead to verify.</span>
+        </div>
+        <span class="src">Owner group <code>OG-51705</code> · deed <code>2020092500293001</code> ($18.6M · 10 parcels ·
+          Ch. 11 sale) · composition <code>deed_only</code>. See <code>specs/case-haight.md</code>.</span>
+        <aside class="notes">(~45s) Splink fixed Croman because his records shared SOMETHING — a rare name, a fuzzy
+          address. But some owners leave nothing to match on. Ten identical townhouses on one block of Haight Street in
+          Flushing: Who Owns What reads the registered nine as SIX different owners — six head officers, nine LLCs, no
+          shared name or address — so name, address, AND Splink all split them. The only tie is a transaction: in 2020 a
+          bankruptcy trustee sold the whole row — all ten — on one deed, $18.6 million, to a single buyer, who re-deeded
+          them one at a time into shells. So we add a fourth edge type, CONNECTED_BY_DEED, straight from ACRIS, and it
+          reunites nine of the ten — a tie that is pure deed, no name, no address. Who Owns What can't reach this even
+          in
+          principle: it reads no deeds. Then the honesty beat — the tenth, 41-23, is on the same deed but has no HPD
+          registration, so it falls through BOTH systems: the ghost dot. Precision-first, with a real recall limit shown
+          on purpose.</aside>
       </section>
 
-      <!-- 6 — RESOLUTION + NUMBERS -->
+      <!-- 8 — FALSE MERGE (MILLER) → THE THREE-LAYER MODEL -->
       <section>
-        <span class="kicker">The linkage improvement</span>
-        <h2>Precision-first owner resolution</h2>
-        <h3>Probabilistic record linkage that refuses to fuse two different people</h3>
+        <span class="kicker">False merge → the three-layer fix</span>
+        <h2>One office is not one owner</h2>
+        <h3>Miller: Who Owns What reads <b>27 buildings as one owner</b> — really ~10, all self-filing from one
+          Lakewood office</h3>
         <hr class="rule">
-        <p class="lead">Replaces exact/rule matching with probabilistic linkage + precision guards: common-name veto ·
-          aggregator-office &amp; servicer-signer masks · co-op/condo exclusion</p>
-        <div class="num fragment"><span class="n">①</span><span class="t"><b>Precision ≈ 1.0</b> — 0 cross-surname
-            merges on a 105-record gold set → Croman's 107 LLC names resolve to one owner &nbsp; <span
-              class="cap">resolver quality</span></span></div>
-        <div class="num fragment"><span class="n">②</span><span class="t"><b>Divergence — <em>not</em> accuracy</b> — on
-            the <b>39,456 buildings both systems group</b>, they differ both ways: <b>~780</b> of our owner-groups unify
-            what WoW splits · <b>~620</b> WoW portfolios split across ours &nbsp; <span class="cap">scale of the
-              difference</span></span></div>
-        <div class="num fragment"><span class="n">③</span><span class="t"><b>The honest gap</b> — which differences are
-            improvements? A blind head-to-head on ~530 pairs is <b>built, not yet run</b> &nbsp; <span class="cap">the
-              ask →</span></span></div>
-        <span class="src">No "beats WoW" claim: precision is measured; the head-to-head is not. &nbsp; Reproduce ②:
-          <code>compare_kg --divergence</code></span>
-        <aside class="notes">(~60s) Three numbers at three confidence levels — being clear about which is which is the
-          whole ethos. ONE, precision: on a hand-labeled gold set, when it links two records as the same owner it's
-          essentially never wrong — zero cross-surname merges. Croman's 107 LLC names collapse to one. TWO — careful
-          here — is DIVERGENCE, not accuracy. On ~39,000 buildings where both make a call, they disagree both
-          directions: ~780 of my owner-groups pull together buildings WoW splits, ~620 WoW portfolios split across mine.
-          That's how far apart, and which way — NOT a claim about who's right; there's no ground truth in that number.
-          Which is THREE: deciding who's right needs a blind, adjudicated head-to-head. Built — ~530 pairs — but not
-          run. That's the honest gap, and the help I'll ask for at the end. CAVEATS if pushed: divergence≠accuracy;
-          co-op/condo are out of the universe so the splits aren't artifacts; both drivers of the split are real but
-          unjudged.</aside>
-      </section>
-
-      <!-- 7 — NOT EVERY PORTFOLIO IS OWNERSHIP -->
-      <section>
-        <span class="kicker">Credibility anchor #2</span>
-        <h2>Not every "portfolio" is ownership</h2>
-        <h3>Shared-address linkage answers <em>"who operates through this office"</em> — not <em>"who owns this"</em>
-        </h3>
-        <hr class="rule">
-        <p style="font-size:.82em">Linking landlords by shared business address is powerful — often it's the
-          <em>only</em> thread through a shell operation. But it can't tell an <strong>owner's</strong> office from a
-          <strong>managing agent's</strong>.
-        </p>
-        <div class="pull" style="font-size:.95em"><strong>138 different owners register from one office at 770 Lexington
-            Ave</strong> (453 buildings).<br>Read "same office" as "same owner" and you fuse them into one empire that
-          doesn't exist.</div>
-        <p style="font-size:.78em">Same trap: <strong>co-op &amp; condo boards</strong> — many unit owners, no single
-          landlord.</p>
-        <p style="font-size:.82em; color:var(--navy-2)">The fix isn't to throw away the address signal — it's to stop
-          asking it two questions at once. <strong>→ three layers</strong></p>
-        <span class="src">Source: raw HPD registrations, 770 Lexington Ave. Inherent to address-linkage — WoW uses the
-          signal deliberately and flags it on the site.</span>
-        <aside class="notes">(~50s) One design decision I want to explain. Linking landlords by shared business address
-          is powerful — often the only thread tying a shell operation together, and Who Owns What uses it deliberately
-          and to good effect. But a shared address can't tell you whether it's the OWNER's office or a MANAGING AGENT's.
-          Raw public record: 138 different owners register from one office at 770 Lexington — 453 buildings. Read "same
-          office" as "same owner" and those 138 collapse into an empire that doesn't exist. Co-op and condo boards do it
-          from the other direction. None of this is a discovery — it's inherent to address linkage, well understood. The
-          question is what you DO about it. Not throw away the signal — it's valuable — but stop making one signal
-          answer two questions.</aside>
-      </section>
-
-      <!-- 8 — THREE LAYERS -->
-      <section>
-        <span class="kicker">The architecture</span>
-        <h2>Three layers, not one</h2>
-        <h3>A single "portfolio" hides three different questions — so we ask them separately</h3>
-        <hr class="rule">
-        <table>
-          <thead>
-            <tr>
-              <th>The question</th>
-              <th>Layer</th>
-              <th>Signal</th>
-              <th>Reliability</th>
-              <th>Live scale</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Who <b>manages</b> it?</td>
-              <td>management</td>
-              <td>self-disclosed HPD agent</td>
-              <td><span class="tag s">mostly sourced</span></td>
-              <td>~28,500 managers · ~67,000 bldgs</td>
-            </tr>
-            <tr>
-              <td>What network does it <b>run through</b>?</td>
-              <td>operational nexus</td>
-              <td>shared office / agent / shell <em>(WoW's strength)</em></td>
-              <td><span class="tag i">inferred</span></td>
-              <td>~15,800 multi-building nexuses</td>
-            </tr>
-            <tr>
-              <td>Who actually <b>owns</b> it?</td>
-              <td>owner identity</td>
-              <td>precision-first record linkage</td>
-              <td><span class="tag i">inferred</span></td>
-              <td>~6,500 owner-groups</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="pull" style="font-size:.85em">770 Lexington's 138 owners share an <strong>operational nexus</strong>
-          — real and useful. They are <strong>not one owner.</strong> Separate layers keep the signal <em>without</em>
-          the false empire.</div>
-        <span class="src">Owner-identity is inferred (Type II); its accuracy vs. WoW is not yet adjudicated → the blind
-          eval (slide 11).</span>
-        <aside class="notes">(~55s) The architectural idea. Collapse everything into one "portfolio" and you're
-          answering three different questions at once — with different answers and different reliability. Who MANAGES is
-          mostly self-disclosed — close to a sourced fact. What operational NETWORK it runs through — WoW's real
-          strength, an inference, deliberately recall-biased. Who OWNS it — a third question, answered precision-first
-          and separately. Back to 770 Lexington: those 138 owners genuinely share an operational nexus — true and
-          useful, we keep it. But they're NOT one owner, and now nothing in the system says they are, because "shares an
-          office" and "same owner" live in different layers. You don't trade recall for precision — you keep both,
-          labeled. Honest note: the owner-identity layer runs — ~6,500 groups — but whether it's MORE ACCURATE than WoW
-          where they disagree is what I haven't adjudicated yet.</aside>
+        <div style="display:flex;gap:1em;align-items:stretch;margin-top:.25em">
+          <figure style="flex:1.05;margin:0">
+            <div
+              style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:220px;display:flex;align-items:center;justify-content:center">
+              <img src="miller-map.png"
+                alt="Who Owns What portfolio #183 — 27 buildings across the Bronx, Brooklyn and Queens, recolored by WatchlineNYC's seven owner groups"
+                style="display:block;max-width:100%;max-height:42vh;margin:0 auto;object-fit:contain"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              <div style="display:none;padding:1.2em;text-align:center;color:var(--faint);font-size:.8em">▸
+                <code>docs/meetup/miller-map.png</code>
+              </div>
+            </div>
+            <figcaption style="font-size:.72em;color:var(--muted);margin-top:.35em">WoW #183, recolored by owner —
+              the “one owner” is <b>7</b>, across three boroughs. False glue: 235 River Ave, Lakewood NJ.</figcaption>
+          </figure>
+          <!-- the three layers, introduced through Miller -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:.4em;font-size:.75em">
+            <div style="border-left:4px solid #40597c;padding:.25em .6em;background:#f6f8fb;border-radius:4px">
+              <b>Management</b> — who <em>manages</em> it? <span class="tag s">sourced</span><br>
+              <span style="color:var(--muted)">self-disclosed HPD agent · ~28,500 managers</span>
+            </div>
+            <div style="border-left:4px solid #c1901f;padding:.25em .6em;background:#fdf6e6;border-radius:4px">
+              <b>Operational nexus</b> — what does it <em>run through</em>? <span class="tag i">inferred</span><br>
+              <span style="color:var(--muted)">shared office / agent (WoW's strength) · ~15,800 nexuses</span><br>
+              <b style="color:#a6790f">← Miller's Lakewood office lives here</b> — one nexus, real and useful
+            </div>
+            <div style="border-left:4px solid #1c7c54;padding:.25em .6em;background:#e7f4ee;border-radius:4px">
+              <b>Owner identity</b> — who actually <em>owns</em> it? <span class="tag i">inferred</span><br>
+              <span style="color:var(--muted)">precision-first linkage; <b>ignores aggregator addresses</b> · ~6,500
+                groups</span><br>
+              <b style="color:#1c7c54">→ Miller resolves to 7 owners</b>
+            </div>
+          </div>
+        </div>
+        <div class="pull" style="font-size:.8em">The shared office is a <b>real operational nexus</b> — keep it. It is
+          <b>not ownership.</b> Don't ask one signal two questions: <em>read ownership from the identity layer, which
+            never merges on a shared address.</em>
+        </div>
+        <span class="src">WoW portfolio #183 · recolored by <code>IN_OWNER_GROUP</code>. Owner identity ignores
+          <code>CONNECTED_BY_ADDRESS</code> — merges only on <code>SPLINK ∪ DEED</code>. See
+          <code>specs/case-miller.md</code>.</span>
+        <aside class="notes">(~55s) Now the other failure — the false merge — and it's the answer to the obvious
+          challenge, "doesn't your system just merge everything into big portfolios?" No — here it does the opposite.
+          This is Who Owns What's portfolio #183: 27 buildings it labels as one owner, Nathan Obstfeld. Recolor them by
+          who actually owns them and it's seven different owners across three boroughs. What glues them in WoW is a
+          single shared office in Lakewood, New Jersey — and I checked, it's not a registered agent, just an address
+          about ten small landlords self-file from. So how do we keep the useful signal without the false empire? We
+          stop collapsing everything into one "portfolio," because a portfolio is really THREE questions. Who MANAGES —
+          self-disclosed, near-sourced. What operational NEXUS it runs through — that's where the shared Lakewood office
+          belongs, WoW's real strength, an inference we keep. And who OWNS it — a separate, precision-first layer that
+          never merges on a shared address, so Miller resolves to seven. Same office and same owner live in DIFFERENT
+          layers. And to be honest, the identity layer isn't magic — it left one owner, Obtfeld, split off on a
+          one-letter typo. Precision-first, and it diverges from WoW both ways.</aside>
       </section>
 
       <!-- 8b — THREE LAYERS, A WORKED EXAMPLE (VERUS) -->
@@ -758,68 +1000,96 @@
         <h2>The three layers on one cluster</h2>
         <h3>One manager, five buildings, three owners — the identity layer <em>abstains</em></h3>
         <hr class="rule">
-        <svg viewBox="0 74 960 492" style="width:100%;max-width:1000px;height:auto;display:block;margin:.2em auto 0" xmlns="http://www.w3.org/2000/svg">
-          <rect x="0" y="74" width="960" height="492" fill="#ffffff"/>
-          <rect x="678" y="80" width="262" height="120" rx="8" fill="#ffffff" stroke="#d8dee7"/>
+        <svg viewBox="0 74 960 492" style="display:block;margin:.2em auto 0;max-width:100%;max-height:48vh;height:auto"
+          xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="74" width="960" height="492" fill="#ffffff" />
+          <rect x="678" y="80" width="262" height="120" rx="8" fill="#ffffff" stroke="#d8dee7" />
           <text x="690" y="99" font-size="11.5" font-weight="700" fill="#12243f">Edges by layer</text>
-          <line x1="690" y1="117" x2="716" y2="117" stroke="#c8971c" stroke-width="3"/>
+          <line x1="690" y1="117" x2="716" y2="117" stroke="#c8971c" stroke-width="3" />
           <text x="722" y="121" font-size="10.5" fill="#1b2430">MANAGED_BY — management (sourced)</text>
-          <line x1="690" y1="139" x2="716" y2="139" stroke="#b26a00" stroke-width="2.5" stroke-dasharray="5 3"/>
+          <line x1="690" y1="139" x2="716" y2="139" stroke="#b26a00" stroke-width="2.5" stroke-dasharray="5 3" />
           <text x="722" y="143" font-size="10.5" fill="#1b2430">APPARENT_CONTROL — control (inferred)</text>
-          <line x1="690" y1="161" x2="716" y2="161" stroke="#1f6fb0" stroke-width="2.5" stroke-dasharray="5 3"/>
+          <line x1="690" y1="161" x2="716" y2="161" stroke="#1f6fb0" stroke-width="2.5" stroke-dasharray="5 3" />
           <text x="722" y="165" font-size="10.5" fill="#1b2430">CONNECTED_BY_ADDRESS — shared office</text>
-          <line x1="690" y1="183" x2="716" y2="183" stroke="#aab3c2" stroke-width="2.5" stroke-dasharray="2 3"/>
+          <line x1="690" y1="183" x2="716" y2="183" stroke="#aab3c2" stroke-width="2.5" stroke-dasharray="2 3" />
           <text x="722" y="187" font-size="10.5" fill="#1b2430">IN_OWNER_GROUP — identity (absent)</text>
-          <rect x="52"  y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
-          <rect x="388" y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
-          <rect x="724" y="192" width="150" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee"/>
+          <rect x="52" y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee" />
+          <rect x="388" y="192" width="268" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee" />
+          <rect x="724" y="192" width="150" height="214" rx="14" fill="#f0f3f8" stroke="#e2e6ee" />
           <text x="186" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-67385</text>
           <text x="522" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-11</text>
           <text x="799" y="399" font-size="10.5" fill="#8290a3" text-anchor="middle">Portfolio PF-…-73027</text>
           <g stroke="#c8971c" stroke-width="2" opacity="0.5" fill="none">
-            <path d="M480,146 L126,298"/><path d="M480,146 L250,298"/><path d="M480,146 L462,298"/><path d="M480,146 L586,298"/><path d="M480,146 L799,298"/>
+            <path d="M480,146 L126,298" />
+            <path d="M480,146 L250,298" />
+            <path d="M480,146 L462,298" />
+            <path d="M480,146 L586,298" />
+            <path d="M480,146 L799,298" />
           </g>
           <g stroke="#b26a00" stroke-width="2" stroke-dasharray="5 3" fill="none">
-            <path d="M188,250 L126,298"/><path d="M188,250 L250,298"/><path d="M524,250 L462,298"/><path d="M524,250 L586,298"/><path d="M799,250 L799,298"/>
+            <path d="M188,250 L126,298" />
+            <path d="M188,250 L250,298" />
+            <path d="M524,250 L462,298" />
+            <path d="M524,250 L586,298" />
+            <path d="M799,250 L799,298" />
           </g>
           <g stroke="#1f6fb0" stroke-width="2" stroke-dasharray="5 3" fill="none">
-            <path d="M126,344 Q188,378 250,344"/><path d="M462,344 Q524,378 586,344"/>
+            <path d="M126,344 Q188,378 250,344" />
+            <path d="M462,344 Q524,378 586,344" />
           </g>
           <text x="188" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 33 W 60th St</text>
-          <text x="524" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 240 Riverside CU2</text>
-          <rect x="366" y="98" width="228" height="50" rx="10" fill="#0a1629"/>
-          <text x="480" y="119" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">VERUS REAL ESTATE</text>
-          <text x="480" y="136" font-size="10" fill="#c8971c" text-anchor="middle">managing agent (Anya Levitov) · MANAGED_BY</text>
+          <text x="524" y="374" font-size="9" fill="#1f6fb0" text-anchor="middle">shared office · 240 Riverside
+            CU2</text>
+          <rect x="366" y="98" width="228" height="50" rx="10" fill="#0a1629" />
+          <text x="480" y="119" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">VERUS REAL
+            ESTATE</text>
+          <text x="480" y="136" font-size="10" fill="#c8971c" text-anchor="middle">managing agent (Anya Levitov) ·
+            MANAGED_BY</text>
           <g>
-            <rect x="113" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
-            <text x="188" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Michael Schwarz</text>
+            <rect x="113" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c" />
+            <text x="188" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Michael
+              Schwarz</text>
             <text x="188" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
-            <rect x="449" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
-            <text x="524" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Dmitry Sokolov</text>
+            <rect x="449" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c" />
+            <text x="524" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Dmitry
+              Sokolov</text>
             <text x="524" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
-            <rect x="724" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c"/>
-            <text x="799" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Oleg Evdokimenko</text>
+            <rect x="724" y="210" width="150" height="40" rx="8" fill="#fbeede" stroke="#c8971c" />
+            <text x="799" y="228" font-size="12" font-weight="600" fill="#7a4a00" text-anchor="middle">Oleg
+              Evdokimenko</text>
             <text x="799" y="242" font-size="9" fill="#a06a1f" text-anchor="middle">apparent controller</text>
           </g>
           <g font-size="11.5" font-weight="600" fill="#12243f" text-anchor="middle">
-            <rect x="70"  y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
-            <text x="126" y="320">349 W 53 St</text><text x="126" y="335" font-size="9" font-weight="400" fill="#8290a3">Manhattan</text>
-            <rect x="194" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
-            <text x="250" y="320">418 MacDonough</text><text x="250" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
-            <rect x="406" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
-            <text x="462" y="320">1239 Putnam Ave</text><text x="462" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
-            <rect x="530" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
-            <text x="586" y="320">1111 Jefferson</text><text x="586" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
-            <rect x="743" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f"/>
-            <text x="799" y="320">124 South 2 St</text><text x="799" y="335" font-size="9" font-weight="400" fill="#8290a3">Brooklyn</text>
+            <rect x="70" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f" />
+            <text x="126" y="320">349 W 53 St</text><text x="126" y="335" font-size="9" font-weight="400"
+              fill="#8290a3">Manhattan</text>
+            <rect x="194" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f" />
+            <text x="250" y="320">418 MacDonough</text><text x="250" y="335" font-size="9" font-weight="400"
+              fill="#8290a3">Brooklyn</text>
+            <rect x="406" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f" />
+            <text x="462" y="320">1239 Putnam Ave</text><text x="462" y="335" font-size="9" font-weight="400"
+              fill="#8290a3">Brooklyn</text>
+            <rect x="530" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f" />
+            <text x="586" y="320">1111 Jefferson</text><text x="586" y="335" font-size="9" font-weight="400"
+              fill="#8290a3">Brooklyn</text>
+            <rect x="743" y="298" width="112" height="46" rx="8" fill="#ffffff" stroke="#12243f" />
+            <text x="799" y="320">124 South 2 St</text><text x="799" y="335" font-size="9" font-weight="400"
+              fill="#8290a3">Brooklyn</text>
           </g>
-          <rect x="230" y="424" width="500" height="34" rx="8" fill="#f2f3f6" stroke="#c7cdd8" stroke-dasharray="4 3"/>
-          <text x="480" y="446" font-size="11.5" fill="#8290a3" text-anchor="middle">⊘  IN_OWNER_GROUP — no owner group spans the five · the identity layer abstains</text>
-          <rect x="40" y="486" width="880" height="74" rx="10" fill="#0a1629"/>
-          <text x="60" y="516" font-size="16" font-weight="700" fill="#ffffff">Management connects all five buildings. Owner-identity connects none.</text>
-          <text x="60" y="540" font-size="12.5" fill="#c7d2e2">Three separate owners behind one managing agent — the graph refuses to let “same manager” become “same owner.”</text>
+          <rect x="230" y="424" width="500" height="34" rx="8" fill="#f2f3f6" stroke="#c7cdd8" stroke-dasharray="4 3" />
+          <text x="480" y="446" font-size="11.5" fill="#8290a3" text-anchor="middle">⊘ IN_OWNER_GROUP — no owner group
+            spans the five · the identity layer abstains</text>
+          <rect x="40" y="486" width="880" height="74" rx="10" fill="#0a1629" />
+          <text x="60" y="516" font-size="16" font-weight="700" fill="#ffffff">Management connects all five buildings.
+            Owner-identity connects none.</text>
+          <text x="60" y="540" font-size="12.5" fill="#c7d2e2">Three separate owners behind one managing agent — the
+            graph refuses to let “same manager” become “same owner.”</text>
         </svg>
-        <span class="src">Every edge verified against the live graph · ownership / control are inferred (Type II) — leads, not verdicts.</span>
+        <div class="pull" style="font-size:.78em">Same algorithm as WoW — <b>connected components</b> — just different
+          edges: operational nexus = <code>NAME ∪ ADDRESS ∪ SPLINK</code>; owner identity = <code>SPLINK ∪ DEED</code>.
+        </div>
+        <span class="src">Every edge verified against the live graph · ownership / control are inferred (Type II) —
+          leads, not verdicts.</span>
         <aside class="notes">(~45s) The table on the last slide, made concrete. Five buildings, all managed by
           Verus Real Estate — that gold star is the management layer, and it's the ONE thing common to all five.
           Underneath, the owners file from two different offices — 33 West 60th and 240 Riverside — so the operational
@@ -830,57 +1100,107 @@
           on purpose.</aside>
       </section>
 
+      <!-- 11 — LEADS NOT VERDICTS / THE ASK -->
+      <section>
+        <span class="kicker">The close</span>
+        <h2>Leads, not verdicts — and what's next</h2>
+        <h3>Inference to point an investigator at a question — never a determination about a person</h3>
+        <hr class="rule">
+        <div
+          style="text-align:center;font-size:.8em;background:#f6f8fb;border:1px solid var(--line);border-radius:6px;padding:.4em .7em;margin:.1em 0 .55em">
+          On the <b>~39,500 buildings both systems group</b>, we differ <b>both ways</b> — <b>~780</b> of our
+          owner-groups
+          unify what WoW splits · <b>~620</b> WoW portfolios split across ours. <span style="color:var(--muted)">Which
+            of
+            those are improvements? <b style="color:var(--navy)">The blind eval decides — and it isn't run.</b></span>
+        </div>
+        <div class="cards">
+          <div class="card" style="border-top:5px solid var(--navy)">
+            <div class="cl" style="color:var(--navy)">Honestly not done yet</div>
+            <ul class="tight" style="margin-top:.2em">
+              <li>The blind <b>accuracy</b> eval is <b>built, not run</b> — ~530 pairs need adjudication.</li>
+              <li>Validated for <b>precision</b>, not yet <b>recall / who's-right-vs-WoW</b>.</li>
+              <li>A <b>sabbatical prototype</b>, not a shared service.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top:5px solid var(--gold)">
+            <div class="cl" style="color:var(--gold)">What I'm asking this room</div>
+            <ul class="tight" style="margin-top:.2em">
+              <li><b>Help run the ~530-pair blind eval</b> — ground-truth portfolios, adjudication time, or a
+                co-adjudicator.</li>
+              <li>Some of this may belong <b>upstream in Who Owns What</b>.</li>
+              <li><b>Feedback on the three-layer model</b> — and the edge sets behind it.</li>
+            </ul>
+          </div>
+        </div>
+        <p style="text-align:center; color:var(--navy); font-weight:750; font-size:1.05em; margin-top:.5em">Thank you —
+          and I'd love to talk. &nbsp;<span style="color:var(--gold)">(Q&amp;A)</span></p>
+        <aside class="notes">(~55s) Let me close where I started. Everything you've seen produces LEADS, not verdicts —
+          a pointer to a question a human should investigate, never a claim that a named person owns something. In the
+          demo you'll see it refuse to cross that line; that refusal is the most important feature in the system.
+          And let me be straight about what I HAVEN'T done — the resolver is precise on a labeled set, and it diverges
+          from Who Owns What at scale, both ways: roughly 780 of our owner-groups unify buildings WoW splits, and about
+          620 WoW portfolios split across ours. But that's DIVERGENCE, not accuracy — I have NOT run the blind,
+          adjudicated head-to-head that tells you who's right where we disagree. It's built; it needs ground truth and
+          hands. This isn't a service you can use
+          yet. So the reason I'm really here: I'd love your help — ground-truth data, adjudication time. Some of this
+          probably belongs back in Who Owns What. And I'd value your read on the three-layer idea. I'm new to this
+          world, the tool is the contribution, and I'm hoping to build the next part WITH people in this room. Thank
+          you.</aside>
+      </section>
+
       <!-- 9 — CONVERSATIONAL BY DESIGN -->
       <section>
-        <span class="kicker">Setting up the demo</span>
+        <span class="kicker">Appendix · the live agent</span>
         <h2>Conversational — by design, not free-form</h2>
         <h3>The agent <em>orchestrates queries</em>; it doesn't reason about people</h3>
         <hr class="rule">
-        <p class="lead">Four guarantees, enforced in code — not asked of the model:</p>
+        <p class="lead">Guarantees enforced in code — not asked of the model:</p>
         <ul class="tight">
-          <li><strong>Asks the graph, doesn't answer from itself</strong> — plain English → parameterized,
-            <em>read-only</em> queries. Writes/admin refused, even for the deep tier.
+          <li><strong>Asks the graph, never answers from itself</strong> — plain English → parameterized,
+            <em>read-only</em> queries; it reports <em>only what a query returned</em>, every inferred element carrying
+            its caveat.
           </li>
-          <li><strong>Reports only what a query returned</strong> — no free-form claims; every inferred element carries
-            its caveat, automatically.</li>
           <li><strong>"Who owns this?" returns both</strong> — recorded owner <em>and</em> apparent controller, labeled
-            — and flags disagreement.</li>
-          <li><strong>Capability is gated structurally</strong> — deep investigation only for <em>vetted</em> users;
-            persona sets tone, never access; fail-closed.</li>
+            — and flags when they disagree.</li>
+          <li><strong>Read-only, access-gated</strong> — writes/admin refused; deep investigation only for
+            <em>vetted</em> users (fail-closed).
+          </li>
         </ul>
-        <div class="pull" style="font-size:.82em">The answer to the thesis: you can't manufacture false certainty about
-          a person if you only ever report what a <em>sourced, labeled query</em> returned.</div>
-        <span class="src">Gating lives in the tool-visibility layer, not a prompt — because the records themselves (raw
-          violation text, ACRIS JSON) are a prompt-injection surface.</span>
-        <aside class="notes">(~55s) Before I show you this live, I want to be precise about what it is and isn't. The
-          agent is an ORCHESTRATOR, not a reasoner. It turns your plain-English question into a parameterized, read-only
-          query — it does not free-associate an answer. It can only READ; writes and admin are refused at a guard, even
-          for the deep mode. It reports only what a query returned, with caveats attached. And gating is structural:
-          deep investigation only for vetted users — a self-declared "journalist" doesn't get it; persona only shapes
-          tone. Crucially, that's enforced in the code that decides which tools the model can even SEE — not by
-          instructing the model in a prompt — because the records contain free text, a place an adversary could smuggle
-          instructions. You don't defend that with a polite system prompt. Orchestrator, not reasoner. Now let me show
-          you.</aside>
+        <div class="pull" style="font-size:.84em">You can't manufacture false certainty about a person if you only ever
+          report what a <em>sourced, labeled query</em> returned.</div>
+        <span class="src">Enforced in the tool-visibility layer, not a prompt — the records themselves (violation text,
+          ACRIS JSON) are a prompt-injection surface.</span>
+        <aside class="notes">(~35s) If we go to the live tool — a note on what the agent is first. It's an ORCHESTRATOR,
+          not a reasoner. It
+          turns your question into a parameterized, read-only query — it doesn't free-associate an answer, and it
+          reports
+          only what the query returned, caveats attached. "Who owns this?" always returns both the recorded owner and
+          the
+          apparent controller, labeled. And it's read-only with gated access — enforced in the code that decides which
+          tools the model can even see, not in a prompt, because these records are full of free text an adversary could
+          hide instructions in. Orchestrator, not reasoner.</aside>
       </section>
 
       <!-- 10 — LIVE DEMO -->
       <section>
-        <span class="kicker">Live demo · pinned to a public landlord</span>
+        <span class="kicker">Appendix · live demo · pinned to a public landlord</span>
         <h2>Ask it about Steven Croman</h2>
         <h3>Watch it label every layer — sourced vs inferred — and refuse to overclaim</h3>
         <hr class="rule">
         <div class="demo-q">
-          <div class="q">① "Who owns 17 Gay Street?" <span class="conf">→ slides 5·6·8</span></div>
+          <div class="q">① "Who owns 17 Gay Street?" <span class="conf">→ the three layers</span></div>
           <div class="a">Three labeled layers, one answer: <b>17 GAY LLC</b> (sourced) · <b>Steven Croman</b> (inferred)
             · <b>unified owner — 12 fragments, 127 buildings</b> (inferred, a lead not title).</div>
         </div>
         <div class="demo-q">
-          <div class="q">② "And who manages it — same as who owns it?" <span class="conf">→ slides 7·8</span></div>
+          <div class="q">② "And who manages it — same as who owns it?" <span class="conf">→ manager ≠ owner</span></div>
           <div class="a"><b>Centennial Properties NY (114 buildings)</b> — "a manager is not an owner." Management ≠
             ownership.</div>
         </div>
         <div class="demo-q">
-          <div class="q">③ "So can I report he legally owns all 127?" <span class="conf">→ slides 3·9</span></div>
+          <div class="q">③ "So can I report he legally owns all 127?" <span class="conf">→ leads, not verdicts</span>
+          </div>
           <div class="a"><b>It declines</b> — "not a legal determination… only a title search or court finding could
             support that." Leads, not verdicts.</div>
         </div>
@@ -895,230 +1215,6 @@
           Croman; if anything about a private individual surfaces, don't dwell — steer back.</aside>
       </section>
 
-      <!-- 10b — THE PAYOFF, MAPPED (Croman) -->
-      <section>
-        <span class="kicker">The payoff · mapped</span>
-        <h2>Croman — 127 buildings, one owner</h2>
-        <img src="croman-map.png"
-          alt="Map of Steven Croman's 127 buildings across Manhattan, resolved by WatchlineNYC into one owner; Who Owns What splits them across six portfolios on address typos"
-          style="display:block;margin:.2em auto;height:395px;width:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;">
-        <div class="pull" style="font-size:.78em;margin-top:.4em"><strong>WatchlineNYC unifies all 127
-          into one owner.</strong> Who Owns What splits 9 of them off into 5 fragments on <strong>address
-          typos</strong> — <code>4 WEST 51</code> vs <code>424 WEST 51</code>. That one-character typo is the
-          whole shell game, in a legend.</div>
-        <span class="src">WatchlineNYC owner group OG-105462 · dots colored by Who Owns What portfolio · the
-          live map toggles between the two. See <code>specs/case-escobar.md</code> for the same story on one block.</span>
-        <aside class="notes">This is the demo's payoff as a picture. 127 buildings across Manhattan — Lower
-          East Side, East Village, Upper West and East Sides — all one owner in WatchlineNYC. Who Owns What
-          mostly agrees: 118 of them sit in one portfolio. But look at the legend — it splits nine buildings
-          off into five separate "portfolios," and the reason is right there: one is filed from "4 West 51
-          Street," another from "424 West 51 Street." Same office, one missing digit, and the record fractures
-          the owner. That typo is exactly the kind of thing address-matching can't bridge and name-anchored
-          resolution can. It's a modest gap for Croman — WoW gets most of him — which is the honest point: the
-          dramatic divergence is the OTHER direction, where WoW over-merges (the Miller backup). Here it's a
-          clean, small win, and a good picture of what "de-fragmenting an owner" actually means.</aside>
-      </section>
-
-      <!-- 11 — LEADS NOT VERDICTS / THE ASK -->
-      <section>
-        <span class="kicker">The close</span>
-        <h2>Leads, not verdicts — and what's next</h2>
-        <h3>Inference to point an investigator at a question — never a determination about a person</h3>
-        <hr class="rule">
-        <div class="cards">
-          <div class="card" style="border-top:5px solid var(--navy)">
-            <div class="cl" style="color:var(--navy)">Honestly not done yet</div>
-            <ul class="tight" style="margin-top:.2em">
-              <li>The blind <b>accuracy</b> eval is <b>built, not run</b> — ~530 pairs need adjudication.</li>
-              <li>Validated for <b>precision</b>, not yet <b>recall / who's-right-vs-WoW</b>.</li>
-              <li>A <b>sabbatical prototype</b>, not a shared service.</li>
-            </ul>
-          </div>
-          <div class="card" style="border-top:5px solid var(--gold)">
-            <div class="cl" style="color:var(--gold)">What I'm asking this room</div>
-            <ul class="tight" style="margin-top:.2em">
-              <li><b>Help run the blind eval</b> — ground-truth data, adjudication time, or methodology.</li>
-              <li>Some of this may belong <b>upstream in Who Owns What</b>.</li>
-              <li><b>Feedback on the three-layer model.</b></li>
-            </ul>
-          </div>
-        </div>
-        <p style="text-align:center; color:var(--navy); font-weight:750; font-size:1.05em; margin-top:.5em">Thank you —
-          and I'd love to talk. &nbsp;<span style="color:var(--gold)">(Q&amp;A)</span></p>
-        <aside class="notes">(~55s) Let me close where I started. Everything you've seen produces LEADS, not verdicts —
-          a pointer to a question a human should investigate, never a claim that a named person owns something. You
-          watched it refuse to cross that line a minute ago; that refusal is the most important feature in the system.
-          And let me be straight about what I HAVEN'T done — the resolver is precise on a labeled set, and it groups
-          differently from Who Owns What at scale, but I have NOT run the blind, adjudicated head-to-head that tells you
-          who's right where we disagree. It's built; it needs ground truth and hands. This isn't a service you can use
-          yet. So the reason I'm really here: I'd love your help — ground-truth data, adjudication time. Some of this
-          probably belongs back in Who Owns What. And I'd value your read on the three-layer idea. I'm new to this
-          world, the tool is the contribution, and I'm hoping to build the next part WITH people in this room. Thank
-          you.</aside>
-      </section>
-
-      <!-- BACKUP — Miller map (divergence runs both ways) -->
-      <section>
-        <span class="kicker">Backup · divergence runs both ways</span>
-        <h2>One WoW portfolio → seven owners <span
-            style="color:var(--muted);font-weight:400;font-size:.55em">Abraham Miller</span></h2>
-        <img src="miller-map.png"
-          alt="Map of WoW portfolio 183 — 27 buildings across the Bronx, Brooklyn and Queens, colored by WatchlineNYC's seven owner groups, with two singletons flagged unmerged"
-          style="display:block;margin:.2em auto;height:395px;width:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;">
-        <div class="pull" style="font-size:.78em;margin-top:.4em">Who Owns What calls these <strong>27
-          buildings one owner</strong>; they're <strong>~10 owners sharing one Lakewood office</strong> (not a
-          registered agent). WatchlineNYC resolves <strong>7</strong> — fixing typos, honestly missing one
-          (OBTFELD). <strong>The answer to <em>"doesn't it just merge everything?"</em> — here it does the
-          opposite.</strong></div>
-        <span class="src">WoW portfolio #183 · colored by WatchlineNYC <code>IN_OWNER_GROUP</code> · false glue:
-          235 River Ave, Lakewood NJ. See <code>specs/case-miller.md</code>.</span>
-        <aside class="notes">This is my backup for the obvious challenge — "doesn't your system just merge
-          everything into big portfolios?" No. This is Who Owns What's portfolio #183: 27 buildings it labels as
-          one owner, Nathan Obstfeld. Watchline colors those same buildings by who actually owns them — seven
-          different owners across three boroughs. What ties them together in WoW is a single shared office in
-          Lakewood, New Jersey — and I checked, it's not a registered agent, just a shared address ~10 small
-          landlords self-file from. Watchline splits them correctly, fixes the misspellings (Abraham vs Abaraham
-          Miller), and — to be honest — misses one: it left Nathan OBTFELD, a one-letter typo of OBSTFELD, as its
-          own dot. I show you the miss on purpose: this is precision-first resolution, not magic, and it diverges
-          from WoW in both directions.</aside>
-      </section>
-
-      <!-- BACKUP — Escobar address-variant fragmentation (WoW under-merge) -->
-      <section>
-        <span class="kicker">Backup · why exact-key matching fragments one owner</span>
-        <h2>One office, a dozen keys <span
-            style="color:var(--muted);font-weight:400;font-size:.46em">Ramon Escobar · 2432 Grand Concourse #504</span></h2>
-        <hr class="rule">
-        <p style="font-size:.84em">Every string below is the <em>same</em> Bronx office as filed in HPD. Who Owns What
-          links landlords only on an <strong>exact</strong> match — same street <em>and</em> same ZIP — so each variant is
-          its own node, splitting the portfolio.</p>
-        <div class="masks">
-          <div class="chip">2432 GRAND CONCOURSE 504</div>
-          <div class="chip">2432 GRAND CONCOURS 504</div>
-          <div class="chip">2432 GRAND <b>COURSE</b> 504</div>
-          <div class="chip">2432 GRAND COCNOURSE 504</div>
-          <div class="chip">2432 GRAND CONCOURSE</div>
-          <div class="chip">105 SHERMAN AVE</div>
-          <div class="chip">(blank)</div>
-          <div class="chip">+ 4 city spellings · 3 ZIPs</div>
-        </div>
-        <div class="pull" style="font-size:.9em"><strong>The real killer isn't the typo.</strong> WoW demands an
-          <strong>exact ZIP</strong> on every link, and two of these buildings standardized to a <em>blank</em> ZIP — so
-          even the perfectly-spelled <code>GRAND CONCOURSE</code> is exiled. <strong>WoW splits 24 + 2; Watchline reunites
-          all 26</strong> — keying on resolved identity and the name-free deed, never the raw string.</div>
-        <span class="src">Source: raw HPD + WoW <code>wow_landlords</code>. Miller was WoW <em>over</em>-merging on a
-          shared office; this is the opposite — WoW <em>under</em>-merging on brittle exact-key matching.</span>
-        <aside class="notes">(~40s backup) Miller was Who Owns What OVER-merging — ten owners fused on a shared office.
-          Here's the opposite failure, under-merging. Ramon Escobar runs 26 Bronx buildings from one office, 2432 Grand
-          Concourse suite 504. But look how HPD records that single address — GRAND CONCOURSE, then GRAND COURSE with the
-          CON dropped, GRAND COCNOURSE transposed, the suite number dropped, a stray Sherman Avenue, a blank row — and
-          even the correct spelling arrives in three ZIPs and four cities. Who Owns What links on the exact
-          business-address string, so each of these is a different node, and Escobar's portfolio shatters into 24 plus 2.
-          Watchline reunites all 26 because it never trusts the string: it resolves identity by name-matching and the
-          name-free deed. And the sharpest version of the point: Who Owns What requires an EXACT ZIP match on every
-          link — and the two split-off buildings standardized to a BLANK ZIP. So it's not even the typo that does the
-          splitting: one of the two is spelled perfectly, GRAND CONCOURSE, same suite — but with no ZIP it can't attach
-          to the 24-building node, because a blank never equals 10458. A missing key meeting a brittle exact-key rule.
-          That's why the resolution layer, which keys on identity and never touches the ZIP field, earns its place.</aside>
-      </section>
-
-      <!-- BACKUP — Escobar WCC before/after (identity edges merge WoW's split) -->
-      <section>
-        <span class="kicker">Backup · the same split, in the graph</span>
-        <h2>The edges that merge what WoW splits</h2>
-        <hr class="rule">
-        <svg viewBox="0 0 960 440" style="width:100%;max-width:1000px;height:auto;display:block;margin:.25em auto 0" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
-          <rect x="0" y="0" width="960" height="440" fill="#ffffff"/>
-          <line x1="490" y1="46" x2="490" y2="330" stroke="#e2e6ee" stroke-width="1.5"/>
-          <text x="490" y="212" font-size="30" fill="#c8971c" text-anchor="middle" font-weight="700">→</text>
-
-          <!-- PANEL A: WoW edges only -->
-          <text x="240" y="28" font-size="13" font-weight="700" fill="#0a1629" text-anchor="middle">① Who Owns What's edges only</text>
-          <text x="240" y="60" font-size="9.5" fill="#8290a3" text-anchor="middle" letter-spacing="0.06em">WOW PORTFOLIO · 24 BUILDINGS</text>
-          <rect x="150" y="68" width="180" height="66" rx="13" fill="none" stroke="#9aa6b6" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <rect x="162" y="79" width="156" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="240" y="98" font-size="12.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="240" y="113" font-size="9" fill="#5c6b80" text-anchor="middle">ZIP 10458 · 24 buildings</text>
-          <text x="240" y="226" font-size="9.5" fill="#8290a3" text-anchor="middle" letter-spacing="0.06em">WOW PORTFOLIO · 2 BUILDINGS</text>
-          <rect x="64" y="234" width="352" height="80" rx="13" fill="none" stroke="#9aa6b6" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <line x1="230" y1="273" x2="250" y2="273" stroke="#1f6fb0" stroke-width="2.5"/>
-          <rect x="80" y="251" width="150" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="155" y="269" font-size="11.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="155" y="283" font-size="8.5" fill="#5c6b80" text-anchor="middle">blank ZIP · 1 bldg</text>
-          <rect x="250" y="251" width="150" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="325" y="266" font-size="11.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="325" y="278" font-size="8.5" fill="#5c6b80" text-anchor="middle">blank ZIP · 1 bldg</text>
-          <text x="325" y="289" font-size="8" fill="#b26a00" text-anchor="middle">"GRAND COURSE" typo</text>
-          <text x="240" y="344" font-size="13" font-weight="700" fill="#0a1629" text-anchor="middle">2 portfolios (24 + 2)</text>
-
-          <!-- PANEL B: + identity edges -->
-          <text x="730" y="28" font-size="13" font-weight="700" fill="#0a1629" text-anchor="middle">② + identity edges (Splink · deed)</text>
-          <text x="730" y="60" font-size="9.5" fill="#8290a3" text-anchor="middle" letter-spacing="0.06em">WATCHLINE OWNER GROUP OG-93013 · 26</text>
-          <rect x="556" y="68" width="348" height="246" rx="14" fill="none" stroke="#9aa6b6" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <line x1="705" y1="123" x2="662" y2="251" stroke="#c8971c" stroke-width="3"/>
-          <line x1="755" y1="123" x2="798" y2="251" stroke="#c8971c" stroke-width="3"/>
-          <line x1="720" y1="273" x2="740" y2="273" stroke="#1f6fb0" stroke-width="2.5" opacity="0.5"/>
-          <rect x="652" y="79" width="156" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="730" y="98" font-size="12.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="730" y="113" font-size="9" fill="#5c6b80" text-anchor="middle">ZIP 10458 · 24 buildings</text>
-          <rect x="570" y="251" width="150" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="645" y="269" font-size="11.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="645" y="283" font-size="8.5" fill="#5c6b80" text-anchor="middle">blank ZIP · 1 bldg</text>
-          <rect x="740" y="251" width="150" height="44" rx="9" fill="#ffffff" stroke="#12243f" stroke-width="1.5"/>
-          <text x="815" y="266" font-size="11.5" font-weight="700" fill="#12243f" text-anchor="middle">RAMON ESCOBAR</text>
-          <text x="815" y="278" font-size="8.5" fill="#5c6b80" text-anchor="middle">blank ZIP · 1 bldg</text>
-          <text x="815" y="289" font-size="8" fill="#b26a00" text-anchor="middle">"GRAND COURSE" typo</text>
-          <text x="730" y="344" font-size="13" font-weight="700" fill="#0a1629" text-anchor="middle">1 owner (26 buildings)</text>
-
-          <!-- legend -->
-          <line x1="288" y1="384" x2="316" y2="384" stroke="#1f6fb0" stroke-width="2.5"/>
-          <text x="324" y="388" font-size="10.5" fill="#1b2430">CONNECTED_BY_NAME / _ADDRESS — Who Owns What's edges (gated on exact ZIP)</text>
-          <line x1="288" y1="406" x2="316" y2="406" stroke="#c8971c" stroke-width="3"/>
-          <text x="324" y="410" font-size="10.5" fill="#1b2430">CONNECTED_BY_SPLINK / _DEED — identity edges that reunite the split (never read ZIP)</text>
-        </svg>
-        <span class="src">The blank-ZIP nodes can't reach the 10458 node under WoW's exact-key rules; the Splink / registered-LLC / deed edges do. Same case as the previous slide — as a graph.</span>
-        <aside class="notes">(~40s backup) The previous slide showed WHY Who Owns What splits Escobar; this is the same case as a graph. On the left I draw only WoW's own edges — name and address. Three Ramon Escobar nodes: one with 24 buildings at ZIP 10458, and two singletons with a blank ZIP. WoW's rules require an exact ZIP match, so the two blank-ZIP nodes can't reach the 10458 node — but they reach each other, because blank equals blank. Two disconnected components: that IS the 24-plus-2 split. On the right I add the identity edges — the Splink model, the registered-LLC match, the ACRIS deed, in gold. None of them read the ZIP. They bridge the 24-node to the pair, and the two components collapse into one owner group of 26. The whole architecture in one before-and-after: WoW's weakly-connected components versus what the identity layer merges.</aside>
-      </section>
-
-      <!-- BACKUP — the deed veil-pierce (Haight) -->
-      <section>
-        <span class="kicker">Backup · the question WoW can't answer</span>
-        <h2>One block, six owners — one deed <span
-            style="color:var(--muted);font-weight:400;font-size:.5em">41 Haight St, Queens</span></h2>
-        <div style="margin:.3em auto .5em;max-width:47em;background:#f7f8fa;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;padding:.5em .85em;font-size:.82em;color:var(--navy-2)">
-          <span style="color:var(--muted)">Ask the agent:</span> <em>“Show me a block Who Owns What reads as six separate owners that's really one bulk purchase.”</em>
-        </div>
-        <div style="display:flex;gap:18px;align-items:stretch;margin:.2em 0 .35em">
-          <img src="haight-map.png"
-            alt="Map of ten adjacent townhouses on one block of Haight Street, Queens — each a dot; Who Owns What paints nine of them in six colors (six separate owners), and the missed tenth, 41-23, shows as a hollow ghost dot mid-row"
-            style="height:396px;width:auto;max-width:58%;border:1px solid var(--line);border-radius:8px;">
-          <div class="card" style="border-top:5px solid var(--gold);flex:1">
-            <div class="cl" style="color:var(--gold)">Six colors, one row → one owner</div>
-            <ul class="tight" style="margin-top:.35em">
-              <li>Who Owns What paints one contiguous row of identical townhouses in <strong>six colors</strong>: <strong>Chan · Xu · Ho · Lin · Li · Chen</strong> — six head officers, nine owner-LLCs, nothing shared.</li>
-              <li><strong>One deed, 2020</strong> — a Chapter 11 trustee sold all <strong>10 townhouses</strong> for <strong>$18.6M</strong> to a single buyer, who then re-deeded them into <strong>single-purpose shells</strong>.</li>
-              <li>Watchline reunites <strong>9 of the 10</strong> into one owner group (<code>CONNECTED_BY_DEED</code>). The <strong>10th (41-23)</strong> is unregistered → in <em>neither</em> system (the ghost dot).</li>
-            </ul>
-          </div>
-        </div>
-        <div class="pull" style="font-size:.8em">Here WoW isn't wrong — it's <strong>blind</strong>: the only tie is a transaction, and it reads no deeds. <span style="color:var(--muted)">Common ownership is <strong>inferred from the deed record — a lead to verify, not a determination.</strong></span></div>
-        <span class="src">Owner group <code>OG-51705</code> · deed <code>2020092500293001</code> ($18.6M · <strong>10 parcels</strong> · Ch. 11 sale) · composition <code>deed_only</code> · 9 of 10 reunited. See <code>specs/case-haight.md</code>.</span>
-        <aside class="notes">My sharpest backup for "what does this do that Who Owns What can't?" A block of ten
-          identical townhouses on Haight Street in Flushing. Who Owns What reads the registered ones as six separate
-          owners — six different people on the registrations, nine different owner LLCs on the tax roll — nothing it
-          links on is shared, so it splits the block six ways. But pull the deed record: in 2020 a bankruptcy trustee
-          sold the entire row — all ten — on ONE deed, for $18.6 million, to a single buyer, who then re-deeded them
-          one at a time into single-purpose LLCs: buy together, then scatter the title. Watchline reunites nine of the
-          ten into one owner group, and the tie is pure deed — no name, no address. This is the case WoW can't reach
-          even in principle: it uses no deed data, and no registration snapshot can say "these were one purchase two
-          years ago." Then the honesty beat — point at the ghost dot: the tenth townhouse, 41-23, is on the same deed
-          but has NO HPD registration at all, so there's no landlord record for the deed link to hang on — it falls
-          through my system AND Who Owns What. I show the miss on purpose: precision-first, with a real recall limit,
-          not magic. And the whole thing is a lead to verify — shared origin and a consistent re-deeding pattern are
-          strong signals, but the onward sales carry real prices, so it points an investigator at a question; it
-          doesn't name one owner. That's the ethos in one slide.</aside>
-      </section>
-
       <!-- BACKUP — likely pushback (SQL / AI) -->
       <section>
         <span class="kicker">Backup · likely pushback</span>
@@ -1128,28 +1224,50 @@
           <div class="card" style="border-top:5px solid var(--navy)">
             <div class="cl" style="color:var(--navy)">"We live in SQL — what does the graph add?"</div>
             <ul class="tight" style="margin-top:.35em">
-              <li><strong>Concede:</strong> most of the pipeline <em>is</em> SQL — WoW is Postgres, the linkage is DuckDB.</li>
-              <li>The graph earns its place for the <strong>transitive, multi-relationship</strong> parts: connected-component owner identity · N-hop "who connects to whom" across owner/manager/deed layers · graph analytics.</li>
-              <li style="color:var(--muted)"><em>"Count violations per owner" → SQL. "Everyone within 3 hops across four link types, ranked by centrality" → graph.</em></li>
+              <li><strong>Concede:</strong> most of the pipeline <em>is</em> SQL — WoW is Postgres, the linkage is
+                DuckDB.</li>
+              <li>The graph earns its place for the <strong>transitive, multi-relationship</strong> parts:
+                connected-component owner identity · N-hop "who connects to whom" across owner/manager/deed layers ·
+                graph analytics.</li>
+              <li style="color:var(--muted)"><em>"Count violations per owner" → SQL. "Everyone within 3 hops across four
+                  link types, ranked by centrality" → graph.</em></li>
             </ul>
           </div>
           <div class="card" style="border-top:5px solid var(--gold)">
             <div class="cl" style="color:var(--gold)">"We don't trust AI."</div>
             <ul class="tight" style="margin-top:.35em">
               <li><strong>Good — neither do I</strong>, for claims about people.</li>
-              <li>The real inference is <strong>transparent statistical linkage</strong> (measured precision), not a neural net.</li>
-              <li>The language model is a <strong>read-only front door</strong> — it makes no claims; the public record does. Ignore it and read the sourced records.</li>
+              <li>The real inference is <strong>transparent statistical linkage</strong> (measured precision), not a
+                neural net.</li>
+              <li>The language model is a <strong>read-only front door</strong> — it makes no claims; the public record
+                does. Ignore it and read the sourced records.</li>
               <li>Its main job is to <strong>not falsely connect people.</strong></li>
             </ul>
           </div>
         </div>
-        <div class="pull" style="font-size:.8em">Both answers share one core: the substance is the <strong>public record</strong> + a transparent, measured linkage step. The graph and the LLM are tooling around it — each earning its place, everything labeled sourced vs. inferred.</div>
-        <aside class="notes">SQL question — concede hard: most of this IS SQL. WoW is Postgres, Splink is DuckDB, every conditions aggregate is a GROUP BY. The graph earns its place in three spots that are awkward or slow in SQL, not impossible: (1) transitive closure — the owner-identity layer IS connected components over the identity edges, one call in a graph, a recursive-CTE headache in SQL; (2) heterogeneous N-hop traversal — "start at this building, walk out across shared-owner/manager/address/deed links, who do I reach" is one graph pattern, a per-hop per-edge-type union in SQL; (3) graph data science — centrality, community, link-prediction run natively. If someone says "you could do it with recursive CTEs or Apache AGE" — concede: you can; it's a convenience/performance + agent/GDS substrate call, not a capability SQL lacks. AI question — AGREE with them; skepticism is correct. Separate the two AIs: the thing that decides who's the same owner is an auditable STATISTICAL model whose precision we measure — not a neural net; the language model is only the front door and never invents an answer, it reads the record and labels it. "If you don't trust the AI, ignore it — read the sourced records it points you to; the findings don't depend on it." And the trust-builder: the tool's main job is to NOT falsely connect people (the Miller case). Name the honest limit yourself: the accuracy eval isn't run yet.</aside>
+        <div class="pull" style="font-size:.8em">Both answers share one core: the substance is the <strong>public
+            record</strong> + a transparent, measured linkage step. The graph and the LLM are tooling around it — each
+          earning its place, everything labeled sourced vs. inferred.</div>
+        <aside class="notes">SQL question — concede hard: most of this IS SQL. WoW is Postgres, Splink is DuckDB, every
+          conditions aggregate is a GROUP BY. The graph earns its place in three spots that are awkward or slow in SQL,
+          not impossible: (1) transitive closure — the owner-identity layer IS connected components over the identity
+          edges, one call in a graph, a recursive-CTE headache in SQL; (2) heterogeneous N-hop traversal — "start at
+          this building, walk out across shared-owner/manager/address/deed links, who do I reach" is one graph pattern,
+          a per-hop per-edge-type union in SQL; (3) graph data science — centrality, community, link-prediction run
+          natively. If someone says "you could do it with recursive CTEs or Apache AGE" — concede: you can; it's a
+          convenience/performance + agent/GDS substrate call, not a capability SQL lacks. AI question — AGREE with them;
+          skepticism is correct. Separate the two AIs: the thing that decides who's the same owner is an auditable
+          STATISTICAL model whose precision we measure — not a neural net; the language model is only the front door and
+          never invents an answer, it reads the record and labels it. "If you don't trust the AI, ignore it — read the
+          sourced records it points you to; the findings don't depend on it." And the trust-builder: the tool's main job
+          is to NOT falsely connect people (the Miller case). Name the honest limit yourself: the accuracy eval isn't
+          run yet.</aside>
       </section>
 
     </div>
   </div>
-  <div class="deck-foot"><a href="../../">Case file</a> · <a href="../cases/">Case studies</a> · <a href="../maps/croman.html">Maps</a> · <a href="../faq/">FAQ</a></div>
+  <div class="deck-foot"><a href="../../">Case file</a> · <a href="../cases/">Case studies</a> · <a
+      href="../maps/croman.html">Maps</a> · <a href="../faq/">FAQ</a></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.min.js"></script>
   <script>
