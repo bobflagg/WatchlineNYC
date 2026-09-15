@@ -200,8 +200,10 @@ grantor is the joint grantee (`LELAND PROPERTY LLC`) and whose buyer owns ≤ `S
 **no consideration/price check**. All three 2025 buyers pass (each owns ≤3 buildings), so a *fresh* rebuild on
 current ACRIS still produces the over-merge. The guard cannot tell a **$1.1M arms-length sale** from a **$0
 restructuring into a controlled shell** — which is exactly §3's *restructuring vs. sale* (check 3), a **manual
-adjudication gate** the automated edge builder does not implement. (Fix: gate re-inclusion on nominal
-consideration.)
+adjudication gate** the automated edge builder does not implement. (**Fixed** in `deed_edges.py` commit
+`5f51475` — re-inclusion now requires nominal consideration (`docamount <= NOMINAL_MAX`); the deed edges +
+OwnerGroup layer were rebuilt, and OG-42728 is now correctly split (Osman/Osmani Ali retained; Ni and Song
+dropped to their own owners). Retained here as a worked example of the failure mode and the C2 gate.)
 
 **`P0464` (S4 hard-neg) → `DIFFERENT` — the shared-surname trap.** A `EZRA ADJMI` @ *Long Branch NJ*
 (a Brooklyn building) vs B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a
