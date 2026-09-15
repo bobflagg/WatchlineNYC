@@ -14,6 +14,10 @@ adjudicating (lightweight preregistration; note it in the paper).
 ## 1. Unit & labels
 
 **Unit:** the pairwise decision — *"are landlord entities X and Y the same beneficial owner?"*
+Each entity is a `(name, standardized business address)` identity node (a cluster of such nodes in the
+cutover frame), drawn from WoW's per-BBL owner/officer contact selection — the `name` is always a
+responsible *person*, not necessarily a head officer and never a managing agent or bare corporation
+name. See [`review-tool-contract.md`](review-tool-contract.md) §1 ("What an entity is (provenance)").
 **Labels:** `SAME` · `DIFFERENT` · `INDETERMINATE`. Indeterminate is a first-class outcome
 (public record often can't settle ownership); excluded from precision/recall denominators and
 reported separately as **coverage**.
