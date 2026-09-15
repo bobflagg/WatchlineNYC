@@ -98,6 +98,27 @@ CURATED_OWNERS: tuple[CuratedOwner, ...] = (
             "owner identity, it cannot make Kadden a single portfolio."
         ),
     ),
+    CuratedOwner(
+        owner_id="ali-family-2272-leland",
+        label="Ali family (Amjad & Osman Ali)",
+        names=("AMJAD ALI", "OSMAN ALI"),
+        # MANDATORY disambiguator — "ALI" is extremely common; without bbl_allow this
+        # clique would fuse every Amjad/Osman Ali in NYC. Restrict to the family's BBLs:
+        #   1016880052       = 2272 Second Ave  (2272 REALTY LLC — Amjad's node #5292)
+        #   2034980021/23/25/26 = 434/430/426/424 Leland Ave (LELAND PROPERTY LLC — Osman's node #87870, retained)
+        bbl_allow=("1016880052", "2034980021", "2034980023", "2034980025", "2034980026"),
+        evidence=(
+            "Ali-family operation spanning two distinct LLCs, both principal-linked to Amjad + Osman Ali. "
+            "2272 REALTY LLC (owner of record of 2272 Second Ave, BBL 1016880052; ACRIS deed 2014092600340001) "
+            "registers HPD HeadOfficer AMJAD ALI + Officer/Agent OSMAN ALI. LELAND PROPERTY LLC (Leland Ave lots) "
+            "registers HeadOfficer OSMAN ALI and took title from grantor AMJAD ALI (deed 2013120600683001). So "
+            "Amjad is grantor of Leland AND head officer of 2272; Osman is head officer of Leland AND officer of "
+            "2272 — the two principals appear on BOTH entities. Corroboration: identical business address "
+            "434 Leland Ave Bsmt, Bronx; NYS DOS routes both LLCs to the same Garden City / 2 Raymond Ct nexus. "
+            "Verified 2026-09 (postgres-justfix HPD/ACRIS/DOS). The Splink model never compares them "
+            "(name-anchored blocking splits AMJAD/OSMAN by first initial); no shared deed; registered-llc R3-excluded."
+        ),
+    )
 )
 
 
