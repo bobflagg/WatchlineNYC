@@ -186,18 +186,22 @@ decide. Two real frame pairs — both adjudicate `DIFFERENT`, but for opposite r
 **false-merge hazard** the deed/name signals can walk into (BBLs abbreviated; the tool surfaces the records
 from them):
 
-**`P0133` (S1b deed) → `DIFFERENT` — the stale-deed trap.** A `OSMAN ALI` @ *434 Leland Ave, Bronx*
-(lots 21/23/25/26) vs B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx* (lot 22) — different person,
-different office. A shared deed *tempts* a merge (and the KG's `OwnerGroup` OG-42728 does merge them):
-ACRIS deed `2013120600683001` (2013-08-09) conveyed an **8-lot block-3498 assemblage** (lots 19–26) to one
-grantee, `LELAND PROPERTY LLC` (grantor Amjad Ali), under a single 2016 $2.6M blanket mortgage. **But that
-deed is stale.** DOF PLUTO ownername now shows the assemblage was **partitioned to distinct buyers**:
-lot 22 → `NI, LONGCHENG`, lot 20 → `SONG, GONG LIANG`, lot 24 → `LIN'S DOUBLE WOOD LLC`, while only
-lots 21/23/25/26 remain `LELAND PROPERTY LLC`. Per §3.1's rule — *PLUTO where the latest deed confirms it,
-never where it contradicts it* — the shared-owner claim **fails**: PLUTO contradicts the 2013 deed, so the
-current owners of record are distinct → **`DIFFERENT`** (or `INDETERMINATE` until the post-2013 sale deeds
-are pulled; they lag in the ACRIS snapshot). This is the §3 latest-deed / staleness guard doing its job — a
-multi-parcel deed is **held-since only if it's still the latest**, and here it isn't.
+**`P0133` (S1b deed) → `DIFFERENT` — the restructuring-vs-sale trap (`registered-llc`/deed over-recovery).**
+A `OSMAN ALI` @ *434 Leland Ave, Bronx* (lots 21/23/25/26) vs B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx*
+(lot 22) — different person, different office. ACRIS deed `2013120600683001` (2013-08-09) conveyed an
+**8-lot block-3498 assemblage** (lots 19–26) to one grantee, `LELAND PROPERTY LLC` (grantor Amjad Ali). **But
+in 2025 that assemblage was broken up in genuine arms-length sales**: lot 22 → `NI, LONGCHENG` ($1.1M, deed
+`2025111100447002`), lot 20 → `SONG, GONG LIANG` ($1.1M), lot 24 → `LIN'S DOUBLE WOOD LLC` ($1.15M), lot 19 →
+`427 SOUNDVIEW LLC` (2022); only lots 21/23/25/26 remain `LELAND PROPERTY LLC`. So the current owners of
+record are **distinct** → **`DIFFERENT`** (§3.1: PLUTO/latest-deed contradicts the 2013 deed).
+<br>Why this is a *method* trap, not a stale-data one: the held-since rule alone correctly drops the sold lots,
+but `deed_edges.py`'s **linked-successor guard re-merges them** — it re-includes any parcel whose latest-deed
+grantor is the joint grantee (`LELAND PROPERTY LLC`) and whose buyer owns ≤ `SUCCESSOR_MAX`(3) buildings, with
+**no consideration/price check**. All three 2025 buyers pass (each owns ≤3 buildings), so a *fresh* rebuild on
+current ACRIS still produces the over-merge. The guard cannot tell a **$1.1M arms-length sale** from a **$0
+restructuring into a controlled shell** — which is exactly §3's *restructuring vs. sale* (check 3), a **manual
+adjudication gate** the automated edge builder does not implement. (Fix: gate re-inclusion on nominal
+consideration.)
 
 **`P0464` (S4 hard-neg) → `DIFFERENT` — the shared-surname trap.** A `EZRA ADJMI` @ *Long Branch NJ*
 (a Brooklyn building) vs B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a
@@ -208,10 +212,11 @@ deeds**. Distinct grantees, no linking conveyance → `DIFFERENT`, tier **T1**. 
 ownership.
 
 Together they are the two **false-merge** hazards the merge-side strata (S1, S2) exist to measure:
-`P0133` — a **stale co-conveyance deed** that once unified an assemblage since broken up (check PLUTO
-against the deed date); `P0464` — a **tempting shared surname** with no ownership link. For the mirror
-(a *valid* both-differ `SAME`, where one owning entity really does sit on both sides), see the CUT-0029
-case in §3.1.
+`P0133` — **linked-successor over-recovery**, an arms-length sale to a small buyer misread as a
+restructuring into a controlled shell (the deed builder lacks the consideration check that §3's
+restructuring-vs-sale gate applies); `P0464` — a **tempting shared surname** with no ownership link. For
+the mirror (a *valid* both-differ `SAME`, where one owning entity really does sit on both sides), see the
+CUT-0029 case in §3.1.
 
 ## 4. Annotation process
 
