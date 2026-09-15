@@ -49,6 +49,20 @@ One pair per line. Everything the annotator legitimately judges on; nothing that
   `bbls` the buildings. The tool derives everything else (deeds, LLC names → DOS, HPD contacts) from
   the bbls — it is **not** told "the linking deed"; it shows *all* records and the annotator finds
   the link. `a`/`b` order is randomized so it encodes nothing.
+- **What an entity is (provenance).** Each side is a WatchlineNYC identity node — a distinct
+  `(name, standardized business address)` grouping over `landlords_with_connections` — or, in the
+  cutover frame, a *cluster* of such nodes shown under its **anchor** (the member with the most `bbls`),
+  with `bbls` the union across the cluster. Those nodes come from JustFix/WoW's own selection
+  (`who-owns-what/portfoliograph/sql/landlords_to_standardize.sql`): **one contact per BBL**, taken
+  only from contact types **`{HeadOfficer, IndividualOwner, CorporateOwner, JointOwner}`** (role
+  preference `IndividualOwner → HeadOfficer → JointOwner → CorporateOwner`, most-recent registration),
+  with `name = upper(concat_ws(' ', firstname, lastname))`. Consequences the annotator should hold:
+  a `name` is **always a responsible *person*** on the registration — **never** a managing agent, site
+  manager, lessee, officer, shareholder, or a bare corporation name (`corporationname` is not used, and
+  contacts with no person name are dropped); and it is **not necessarily a head officer** (individual
+  owners are preferred first). Treat the `name` as the *registered owner/officer to research from*, not
+  as the beneficial owner or the LLC on the deed — those are what the tool surfaces from ACRIS/DOS for
+  you to judge.
 - **Absent by design:** stratum, signal, `watchline`/`wow` decision, anchor membership.
 
 ### 2. `annotation.jsonl` — tool → WatchlineNYC
