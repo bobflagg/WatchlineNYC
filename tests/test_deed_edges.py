@@ -58,28 +58,74 @@ def test_hub_nodes_drops_serial_co_investors():
 
 # --- linked-successor guard (branch B) ---------------------------------------------------------
 def test_retained_keeps_held_and_restructured_drops_sales_and_strangers():
-    # joint deed D, grantee G = LIBERTY. Four parcels, four fates:
+    # joint deed D, grantee G = LIBERTY. Five parcels, five fates. latest tuple is now
+    # (latest_doc, {grantor_norm}, successor_norm, docamount).
     G = {de._norm("LIBERTY 162 HOLDINGS LLC")}
     latest = {
-        # held: latest deed IS the joint deed
-        "held":  ("D", {de._norm("SELLER")}, de._norm("LIBERTY 162 HOLDINGS LLC")),
-        # restructured: latest grantor == G, successor is a shell (size 1)
-        "restr": ("d_bbgt", G, de._norm("BBGT PROPERTY LLC")),
+        # held: latest deed IS the joint deed (docamount irrelevant on the held branch)
+        "held":  ("D", {de._norm("SELLER")}, de._norm("LIBERTY 162 HOLDINGS LLC"), 5_000_000),
+        # restructured: latest grantor == G, successor is a shell (size 1), NOMINAL consideration
+        "restr": ("d_bbgt", G, de._norm("BBGT PROPERTY LLC"), 0),
         # sale: latest grantor == G BUT successor is a big independent portfolio -> stale, drop
-        "sold":  ("d_sale", G, de._norm("MEGA REALTY")),
+        "sold":  ("d_sale", G, de._norm("MEGA REALTY"), 2_000_000),
+        # priced-sale-to-a-shell: grantor == G and buyer is small (size 1) so it PASSES the
+        # successor guard, but the $1.1M price is a market SALE -> the nominal gate drops it
+        "psale": ("d_psale", G, de._norm("SMALL BUYER LLC"), 1_100_000),
         # stranger: latest grantor is someone else entirely -> drop
-        "other": ("d_x", {de._norm("UNRELATED CORP")}, de._norm("UNRELATED CORP")),
+        "other": ("d_x", {de._norm("UNRELATED CORP")}, de._norm("UNRELATED CORP"), 0),
     }
-    succ = {de._norm("BBGT PROPERTY LLC"): 1, de._norm("MEGA REALTY"): 40}
-    keep = de._retained("D", ["held", "restr", "sold", "other"], G, latest, succ, successor_max=3)
+    succ = {de._norm("BBGT PROPERTY LLC"): 1, de._norm("MEGA REALTY"): 40,
+            de._norm("SMALL BUYER LLC"): 1}
+    keep = de._retained("D", ["held", "restr", "sold", "psale", "other"], G, latest, succ,
+                        successor_max=3)
     assert set(keep) == {"held", "restr"}
 
 
 def test_retained_needs_two_to_matter():
     G = {de._norm("G LLC")}
-    latest = {"a": ("D", set(), de._norm("G LLC")), "b": ("later", G, de._norm("SHELL"))}
-    # both retained (a held, b restructured into a shell) -> caller requires >=2; here exactly 2
+    latest = {"a": ("D", set(), de._norm("G LLC"), 3_000_000),
+              "b": ("later", G, de._norm("SHELL"), 0)}
+    # both retained (a held, b restructured into a shell at nominal $) -> caller requires >=2
     assert len(de._retained("D", ["a", "b"], G, latest, {de._norm("SHELL"): 1}, 3)) == 2
+
+
+def test_retained_block3498_arms_length_sales_not_remerged():
+    # REGRESSION (block 3498 / P0133, specs/eval-protocol.md §3.2): AMJAD ALI deeded an 8-lot
+    # assemblage (lots 19-26) to LELAND PROPERTY LLC on joint deed 2013120600683001. In 2022-2025
+    # four lots were SOLD arms-length (~$1.1M). Each sale deed's grantor is LELAND and each buyer
+    # owns <= SUCCESSOR_MAX(3) buildings, so all four PASS the successor guard -- only the
+    # nominal-consideration gate keeps them from being falsely re-merged into LELAND's clique.
+    JOINT = "2013120600683001"
+    G = {de._norm("LELAND PROPERTY LLC")}
+    held = (JOINT, {de._norm("AMJAD ALI")}, de._norm("LELAND PROPERTY LLC"), 0)  # latest == joint
+    latest = {
+        "2034980021": held, "2034980023": held, "2034980025": held, "2034980026": held,
+        "2034980020": ("d20", G, de._norm("SONG, GONG LIANG"), 1_100_000),
+        "2034980022": ("2025111100447002", G, de._norm("NI, LONGCHENG"), 1_100_000),
+        "2034980024": ("d24", G, de._norm("LIN'S DOUBLE WOOD LLC"), 1_150_000),
+        "2034980019": ("d19", G, de._norm("427 SOUNDVIEW LLC"), 900_000),
+    }
+    succ = {de._norm("SONG, GONG LIANG"): 1, de._norm("NI, LONGCHENG"): 1,
+            de._norm("LIN'S DOUBLE WOOD LLC"): 2, de._norm("427 SOUNDVIEW LLC"): 3}
+    bbls = ["2034980019", "2034980020", "2034980021", "2034980022",
+            "2034980023", "2034980024", "2034980025", "2034980026"]
+    keep = de._retained(JOINT, bbls, G, latest, succ, successor_max=3)
+    # only the still-held lots survive; the four ~$1.1M sales are dropped
+    assert set(keep) == {"2034980021", "2034980023", "2034980025", "2034980026"}
+
+    # Held behavior preserved: a genuine $0 re-deed of lot 20 into a controlled shell IS re-included.
+    latest["2034980020"] = ("d20", G, de._norm("LELAND 20 LLC"), 0)
+    succ[de._norm("LELAND 20 LLC")] = 1
+    keep2 = de._retained(JOINT, bbls, G, latest, succ, successor_max=3)
+    assert "2034980020" in set(keep2)
+
+
+def test_is_nominal_thresholds():
+    # nominal (restructuring) vs market sale, and the None/unparseable-safe default
+    assert de._is_nominal(0) and de._is_nominal(10) and de._is_nominal(de.NOMINAL_MAX)
+    assert not de._is_nominal(de.NOMINAL_MAX + 1)
+    assert not de._is_nominal(1_100_000)
+    assert not de._is_nominal(None)            # absent price -> not re-merged (precision-safe)
 
 
 def test_joint_sql_carries_the_restructuring_scope():
@@ -87,3 +133,4 @@ def test_joint_sql_carries_the_restructuring_scope():
     assert "partytype = 2" in sql                        # grantee of the joint purchase
     assert de.RESTRUCT_MIN_DATE in sql                   # recency floor on the joint deed
     assert "partytype = 1" in de._LATEST_SQL             # grantor of the successor deed (the chain)
+    assert "docamount" in de._LATEST_SQL                 # consideration threaded for the nominal gate

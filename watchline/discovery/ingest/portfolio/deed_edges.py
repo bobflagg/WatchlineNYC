@@ -23,9 +23,15 @@ buildings together, then re-deed each into its own single-purpose LLC (each parc
 now a separate transfer, so the joint deed is "superseded" and dropped). We recover it: a superseded
 joint deed still proves co-ownership between parcels Bi,Bj when the joint grantee G is the GRANTOR of
 each parcel's latest deed (G restructured them) AND the successor LLC is a shell (globally the latest
-grantee of <= SUCCESSOR_MAX buildings) — which separates same-owner restructuring from an arms-length
-SALE to an independent portfolio. Verified: LIBERTY 162 co-bought 156-06 & 156-10 43rd Ave (2018),
-then spun them into BBGT / CHERRY 168 LLC — WoW splits them, this guard reunites them.
+grantee of <= SUCCESSOR_MAX buildings) AND that onward conveyance is a NOMINAL transfer (docamount
+<= NOMINAL_MAX, i.e. a $0/token restructuring) — NOT a market-price sale. The nominal-consideration
+check is what separates same-owner restructuring from an arms-length SALE to an independent buyer:
+without it, a genuine $1.1M sale to a small (<= SUCCESSOR_MAX-building) buyer is indistinguishable
+from a $0 re-deed into a controlled shell and gets falsely re-merged (the block-3498 / P0133 trap —
+see specs/eval-protocol.md §3.2). Verified recovery: LIBERTY 162 co-bought 156-06 & 156-10 43rd Ave
+(2018), then spun them into BBGT / CHERRY 168 LLC at nominal consideration — WoW splits them, this
+guard reunites them; while the block-3498 assemblage sold off in real ($1.1M) arms-length deals stays
+split, as it should.
 
 DEED-HUB CAP — a landlord on more than DEED_HUB_CAP distinct multi-parcel deeds is a serial co-investor
 whose transitive links would over-merge unrelated parties (Aaron Feldman doing separate JVs with many
@@ -60,6 +66,22 @@ DEED_HUB_CAP = 20
 # must be a shell (globally the latest-deed grantee of <= this many buildings), else it looks like an
 # arms-length SALE to an independent owner (stale) rather than a same-owner restructuring.
 SUCCESSOR_MAX = 3
+# LINKED-SUCCESSOR GUARD, consideration gate: a successor parcel is only re-included when its latest
+# deed's docamount (the recorded consideration, in dollars) is NOMINAL — i.e. a restructuring, not a
+# market-price sale. Without this, an arms-length SALE to a small buyer (who passes SUCCESSOR_MAX) is
+# indistinguishable from a $0 re-deed into a controlled shell and gets falsely re-merged (the
+# block-3498 / P0133 over-merge; see specs/eval-protocol.md §3.2 and §3 "restructuring vs. sale").
+#
+# Threshold choice ($100): ACRIS restructurings into a controlled shell are typically recorded at $0,
+# occasionally at a small token / transfer-tax basis ($1-$10). $100 sits FOUR ORDERS OF MAGNITUDE
+# below any NYC building sale (block-3498's real sales were ~$1.1M), so it never admits a market
+# transaction, while still catching a restructuring booked slightly above $0. The tradeoff is
+# deliberately precision-favoring: raising it risks re-merging a genuinely cheap sale; the residual
+# hole (a genuine sale improperly recorded at $0-$100, or a restructuring recorded above it) is
+# irreducible for a price-only test and is left to §3's manual C2 "restructuring vs. sale" gate. This
+# is a PREREGISTERABLE parameter (eval feeds specs/eval-protocol.md §3.2, P0133, check 3): fix its
+# value before any accuracy run rather than tuning it against the frame.
+NOMINAL_MAX = 100
 # Only recover restructuring from joint purchases this recent (current-ownership relevance; bounds cost).
 RESTRUCT_MIN_DATE = "2005-01-01"
 # Institutional grantees whose "co-ownership" is not a private owner.
@@ -115,10 +137,12 @@ _JOINT_SQL = f"""
         GROUP BY documentid
     ) g ON g.documentid = jd.doc
 """
-# Latest deed per parcel + that deed's grantor(s) (party1) and grantee (party2), joined (not correlated).
+# Latest deed per parcel + that deed's grantor(s) (party1), grantee (party2), and docamount (the
+# recorded consideration, for the nominal-consideration gate), joined (not correlated).
 _LATEST_SQL = """
     WITH latest AS (
-        SELECT DISTINCT ON (btrim(l.bbl)) btrim(l.bbl) AS bbl, m.documentid AS doc
+        SELECT DISTINCT ON (btrim(l.bbl)) btrim(l.bbl) AS bbl, m.documentid AS doc,
+               m.docamount AS docamount
         FROM real_property_master m
         JOIN real_property_legals l ON l.documentid = m.documentid
         WHERE m.doctype ILIKE '%%DEED%%' AND COALESCE(m.docdate, m.recordedfiled) <= CURRENT_DATE
@@ -133,7 +157,8 @@ _LATEST_SQL = """
         WHERE documentid IN (SELECT doc FROM latest) AND partytype IN (1, 2)
         GROUP BY documentid
     )
-    SELECT latest.bbl AS bbl, latest.doc AS doc, pr.grantors AS grantors, pr.grantee AS grantee
+    SELECT latest.bbl AS bbl, latest.doc AS doc, pr.grantors AS grantors, pr.grantee AS grantee,
+           latest.docamount AS docamount
     FROM latest LEFT JOIN parties pr ON pr.documentid = latest.doc
 """
 # GLOBAL single-purpose size: distinct buildings each (normalized) entity has ever received as grantee.
@@ -146,22 +171,39 @@ _SUCC_SIZE_SQL = """
 """
 
 
+def _is_nominal(docamount, nominal_max: float = NOMINAL_MAX) -> bool:
+    """True when a deed's recorded consideration is nominal (<= ``nominal_max``) — a restructuring,
+    not a market sale. A missing amount (None) is treated as NON-nominal: absent price evidence we do
+    not re-merge, which is precision-safe (drops a possible edge, never invents one)."""
+    if docamount is None:
+        return False
+    try:
+        return float(docamount) <= nominal_max
+    except (TypeError, ValueError):
+        return False
+
+
 def _retained(doc: str, bbls, grantee_norm: set[str],
-              latest: dict, succ_size: dict, successor_max: int) -> list[str]:
+              latest: dict, succ_size: dict, successor_max: int,
+              nominal_max: float = NOMINAL_MAX) -> list[str]:
     """Pure: which parcels of joint deed ``doc`` (grantee set ``grantee_norm``) are still co-owned —
     either held directly (the joint deed is their latest) or restructured by the same grantee into a
-    single-purpose LLC (latest-deed grantor == grantee AND that successor is a shell). ``latest``:
-    bbl -> (latest_doc, {grantor_norm}, successor_norm). ``succ_size``: successor_norm -> global count."""
+    single-purpose LLC (latest-deed grantor == grantee AND that successor is a shell AND that onward
+    conveyance is a NOMINAL transfer, not a market-price sale). ``latest``:
+    bbl -> (latest_doc, {grantor_norm}, successor_norm, docamount). ``succ_size``: successor_norm ->
+    global count. The nominal gate is what keeps a $1.1M arms-length sale to a small buyer from being
+    re-merged as if it were a $0 re-deed into a controlled shell (block-3498 / P0133)."""
     out: list[str] = []
     for b in bbls:
         info = latest.get(b)
         if not info:
             continue
-        ldoc, lgrantors, lgrantee = info
+        ldoc, lgrantors, lgrantee, ldocamount = info
         if ldoc == doc:                                                   # held since the joint deed
             out.append(b)
-        elif (lgrantors & grantee_norm) and succ_size.get(lgrantee, 10**9) <= successor_max:
-            out.append(b)                                                 # restructured into a shell
+        elif (lgrantors & grantee_norm) and succ_size.get(lgrantee, 10**9) <= successor_max \
+                and _is_nominal(ldocamount, nominal_max):
+            out.append(b)                                     # restructured into a shell (nominal $)
     return out
 
 
@@ -176,8 +218,8 @@ def _restructured_groups(conn, max_parcels: int, successor_max: int) -> dict[str
     allb = sorted({b for bbls in joint["bbls"] for b in bbls})
     cur = conn.cursor()
     cur.execute(_LATEST_SQL, (allb,))
-    latest = {bbl: (doc, {_norm(x) for x in (grs or [])}, _norm(gee))
-              for bbl, doc, grs, gee in cur.fetchall()}
+    latest = {bbl: (doc, {_norm(x) for x in (grs or [])}, _norm(gee), amt)
+              for bbl, doc, grs, gee, amt in cur.fetchall()}
     keys = sorted({v[2] for v in latest.values() if v[2]})
     cur.execute(_SUCC_SIZE_SQL, (keys,))
     succ_size = {g: n for g, n in cur.fetchall()}
