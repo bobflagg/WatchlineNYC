@@ -182,28 +182,36 @@ caveat — is owner-review `e6d5e8c`; see phase-2 findings F11.)*
 
 A node is keyed on `(name, standardized business address)`, so any two distinct nodes differ in ≥1 of
 those; the **both-differ** case is where WoW's name+address matching cannot help and the primary records
-decide. Two real frame pairs, one each way (BBLs abbreviated; the tool surfaces the deeds from them):
+decide. Two real frame pairs — both adjudicate `DIFFERENT`, but for opposite reasons, and each is a
+**false-merge hazard** the deed/name signals can walk into (BBLs abbreviated; the tool surfaces the records
+from them):
 
-**`P0133` (S1a/b deed) → `SAME`.** A `OSMAN ALI` @ *434 Leland Ave, Bronx* (lots 21/23/25/26) vs
-B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx* (lot 22) — different person, different office. But the five
-BBLs are adjacent lots on one Bronx block, and ACRIS deed `2013120600683001` (2013-08-09) conveys **all
-five to one grantee, `LELAND PROPERTY LLC`**, later carried on a single **$2.6M blanket mortgage**
-(`2016042800626001`). One **owner of record** on both sides → `SAME`, tier **T1** (shared deed grantee) +
-**T3** (shared mortgage) = **C1**. Note the person-names don't matter to the call and in fact *contradict*
-each other: lots 21/23/25/26 register `LELAND PROPERTY LLC` (head officer Osman Ali, officer Amjad Ali —
-the deed grantor), while lot 22's HPD registration names a lone `IndividualOwner` "Longcheng Ni" with **no
-LLC and no later deed to Ni** — an unreliable HPD filing that disagrees with the recorded title. You
-adjudicate on the **owner of record** (the deed grantee), not the HPD contact name.
+**`P0133` (S1b deed) → `DIFFERENT` — the stale-deed trap.** A `OSMAN ALI` @ *434 Leland Ave, Bronx*
+(lots 21/23/25/26) vs B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx* (lot 22) — different person,
+different office. A shared deed *tempts* a merge (and the KG's `OwnerGroup` OG-42728 does merge them):
+ACRIS deed `2013120600683001` (2013-08-09) conveyed an **8-lot block-3498 assemblage** (lots 19–26) to one
+grantee, `LELAND PROPERTY LLC` (grantor Amjad Ali), under a single 2016 $2.6M blanket mortgage. **But that
+deed is stale.** DOF PLUTO ownername now shows the assemblage was **partitioned to distinct buyers**:
+lot 22 → `NI, LONGCHENG`, lot 20 → `SONG, GONG LIANG`, lot 24 → `LIN'S DOUBLE WOOD LLC`, while only
+lots 21/23/25/26 remain `LELAND PROPERTY LLC`. Per §3.1's rule — *PLUTO where the latest deed confirms it,
+never where it contradicts it* — the shared-owner claim **fails**: PLUTO contradicts the 2013 deed, so the
+current owners of record are distinct → **`DIFFERENT`** (or `INDETERMINATE` until the post-2013 sale deeds
+are pulled; they lag in the ACRIS snapshot). This is the §3 latest-deed / staleness guard doing its job — a
+multi-parcel deed is **held-since only if it's still the latest**, and here it isn't.
 
-**`P0464` (S4 hard-neg) → `DIFFERENT`.** A `EZRA ADJMI` @ *Long Branch NJ* (a Brooklyn building) vs
-B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a **shared, prominent surname**
-that tempts a merge. But the owners of record are distinct — A held personally by `ADJMI, EZRA` + `ADJMI,
-JACK` (2021 deed, $1.35M); B owned by `J T TAI & CO INC` (Robert Adjmi is only the HPD contact) — and
-across A's 22 and B's 13 ACRIS documents there are **zero shared deeds**. Distinct grantees, no linking
-conveyance → `DIFFERENT`, tier **T1**. A common surname is not ownership.
+**`P0464` (S4 hard-neg) → `DIFFERENT` — the shared-surname trap.** A `EZRA ADJMI` @ *Long Branch NJ*
+(a Brooklyn building) vs B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a
+**shared, prominent surname** that tempts a merge. But the owners of record are distinct — A held
+personally by `ADJMI, EZRA` + `ADJMI, JACK` (2021 deed, $1.35M); B owned by `J T TAI & CO INC` (Robert
+Adjmi is only the HPD contact) — and across A's 22 and B's 13 ACRIS documents there are **zero shared
+deeds**. Distinct grantees, no linking conveyance → `DIFFERENT`, tier **T1**. A common surname is not
+ownership.
 
-Together they are the two error directions the frame guards: `P0133` tests whether the graph can **merge
-what name/address hide**; `P0464` tests whether it can **resist a tempting shared surname**.
+Together they are the two **false-merge** hazards the merge-side strata (S1, S2) exist to measure:
+`P0133` — a **stale co-conveyance deed** that once unified an assemblage since broken up (check PLUTO
+against the deed date); `P0464` — a **tempting shared surname** with no ownership link. For the mirror
+(a *valid* both-differ `SAME`, where one owning entity really does sit on both sides), see the CUT-0029
+case in §3.1.
 
 ## 4. Annotation process
 
