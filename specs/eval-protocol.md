@@ -188,9 +188,12 @@ decide. Two real frame pairs, one each way (BBLs abbreviated; the tool surfaces 
 B `LONGCHENG NI` @ *3078 Coddington Ave, Bronx* (lot 22) — different person, different office. But the five
 BBLs are adjacent lots on one Bronx block, and ACRIS deed `2013120600683001` (2013-08-09) conveys **all
 five to one grantee, `LELAND PROPERTY LLC`**, later carried on a single **$2.6M blanket mortgage**
-(`2016042800626001`). One owning entity on both sides → `SAME`, tier **T1** (shared deed grantee) + **T3**
-(shared mortgage) = **C1**. The two person-names are just alternating officers of the one LLC (the
-CUT-0029 pattern).
+(`2016042800626001`). One **owner of record** on both sides → `SAME`, tier **T1** (shared deed grantee) +
+**T3** (shared mortgage) = **C1**. Note the person-names don't matter to the call and in fact *contradict*
+each other: lots 21/23/25/26 register `LELAND PROPERTY LLC` (head officer Osman Ali, officer Amjad Ali —
+the deed grantor), while lot 22's HPD registration names a lone `IndividualOwner` "Longcheng Ni" with **no
+LLC and no later deed to Ni** — an unreliable HPD filing that disagrees with the recorded title. You
+adjudicate on the **owner of record** (the deed grantee), not the HPD contact name.
 
 **`P0464` (S4 hard-neg) → `DIFFERENT`.** A `EZRA ADJMI` @ *Long Branch NJ* (a Brooklyn building) vs
 B `ROBERT ADJMI` @ *1412 Broadway, Manhattan* (a Manhattan building) — a **shared, prominent surname**
