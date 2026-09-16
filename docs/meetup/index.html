@@ -714,81 +714,84 @@
       <section>
         <span class="kicker">False split — in the wild</span>
         <h2>One owner, <em>six</em> Who Owns What portfolios</h2>
+        <h3>The same man at the same two offices — split by floor labels, a name spelling, and a dropped digit</h3>
         <hr class="rule">
-        <div style="display:flex;gap:1em;align-items:stretch;margin-top:.3em">
-          <!-- LEFT: WoW map screenshot (drop-in) -->
-          <figure style="flex:1.25;margin:0">
-            <div
-              style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:320px;display:flex;align-items:center;justify-content:center">
-              <img src="croman-wow-map.png"
-                alt="Who Owns What map of Steven Croman's buildings, fragmented across six portfolios"
-                style="width:100%;display:block;max-height:46vh;object-fit:contain"
-                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-              <div style="display:none;padding:1.4em;text-align:center;color:var(--faint);font-size:.8em">▸ add
-                <code>docs/meetup/croman-wow-map.png</code><br>(Who Owns What — Croman screenshot, map + sidebar)
-              </div>
-            </div>
-            <figcaption style="font-size:.72em;color:var(--muted);margin-top:.35em">Who Owns What, as the site renders
-              “Croman” — the buildings scatter across separate portfolios.</figcaption>
-          </figure>
-          <!-- RIGHT: the breakdown -->
-          <div style="flex:.9;font-size:.8em">
-            <div style="font-weight:700;color:var(--navy);margin-bottom:.35em">“Croman” → 6 portfolios by name</div>
-            <table style="width:100%;border-collapse:collapse;font-size:.92em">
-              <thead>
-                <tr style="color:var(--muted);text-align:left">
-                  <th style="padding:.15em .3em">WoW portfolio</th>
-                  <th style="padding:.15em .3em;text-align:right">Buildings</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#87259 <span style="color:var(--gold);font-weight:700">· main</span>
-                  </td>
-                  <td style="text-align:right">118</td>
-                </tr>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#87260</td>
-                  <td style="text-align:right">5</td>
-                </tr>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#46243</td>
-                  <td style="text-align:right">2</td>
-                </tr>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#87395</td>
-                  <td style="text-align:right">1</td>
-                </tr>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#87396</td>
-                  <td style="text-align:right">1</td>
-                </tr>
-                <tr style="border-top:1px solid var(--line)">
-                  <td style="padding:.2em .3em">#87397</td>
-                  <td style="text-align:right">1</td>
-                </tr>
-                <tr style="border-top:2px solid var(--line);font-weight:700">
-                  <td style="padding:.2em .3em">WoW total (by name)</td>
-                  <td style="text-align:right">128</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="pull" style="font-size:.8em">Six differently-registered fragments of <b>one</b> operator (a name the
-          AG prosecuted) — because his offices differ by a typo and the shells share no address. <em>The most public
-            landlord in the city, split six ways.</em></div>
-        <span class="src">JustFix Who Owns What, “Croman” portfolios (2026-09-10 run; WoW ids renumber between
-          refreshes).
-          Watchline owner-identity layer (<code>OwnerGroup</code>). See <code>docs/cases/croman.html</code>.</span>
-        <aside class="notes">(~50s) Here's a false split you can't wave away as an edge case — it's the most notorious
-          landlord in New York. Ask Who Owns What for "Croman" and you don't get one portfolio, you get SIX: a main one
-          with 118 buildings, then a 5, a 2, and three singletons — 128 buildings by name, scattered. Why? Exactly the
-          mechanism from two slides ago: his management offices differ by small typos, and the single-purpose shells
-          don't share an address, so WoW's name and address rules can't bridge them — no edges, separate components,
-          six portfolios. If the graph fragments a landlord the Attorney General literally prosecuted, imagine the quiet
-          operators. Our owner-identity layer reunites the six into one owner of 127 buildings — and the next slides are
-          how. (Map on the left is the Who Owns What rendering; the sidebar is its own portfolio breakdown.)</aside>
+        <table style="width:100%;border-collapse:collapse;font-size:.78em;margin-top:.25em">
+          <thead>
+            <tr style="color:var(--muted);text-align:left;border-bottom:2px solid var(--line)">
+              <th style="padding:.35em .5em">#</th>
+              <th style="padding:.35em .5em">Registered office — <em>as filed in HPD</em></th>
+              <th style="padding:.35em .5em">Name filed</th>
+              <th style="padding:.35em .5em;text-align:right">Filings</th>
+              <th style="padding:.35em .5em;text-align:right">Buildings</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--line)">
+              <td style="padding:.28em .5em">1</td>
+              <td style="padding:.28em .5em"><b>424 WEST 51 ST</b> — “GF” · “GROUND” · “2 FL”</td>
+              <td style="padding:.28em .5em">STEVEN / STEVE CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">5</td>
+              <td style="padding:.28em .5em;text-align:right"><b>118</b></td>
+            </tr>
+            <tr style="border-top:1px solid var(--line)">
+              <td style="padding:.28em .5em">2</td>
+              <td style="padding:.28em .5em"><b>740 BROADWAY</b> — “—” · “2” · “2 FL”</td>
+              <td style="padding:.28em .5em">STEVE / STEVEN CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">3</td>
+              <td style="padding:.28em .5em;text-align:right">5</td>
+            </tr>
+            <tr style="border-top:1px solid var(--line);background:#fdf1f0">
+              <td style="padding:.28em .5em">3</td>
+              <td style="padding:.28em .5em"><b>4 WEST 51 ST</b> <span style="color:#b0261c;font-weight:700">⚠ a digit dropped from 424</span></td>
+              <td style="padding:.28em .5em">STEVEN CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+            </tr>
+            <tr style="border-top:1px solid var(--line)">
+              <td style="padding:.28em .5em">4</td>
+              <td style="padding:.28em .5em">424 WEST 22 ST</td>
+              <td style="padding:.28em .5em">STEVEN CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+            </tr>
+            <tr style="border-top:1px solid var(--line)">
+              <td style="padding:.28em .5em">5</td>
+              <td style="padding:.28em .5em">424 BROADWAY</td>
+              <td style="padding:.28em .5em">STEVEN CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+            </tr>
+            <tr style="border-top:1px solid var(--line)">
+              <td style="padding:.28em .5em">6</td>
+              <td style="padding:.28em .5em">632 BROADWAY</td>
+              <td style="padding:.28em .5em">STEVEN CROMAN</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+              <td style="padding:.28em .5em;text-align:right">1</td>
+            </tr>
+            <tr style="border-top:2px solid var(--line);font-weight:700;color:var(--navy)">
+              <td style="padding:.3em .5em"></td>
+              <td style="padding:.3em .5em">6 fragments — all “Steven Croman,” <b>one owner</b></td>
+              <td style="padding:.3em .5em"></td>
+              <td style="padding:.3em .5em;text-align:right">12</td>
+              <td style="padding:.3em .5em;text-align:right">127</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pull" style="font-size:.8em">Every row is the same man at the same couple of offices. Who Owns What
+          splits him six ways on <b>clerical noise</b> — a floor label, a name spelling, a missing digit — because exact
+          name-and-address matching can't bridge any of it.</div>
+        <span class="src">WatchlineNYC discovery graph — WoW-equivalent components over
+          <code>CONNECTED_BY_NAME ∪ CONNECTED_BY_ADDRESS</code>; owner identity unifies them to 127 buildings.
+          See <a href="../maps/croman.html">the live map</a> · <code>docs/cases/croman.html</code>.</span>
+        <aside class="notes">(~50s) A false split you can't wave away as an edge case — the most notorious landlord in
+          New York. Ask Who Owns What for "Croman" and you don't get one portfolio, you get SIX. Here's why, filing by
+          filing: every one is Steven — or Steve — Croman, at basically two offices, 424 West 51st and 740 Broadway. But
+          look at the office field as HPD has it: filed as "GF," then "GROUND," then "2 FL"; the name as both STEVEN and
+          STEVE; and one building filed from "4 West 51" — a single digit dropped from 424. WoW matches on exact name and
+          address, so each clerical variant becomes its own node, and the connected components fall into six portfolios —
+          118, a 5, and four singletons, 127 buildings in all. Our identity layer bridges that noise and reunites all
+          127 — the next slides are how.</aside>
       </section>
 
       <!-- 6 — THE IDENTITY ENGINE: SPLINK -->
@@ -877,66 +880,12 @@
           other.</aside>
       </section>
 
-      <!-- 7b — FALSE SPLIT BY DEED: HAIGHT -->
-      <section>
-        <span class="kicker">False split — no name, no address to match</span>
-        <h2>When owners share only a <em>deed</em> — <code>CONNECTED_BY_DEED</code></h2>
-        <hr class="rule">
-        <div style="display:flex;gap:1em;align-items:stretch;margin-top:.3em">
-          <figure style="flex:1.1;margin:0">
-            <div
-              style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6f8fb;min-height:240px;display:flex;align-items:center;justify-content:center">
-              <img src="haight-map.png"
-                alt="Ten adjacent townhouses on one block of Haight Street, Queens; Who Owns What paints nine of them in six colors as six separate owners, with the unregistered tenth shown as a hollow ghost dot"
-                style="display:block;max-width:100%;max-height:46vh;margin:0 auto;object-fit:contain"
-                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-              <div style="display:none;padding:1.2em;text-align:center;color:var(--faint);font-size:.8em">▸
-                <code>docs/meetup/haight-map.png</code>
-              </div>
-            </div>
-            <figcaption style="font-size:.72em;color:var(--muted);margin-top:.35em">41 Haight St, Queens — one
-              contiguous
-              row of identical townhouses, painted six colors by Who Owns What.</figcaption>
-          </figure>
-          <div style="flex:.9;font-size:.8em">
-            <div style="margin-bottom:.5em"><b style="color:#b0261c">WoW → 6 owners.</b> One row, six head officers —
-              Chan · Xu · Ho · Lin · Li · Chen — across nine owner-LLCs. Different names, different offices:
-              <b>nothing for name, address, or Splink to match on.</b>
-            </div>
-            <div style="margin-bottom:.5em"><b>The only tie is a transaction.</b> In 2020 a Chapter 11 trustee sold all
-              <b>10 townhouses on one deed for $18.6M</b> to a single buyer — who re-deeded them into single-purpose
-              shells.
-            </div>
-            <div style="padding:.4em .6em;border-left:4px solid #1c7c54;background:#e7f4ee;border-radius:4px"><b>▸
-                <code>CONNECTED_BY_DEED</code></b> reunites <b>9 of 10</b> into one owner. The 10th (41-23) is
-              unregistered → in <em>neither</em> system: the ghost dot.</div>
-          </div>
-        </div>
-        <div class="pull" style="font-size:.8em">Splink needs <em>some</em> shared field; a bulk buyer who scatters
-          title
-          leaves none. Here WoW isn't wrong — it's <b>blind: it reads no deeds.</b> ACRIS does.
-          <span style="color:var(--muted)">Common ownership inferred from the deed — a lead to verify.</span>
-        </div>
-        <span class="src">Owner group <code>OG-51705</code> · deed <code>2020092500293001</code> ($18.6M · 10 parcels ·
-          Ch. 11 sale) · composition <code>deed_only</code>. See <code>specs/case-haight.md</code>.</span>
-        <aside class="notes">(~45s) Splink fixed Croman because his records shared SOMETHING — a rare name, a fuzzy
-          address. But some owners leave nothing to match on. Ten identical townhouses on one block of Haight Street in
-          Flushing: Who Owns What reads the registered nine as SIX different owners — six head officers, nine LLCs, no
-          shared name or address — so name, address, AND Splink all split them. The only tie is a transaction: in 2020 a
-          bankruptcy trustee sold the whole row — all ten — on one deed, $18.6 million, to a single buyer, who re-deeded
-          them one at a time into shells. So we add a fourth edge type, CONNECTED_BY_DEED, straight from ACRIS, and it
-          reunites nine of the ten — a tie that is pure deed, no name, no address. Who Owns What can't reach this even
-          in
-          principle: it reads no deeds. Then the honesty beat — the tenth, 41-23, is on the same deed but has no HPD
-          registration, so it falls through BOTH systems: the ghost dot. Precision-first, with a real recall limit shown
-          on purpose.</aside>
-      </section>
-
       <!-- 8 — FALSE MERGE (MILLER) → THE THREE-LAYER MODEL -->
       <section>
         <span class="kicker">False merge → the three-layer fix</span>
         <h2>One office is not one owner</h2>
-        <h3>Miller: Who Owns What reads <b>27 buildings as one owner</b> — really ~10, all self-filing from one
+        <h3><a href="http://localhost:8000/maps/miller.html">Miller</a>: Who Owns What reads <b>27 buildings as one
+            owner</b> — really ~10, all self-filing from one
           Lakewood office</h3>
         <hr class="rule">
         <div style="display:flex;gap:1em;align-items:stretch;margin-top:.25em">
