@@ -106,14 +106,17 @@ still controls. Check 3 fails → a deed-only `SAME` is recorded `INDETERMINATE`
 is `DIFFERENT`: Dreifus and Farber are distinct people whose *former* co-ownership (an **association**, not
 identity — Option B / R3) has dissolved into separate current ownership; the shared office
 (207 Rockaway Turnpike) is an association signal, not identity. This is the mirror of a *valid*
-linked-successor case — e.g. `CITADEL ESTATES LLC` bought 15 Brooklyn buildings on one 2008 deed
-(`2008072300342001`, $58.4M) and later re-deeded each into its own Grateful-Dead-named single-purpose
-shell (`RIPPLE EP LLC`, `SCARLET BEGONIAS LLC`, `STELLA BLUE REALTY LLC`, ...) **at $0 consideration**.
-The shells register to **three different people** (Leroy Forde / Michael Roth / Thomas Forde), so
-name/address/Splink cannot link them — the shared deed is the *sole* tie, and the group (`OG-67966`) is
-wired by `CONNECTED_BY_DEED` **only**. The grantor-chain and single-purpose successors look identical to
-the partition/sale above, and **check 3 is the sole discriminator** — same-owner restructuring at nominal
-consideration (recover as `SAME`) vs. partition or sale between parties at real prices (reject).
+linked-successor case — e.g. `AXL HOME LLC` bought two adjacent Flushing houses (43-58 & 43-60 164th St)
+on one 2015 deed (`2015120200784001`, $1.2M) and in 2019 re-deeded each into its own single-purpose shell
+**at $0** — 43-58 → `BRIDGEWOOD DEVELOPMENT LLC`, 43-60 → `HONG LI GROUP LLC`. They register to two
+different people at two different addresses, so **real JustFix WoW splits them into two unrelated
+portfolios** (`wow.wow_portfolios` `orig_id` 14133 vs 55695); the shared deed is the *sole* tie and the
+group (`OG-15928`) is wired by `CONNECTED_BY_DEED` **only**. The grantor-chain and single-purpose
+successors look identical to the partition/sale above, and **check 3 is the sole discriminator** —
+same-owner restructuring at nominal consideration (recover as `SAME`) vs. partition or sale between
+parties at real prices (reject). (Verify positive examples against `wow.wow_portfolios`, not the graph's
+own `Portfolio` nodes — see [`case-axl.md`](case-axl.md), incl. why the vivid 15-shell Citadel fleet is
+*not* such an example: WoW over-lumps it via a shared aggregator address.)
 
 > **Note (2026-09-16): this exemplar was corrected.** §3 previously cited "156-06 → CHERRY 168" as the
 > valid same-owner recovery. On re-verification that case is the *opposite* — it is a priced resale to

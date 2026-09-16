@@ -107,10 +107,11 @@ One line per (pair, annotator).
 > `156-10` in `OG-3422`). And the illustrative annotation's `restructuring_not_sale: true` is itself
 > contestable — the successors register to two **distinct** people, so the substantive call is closer to
 > `DIFFERENT`/`INDETERMINATE`. The block is retained only to show the *schema*; for a live-SAME example
-> substitute a deed-only nominal-consideration recovery (e.g. `CITADEL ESTATES LLC`'s 15 Brooklyn
-> buildings, 2008 deed `2008072300342001`, re-deeded into Grateful-Dead-named shells at $0, `OG-67966` —
-> distinct registrants, `CONNECTED_BY_DEED` only). See [`deed-gate-review.md`](deed-gate-review.md) and
-> [`eval-protocol.md`](eval-protocol.md) §3.
+> substitute a deed-only nominal-consideration recovery that real WoW actually splits (e.g. `AXL HOME
+> LLC`'s two Flushing houses `4054210059`/`4054210061`, 2015 deed `2015120200784001`, re-deeded into
+> `BRIDGEWOOD DEVELOPMENT LLC` / `HONG LI GROUP LLC` at $0, `OG-15928` — WoW files them under two
+> unrelated portfolios `orig_id` 14133 vs 55695). See [`case-axl.md`](case-axl.md),
+> [`deed-gate-review.md`](deed-gate-review.md) and [`eval-protocol.md`](eval-protocol.md) §3.
 
 Plus `frame_manifest.json` (preregistration): `as_of_date`, `pipeline_git_sha`, sampling `seed`, and
 per-stratum `{frame_size, n}` — frozen before adjudication.

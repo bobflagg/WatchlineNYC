@@ -203,8 +203,9 @@ Read-only. Vintage **2026-09-16** (`justfixwow` + discovery graph). All queries 
 - [`case-miller.md`](case-miller.md) — **un-merge** what WoW conflated on a shared **address** (nexus ≠ owner).
 - [`case-levitov.md`](case-levitov.md) — **un-merge** on a shared **manager** (management ≠ owner).
 - **The deed veil-pierce, both faces:**
-  - [`case-citadel.md`](case-citadel.md) — the **payoff**: 15 buildings re-titled into 12 shells **at
-    $0**, reunited on the deed alone (`OG-67966`, `deed_only`) — the recovery the gate *admits*.
+  - [`case-axl.md`](case-axl.md) — the **payoff**: two houses bought together, re-titled into two shells
+    **at $0** and filed by *real* WoW under two unrelated portfolios, reunited on the deed alone
+    (`OG-15928`, `deed_only`) — the recovery the gate *admits*.
   - `case-haight.md` (this file) — the **limit**: the same shape, but the onward conveyances are
     **priced resales**, so "shared origin" cannot be upgraded to "same current owner" on the record
     alone. The consideration gate declines it — precision over recall.

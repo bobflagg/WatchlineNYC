@@ -28,14 +28,14 @@ grantee of <= SUCCESSOR_MAX buildings) AND that onward conveyance is a NOMINAL t
 check is what separates same-owner restructuring from an arms-length SALE to an independent buyer:
 without it, a genuine $1.1M sale to a small (<= SUCCESSOR_MAX-building) buyer is indistinguishable
 from a $0 re-deed into a controlled shell and gets falsely re-merged (the block-3498 / P0133 trap —
-see specs/eval-protocol.md §3.2). Verified recovery (nominal consideration, currently reunited,
-DEED-ONLY): CITADEL ESTATES LLC bought 15 Brooklyn buildings on one 2008 deed (2008072300342001,
-$58.4M) and later re-deeded each into its own Grateful-Dead-named single-purpose shell (RIPPLE EP LLC,
-SCARLET BEGONIAS LLC, STELLA BLUE REALTY LLC, PICASSO MOON 72 LLC, ...) at $0. Those shells register
-to THREE different people (Leroy Forde / Michael Roth / Thomas Forde), so name/address/Splink keep them
-apart — the shared deed + nominal recovery is the SOLE link that reunites them (owner group OG-67966,
-wired by CONNECTED_BY_DEED only). block-3498's assemblage, sold off in real ($1.1M) arms-length deals
-to distinct buyers, stays split, as it should.
+see specs/eval-protocol.md §3.2). Verified recovery (nominal consideration, DEED-ONLY, and a true
+false-split vs REAL JustFix WoW): AXL HOME LLC bought two adjacent Flushing houses (43-58 & 43-60 164th
+St) on one 2015 deed (2015120200784001, $1.2M) and in 2019 re-deeded each into its own shell at $0 —
+43-58 -> BRIDGEWOOD DEVELOPMENT LLC (head officer Brian Lin), 43-60 -> HONG LI GROUP LLC (head officer
+Xianglian Wang). They register to different people at different addresses, so WoW files them under two
+UNRELATED portfolios (wow.wow_portfolios orig_id 14133 vs 55695); the shared deed + nominal recovery is
+the SOLE link that reunites them (owner group OG-15928, CONNECTED_BY_DEED only). block-3498's assemblage,
+sold off in real ($1.1M) arms-length deals to distinct buyers, stays split, as it should.
 
 RECALL CAVEAT — the nominal gate is deliberately precision-first, and its recall cost is real, not
 hypothetical: a same-owner restructuring recorded at a market-scale price (a transfer-tax or financing

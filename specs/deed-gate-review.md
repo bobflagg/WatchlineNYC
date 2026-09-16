@@ -53,32 +53,37 @@ updates.) **Owner-group impact is bounded above by ~160 groups** — each lost d
 survive on the Splink edge, so ≤160 groups actually lose a deed-only reunification. The guard still does
 substantial work *post*-gate: **1,555** joint deeds currently keep ≥2 parcels via ≥2 nominal successors.
 
-### 1a. The upside the gate protects — deed-only false-split fixes
+### 1a. The upside the gate protects — deed-only false-split fixes (checked against *real* WoW)
 
-The gate is worth defending because the signal genuinely fixes false splits that *no* registration
-signal can. In the current graph, **44 owner groups are wired by `CONNECTED_BY_DEED` only** (no
-name/address/Splink edge) **and span ≥2 distinct registered persons** — buildings a human would never
-guess share an owner, tied solely by a shared deed.
+The gate is worth defending because the signal fixes false splits that *no* registration signal can.
+But "false split" must be scored against the **live JustFix `wow.wow_portfolios`**, not the discovery
+graph's own `Portfolio` nodes — WatchlineNYC's `Portfolio` layer masks aggregator addresses
+(landlord-degree > 25), real WoW does not, so a group can look split in our layer yet be one lump in
+WoW. Applying that gate changes the picture sharply:
 
-The cleanest is **CITADEL ESTATES (`OG-67966`)**: `CITADEL ESTATES LLC` bought **15 Brooklyn buildings
-on one 2008 deed** (`2008072300342001`, $58.4M, assembled from 15 numbered `… REALTY LLC` sellers),
-then re-deeded each into its own **Grateful-Dead-themed single-purpose shell at $0** — `RIPPLE EP LLC`,
-`SCARLET BEGONIAS LLC`, `STELLA BLUE REALTY LLC`, `FRANKLIN'S TOWER 26 LLC`, `PICASSO MOON 72 LLC`,
-`MORNING DEW 18 LLC`, `SUGAREE LLC`, `HALF STEP 36 LLC`, … The shells register to **three different
-people** (Leroy Forde / Michael Roth / Thomas Forde), so name/address/Splink keep them apart; the deed
-+ nominal recovery is the *sole* link, and it survives the gate precisely because every onward transfer
-is $0. This is the veil-pierce working as designed, and exactly what the gate is calibrated to keep —
-written up as the positive companion case in [`case-citadel.md`](case-citadel.md) (the mirror of
-[`case-haight.md`](case-haight.md)).
+- In the graph, **55 owner groups are wired by `CONNECTED_BY_DEED` only**, of which **44 span ≥2 distinct
+  registered persons**. Against real WoW, ~40 of those 44 do land in ≥2 distinct portfolios — **but the
+  population is dominated by non-shell-game patterns**: HDFC / co-op sponsor conveyances, family/estate
+  trust transfers, and institutional REIT deals (the `_INST` grantee filter misses these when the
+  institution is the *grantor*). Screening to a genuine same-owner restructuring — all onward transfers
+  $0, a single non-institutional **company** grantor, non-family — leaves only **5**, of which just
+  **one** is multi-shell.
 
-**Caveat — the deed-only-cross-name population needs triage, it is not 44 clean veil-pierces.** Spot-
-checking the set surfaces three non-shell-game patterns that also land here: **HDFC / affordable co-op
-sponsor deeds** (e.g. `OG-1545`, an `NYC PARTNERSHIP HDFC` sponsor conveyance to individual unit
-owners — the institutional party is the *grantor*, so the grantee-side `_INST` filter misses it);
-**family estate / trust transfers** (e.g. the `IVY OGLE 2024 IRREVOCABLE TRUST` pair in `OG-1652`); and
-occasional **spurious multi-hop merges** joining an unrelated third parcel. These are a *separate*
-precision question from the nominal gate (they enter through the held-since / co-purchase branch, not
-the restructuring branch), worth a follow-up — but they do not undercut CITADEL-class recoveries.
+- That one is the clean positive companion: **AXL HOME LLC (`OG-15928`)** — two adjacent Flushing houses
+  (43-58 & 43-60 164th St) bought on one 2015 deed ($1.2M), re-deeded in 2019 into `BRIDGEWOOD
+  DEVELOPMENT LLC` and `HONG LI GROUP LLC` at $0, registered to two different people at two different
+  addresses. **Real WoW files them under two unrelated portfolios** (`orig_id` 14133 vs 55695, neither an
+  aggregator), and only the deed reunites them. Written up as [`case-axl.md`](case-axl.md).
+
+- **The vivid big fleets are usually WoW *over-lumps*, not false-splits.** `CITADEL ESTATES (OG-67966)` —
+  15 Brooklyn buildings re-deeded into Grateful-Dead-named shells at $0 — is a *genuine* deed recovery,
+  but its three registrants all file at one 33-landlord aggregator address (`1330 EASTERN PARKWAY 6A`),
+  so **all 15 sit in a single real WoW portfolio (`orig_id 161`, 83 bldgs, 33 landlords)**. Relative to
+  WoW it is an over-lump, not a split. This is the structural tension worth stating: the shell operators
+  most worth catching tend to reuse one registration address (which lumps them in WoW), so the deed's
+  *uniquely* recovered false-splits skew small — an operator who spread the shells across different
+  addresses (AXL). A follow-up worth doing: fixing the grantor-side institutional leakage (HDFC/co-op
+  sponsor deeds) that pads the deed-only pool.
 
 ## 2. What is in the drop? (classification of a sample)
 
