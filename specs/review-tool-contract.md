@@ -98,6 +98,19 @@ One line per (pair, annotator).
  "anchor": null}
 ```
 
+> **Caveat (2026-09-16) — P0001 is a stale-label illustration, not current system output.** The example
+> pair above (`MOBUN YIP`/`4054140033` ↔ `JAN HOW KANG`/`4054140034`, the "156-06 → CHERRY 168" linked
+> successor) predates the nominal-consideration gate in `deed_edges.py` (commit `5f51475`). On current
+> data the system produces **`watchline: "DIFFERENT"`**, not `SAME`: the two successors were re-deeded at
+> **market prices** ($1,666,500 / $1,699,888, from joint grantee `LIBERTY 162 HOLDINGS LLC`), so the
+> linked-successor recovery is now gated off and they are not reunited (`156-06` in no owner group,
+> `156-10` in `OG-3422`). And the illustrative annotation's `restructuring_not_sale: true` is itself
+> contestable — the successors register to two **distinct** people, so the substantive call is closer to
+> `DIFFERENT`/`INDETERMINATE`. The block is retained only to show the *schema*; for a live-SAME example
+> substitute a nominal-consideration recovery (e.g. `STERLING PORTFOLIO LLC` → `PROSPECT`/`OCEAN` shells,
+> deed `2021062101445001`, all $0, `OG-97075`). See [`deed-gate-review.md`](deed-gate-review.md) and
+> [`eval-protocol.md`](eval-protocol.md) §3.
+
 Plus `frame_manifest.json` (preregistration): `as_of_date`, `pipeline_git_sha`, sampling `seed`, and
 per-stratum `{frame_size, n}` — frozen before adjudication.
 

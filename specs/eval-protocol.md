@@ -105,11 +105,25 @@ building into his own sole LLC), a division between distinct parties, not one ow
 still controls. Check 3 fails → a deed-only `SAME` is recorded `INDETERMINATE`, and the substantive call
 is `DIFFERENT`: Dreifus and Farber are distinct people whose *former* co-ownership (an **association**, not
 identity — Option B / R3) has dissolved into separate current ownership; the shared office
-(207 Rockaway Turnpike) is an association signal, not identity. This is the mirror of the *valid*
-linked-successor case (156-06 → CHERRY 168, where one owner spun buildings into shells it retained): the
-grantor-chain and single-purpose successors look identical, and **check 3 is the sole discriminator** —
-same-owner restructuring (recover as `SAME`) vs. partition/sale between parties (reject). The gate works
-as designed.
+(207 Rockaway Turnpike) is an association signal, not identity. This is the mirror of a *valid*
+linked-successor case — e.g. `STERLING PORTFOLIO LLC` co-bought six Brooklyn parcels and (deed
+`2021062101445001`) re-deeded each into its own `PROSPECT`-numbered / `OCEAN` single-purpose shell **at
+$0 consideration**, all still one owner (registrant Rony Kravel, currently `OG-97075`). The grantor-chain
+and single-purpose successors look identical to the partition/sale above, and **check 3 is the sole
+discriminator** — same-owner restructuring at nominal consideration (recover as `SAME`) vs. partition or
+sale between parties at real prices (reject).
+
+> **Note (2026-09-16): this exemplar was corrected.** §3 previously cited "156-06 → CHERRY 168" as the
+> valid same-owner recovery. On re-verification that case is the *opposite* — it is a priced resale to
+> two **distinct** people (`156-06`/`4054140033` → `BBGT PROPERTY LLC`, head officer MoBun Yip,
+> $1,666,500; `156-10`/`4054140034` → `CHERRY 168 LLC`, head officer Jan How Kang, $1,699,888; the
+> shared joint grantee was `LIBERTY 162 HOLDINGS LLC`, 2018, $3.9M). Its onward deeds are **market
+> price, not nominal**, so the consideration gate (`5f51475`) declines it and the two are **not**
+> reunited on current data (`156-06` in no owner group, `156-10` in `OG-3422`). It is therefore an
+> instance where check 3 correctly rejects (or defers), not a recovery — the same trap as `P0133` /
+> block-3498. `STERLING PORTFOLIO` above replaces it. See [`deed-gate-review.md`](deed-gate-review.md).
+
+The gate works as designed.
 
 ### 3.1 Shared owner-of-record: coverage triages, the C2 gate decides
 

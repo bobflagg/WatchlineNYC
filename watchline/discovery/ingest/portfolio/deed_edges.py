@@ -28,10 +28,20 @@ grantee of <= SUCCESSOR_MAX buildings) AND that onward conveyance is a NOMINAL t
 check is what separates same-owner restructuring from an arms-length SALE to an independent buyer:
 without it, a genuine $1.1M sale to a small (<= SUCCESSOR_MAX-building) buyer is indistinguishable
 from a $0 re-deed into a controlled shell and gets falsely re-merged (the block-3498 / P0133 trap —
-see specs/eval-protocol.md §3.2). Verified recovery: LIBERTY 162 co-bought 156-06 & 156-10 43rd Ave
-(2018), then spun them into BBGT / CHERRY 168 LLC at nominal consideration — WoW splits them, this
-guard reunites them; while the block-3498 assemblage sold off in real ($1.1M) arms-length deals stays
-split, as it should.
+see specs/eval-protocol.md §3.2). Verified recovery (nominal consideration, currently reunited):
+STERLING PORTFOLIO LLC co-bought six Brooklyn parcels and (deed 2021062101445001) re-deeded each into
+its own PROSPECT-numbered / OCEAN single-purpose shell at $0 — all still one owner (registrant Rony
+Kravel, owner group OG-97075); WoW splits the shells, this guard reunites them. block-3498's
+assemblage, sold off in real ($1.1M) arms-length deals to distinct buyers, stays split, as it should.
+
+RECALL CAVEAT — the nominal gate is deliberately precision-first, and its recall cost is real, not
+hypothetical: a same-owner restructuring recorded at a market-scale price (a transfer-tax or financing
+basis) is dropped right alongside true arms-length sales, because price alone cannot tell them apart
+(the §3 "restructuring vs. sale" check that needs human adjudication). The showcase 41 Haight bulk buy
+is exactly this: nine of ten townhouses were re-deeded at ~$1.6-2.8M, so the gate declines the whole
+set and NO Haight building is now in an owner group — a defensible precision call, but a recall miss
+worth naming (see specs/case-haight.md and the measured impact + a candidate shared-principal
+refinement in specs/deed-gate-review.md).
 
 DEED-HUB CAP — a landlord on more than DEED_HUB_CAP distinct multi-parcel deeds is a serial co-investor
 whose transitive links would over-merge unrelated parties (Aaron Feldman doing separate JVs with many
