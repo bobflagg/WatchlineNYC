@@ -202,9 +202,12 @@ Read-only. Vintage **2026-09-16** (`justfixwow` + discovery graph). All queries 
 - [`case-escobar.md`](case-escobar.md) — **merge** what WoW split (owner identity, one address typo).
 - [`case-miller.md`](case-miller.md) — **un-merge** what WoW conflated on a shared **address** (nexus ≠ owner).
 - [`case-levitov.md`](case-levitov.md) — **un-merge** on a shared **manager** (management ≠ owner).
-- `case-haight.md` (this file) — the **limit** of the deed veil-pierce: WoW is blind to the shared 2020
-  origin, but the onward conveyances are **priced resales**, so "shared origin" cannot be upgraded to
-  "same current owner" on the record alone. The consideration gate declines it — precision over recall.
+- **The deed veil-pierce, both faces:**
+  - [`case-citadel.md`](case-citadel.md) — the **payoff**: 15 buildings re-titled into 12 shells **at
+    $0**, reunited on the deed alone (`OG-67966`, `deed_only`) — the recovery the gate *admits*.
+  - `case-haight.md` (this file) — the **limit**: the same shape, but the onward conveyances are
+    **priced resales**, so "shared origin" cannot be upgraded to "same current owner" on the record
+    alone. The consideration gate declines it — precision over recall.
 
 Together: the owner-identity layer is *precision-first* and reads evidence WoW does not — it keeps *who
 owns* separate from *who operates through this office* and *who manages the building*, and it can see the

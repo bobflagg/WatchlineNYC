@@ -67,7 +67,9 @@ then re-deeded each into its own **Grateful-Dead-themed single-purpose shell at 
 `MORNING DEW 18 LLC`, `SUGAREE LLC`, `HALF STEP 36 LLC`, … The shells register to **three different
 people** (Leroy Forde / Michael Roth / Thomas Forde), so name/address/Splink keep them apart; the deed
 + nominal recovery is the *sole* link, and it survives the gate precisely because every onward transfer
-is $0. This is the veil-pierce working as designed, and exactly what the gate is calibrated to keep.
+is $0. This is the veil-pierce working as designed, and exactly what the gate is calibrated to keep —
+written up as the positive companion case in [`case-citadel.md`](case-citadel.md) (the mirror of
+[`case-haight.md`](case-haight.md)).
 
 **Caveat — the deed-only-cross-name population needs triage, it is not 44 clean veil-pierces.** Spot-
 checking the set surfaces three non-shell-game patterns that also land here: **HDFC / affordable co-op
