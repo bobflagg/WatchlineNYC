@@ -53,6 +53,31 @@ updates.) **Owner-group impact is bounded above by ~160 groups** — each lost d
 survive on the Splink edge, so ≤160 groups actually lose a deed-only reunification. The guard still does
 substantial work *post*-gate: **1,555** joint deeds currently keep ≥2 parcels via ≥2 nominal successors.
 
+### 1a. The upside the gate protects — deed-only false-split fixes
+
+The gate is worth defending because the signal genuinely fixes false splits that *no* registration
+signal can. In the current graph, **44 owner groups are wired by `CONNECTED_BY_DEED` only** (no
+name/address/Splink edge) **and span ≥2 distinct registered persons** — buildings a human would never
+guess share an owner, tied solely by a shared deed.
+
+The cleanest is **CITADEL ESTATES (`OG-67966`)**: `CITADEL ESTATES LLC` bought **15 Brooklyn buildings
+on one 2008 deed** (`2008072300342001`, $58.4M, assembled from 15 numbered `… REALTY LLC` sellers),
+then re-deeded each into its own **Grateful-Dead-themed single-purpose shell at $0** — `RIPPLE EP LLC`,
+`SCARLET BEGONIAS LLC`, `STELLA BLUE REALTY LLC`, `FRANKLIN'S TOWER 26 LLC`, `PICASSO MOON 72 LLC`,
+`MORNING DEW 18 LLC`, `SUGAREE LLC`, `HALF STEP 36 LLC`, … The shells register to **three different
+people** (Leroy Forde / Michael Roth / Thomas Forde), so name/address/Splink keep them apart; the deed
++ nominal recovery is the *sole* link, and it survives the gate precisely because every onward transfer
+is $0. This is the veil-pierce working as designed, and exactly what the gate is calibrated to keep.
+
+**Caveat — the deed-only-cross-name population needs triage, it is not 44 clean veil-pierces.** Spot-
+checking the set surfaces three non-shell-game patterns that also land here: **HDFC / affordable co-op
+sponsor deeds** (e.g. `OG-1545`, an `NYC PARTNERSHIP HDFC` sponsor conveyance to individual unit
+owners — the institutional party is the *grantor*, so the grantee-side `_INST` filter misses it);
+**family estate / trust transfers** (e.g. the `IVY OGLE 2024 IRREVOCABLE TRUST` pair in `OG-1652`); and
+occasional **spurious multi-hop merges** joining an unrelated third parcel. These are a *separate*
+precision question from the nominal gate (they enter through the held-since / co-purchase branch, not
+the restructuring branch), worth a follow-up — but they do not undercut CITADEL-class recoveries.
+
 ## 2. What is in the drop? (classification of a sample)
 
 A random 15 of the ~9,460 price-rejected parcels, enriched with successor grantee + HPD head officer:

@@ -107,8 +107,9 @@ One line per (pair, annotator).
 > `156-10` in `OG-3422`). And the illustrative annotation's `restructuring_not_sale: true` is itself
 > contestable — the successors register to two **distinct** people, so the substantive call is closer to
 > `DIFFERENT`/`INDETERMINATE`. The block is retained only to show the *schema*; for a live-SAME example
-> substitute a nominal-consideration recovery (e.g. `STERLING PORTFOLIO LLC` → `PROSPECT`/`OCEAN` shells,
-> deed `2021062101445001`, all $0, `OG-97075`). See [`deed-gate-review.md`](deed-gate-review.md) and
+> substitute a deed-only nominal-consideration recovery (e.g. `CITADEL ESTATES LLC`'s 15 Brooklyn
+> buildings, 2008 deed `2008072300342001`, re-deeded into Grateful-Dead-named shells at $0, `OG-67966` —
+> distinct registrants, `CONNECTED_BY_DEED` only). See [`deed-gate-review.md`](deed-gate-review.md) and
 > [`eval-protocol.md`](eval-protocol.md) §3.
 
 Plus `frame_manifest.json` (preregistration): `as_of_date`, `pipeline_git_sha`, sampling `seed`, and
