@@ -57,10 +57,11 @@ verify, not determinations of legal ownership.)*
   Bronx portfolio fractures into two. Watchline keeps all 26 buildings together as one owner.
   ([Full node-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/escobar.html) —
   why the raw table holds five nodes.)
-- **[Haight Street — one block, six owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/haight.html):**
-  Nine identical townhouses on one Queens block that Who Owns What reads as six separate owners;
-  Watchline reunites them via a single 2020 bulk deed — a veil-pierce from the ACRIS record that
-  registration-based grouping cannot see. Toggle to watch one contiguous row turn six colors.
+- **[164th Street — two houses, two owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/axl.html):**
+  Two adjacent Flushing row houses bought together on a single 2015 deed, then re-titled into two
+  single-purpose shells at $0 — so Who Owns What files them under two unrelated owners. Watchline
+  reunites them on the deed alone: a veil-pierce from the ACRIS record that registration-based
+  grouping cannot see. Toggle to watch two next-door houses that read as two owners resolve to one.
 - **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
   Who Owns What groups 27 buildings as a single owner because they share one registration
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
@@ -70,9 +71,9 @@ verify, not determinations of legal ownership.)*
 
 Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
 owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
-fractured by brittle address matching (Escobar — 26 buildings reunited), and one WoW can't see at all: nine buildings
-tied only by a shared ACRIS deed (Haight — a Queens block that reads as six owners but was one bulk
-purchase). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
+fractured by brittle address matching (Escobar — 26 buildings reunited), and one WoW can't see at all: two houses
+tied only by a shared ACRIS deed (AXL — a Flushing pair that reads as two owners but was one 2015
+purchase, re-titled into two $0 shells). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
 seven owners) or a managing agent (Levitov — one operator, five separate owners). Together they are
 the answer, in data, to *"doesn't it just merge everything?"* — every ownership link labeled an
 inference to verify, not a legal determination, and drawn from the public record.
