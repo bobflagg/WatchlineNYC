@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio map · OG-15928 (AXL)</title>
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <style>
+    :root { --ink:#1a2129; --soft:#5b6570; --line:#d9ddd6; --panel:#fff; }
+    html,body { margin:0; height:100%; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); }
+    #map { position:absolute; inset:0; }
+    .card { position:absolute; top:12px; left:12px; z-index:2; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.12); max-width:330px; overflow:hidden; }
+    .card h1 { font-size:.95rem; margin:0; padding:11px 14px; border-bottom:1px solid var(--line); }
+    .card h1 small { display:block; color:var(--soft); font-weight:400; font-size:.72rem; margin-top:2px; }
+    .toggle { display:flex; padding:10px 14px 6px; gap:8px; }
+    .toggle button { flex:1; font:inherit; font-size:.8rem; padding:7px 4px; border:1px solid var(--line); background:#f6f7f4; color:var(--ink); border-radius:6px; cursor:pointer; }
+    .toggle button.on { background:var(--ink); color:#fff; border-color:var(--ink); font-weight:600; }
+    .legend { padding:4px 14px 12px; max-height:46vh; overflow-y:auto; }
+    .legend .row { font-size:.78rem; margin:8px 0; padding-left:20px; position:relative; color:var(--ink); }
+    .legend .dot { position:absolute; left:0; top:2px; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,.35); }
+    .legend .nm { color:var(--ink); font-weight:600; }
+    .legend .addr { color:var(--soft); font-family:ui-monospace,monospace; font-size:.72rem; }
+    .note { padding:0 14px 12px; font-size:.72rem; color:var(--soft); }
+    .maplibregl-popup-content { font:13px/1.4 -apple-system,sans-serif; padding:9px 12px; border-radius:7px; box-shadow:0 2px 10px rgba(0,0,0,.18); }
+    .maplibregl-popup-content b { font-size:.85rem; }
+    .pp { color:#5b6570; font-family:ui-monospace,monospace; font-size:.72rem; }
+    .tip .mrow { margin-top:4px; font-size:.78rem; color:var(--ink); }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <div class="card">
+    <h1>Two adjacent houses, one deed<small>43-58 &amp; 43-60 164th St · Who Owns What = 2 unrelated portfolios ·
+        WatchlineNYC = 1 owner</small></h1>
+    <div class="toggle">
+      <button id="b-wow" class="on" onclick="setView('wow')">Who Owns What</button>
+      <button id="b-wl" onclick="setView('wl')">WatchlineNYC</button>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="note"><b>These groupings are algorithmic inferences from public records — leads to verify, not
+        determinations of legal ownership. Data as of 2026-09-16.</b><br>Bought together on one 2015 deed by
+      AXL HOME LLC ($1.2M), re-titled into two $0 shells in 2019. Only <code>CONNECTED_BY_DEED</code> links them.
+      Coordinates: NYC DOF/PLUTO. WoW: <code>wow.wow_portfolios</code>. Base tiles © Esri.</div>
+  </div>
+  <script>
+    const DATA = {"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.8028432,40.7570228]},"properties":{"bbl":"4054210059","address":"43-58 164 STREET","bldgclass":"B2","units":2,"year":2017,"shell":"BRIDGEWOOD DEVELOPMENT LLC","officer":"Brian Lin","wow_pf":"14133","wow_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.8028543,40.7569405]},"properties":{"bbl":"4054210061","address":"43-60 164 STREET","bldgclass":"B2","units":2,"year":2017,"shell":"HONG LI GROUP LLC","officer":"Xianglian Wang","wow_pf":"55695","wow_color":"#d97706"}}]};
+    const WL_COLOR = "#1c7c54";
+    const LEGEND = { wl: `<div class="row"><span class="dot" style="background:#1c7c54"></span><b>One owner</b> · 2 buildings (OG-15928)<br><span class="addr">43-58 &amp; 43-60 164th St — joined by a 2015 deed</span></div>`, wow: `<div class="row"><span class="dot" style="background:#2563eb"></span>WoW #14133 · 1 bldg<br><span class="nm">Brian Lin</span> · <span class="addr">BRIDGEWOOD DEVELOPMENT LLC</span></div>
+<div class="row"><span class="dot" style="background:#d97706"></span>WoW #55695 · 3 bldgs<br><span class="nm">Xianglian Wang</span> · <span class="addr">HONG LI GROUP LLC</span></div>` };
+    const DEFAULT_VIEW = "wow";
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8, sources: { "esristreet": { "type": "raster", "tileSize": 256, "maxzoom": 19, "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"], "attribution": "Tiles \u00a9 Esri" } }, layers: [{ "id": "esristreet", "type": "raster", "source": "esristreet" }] },
+      center: [-73.8028, 40.7570], zoom: 17
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+    function setView(v) {
+      document.getElementById("b-wl").classList.toggle("on", v === "wl");
+      document.getElementById("b-wow").classList.toggle("on", v === "wow");
+      document.getElementById("legend").innerHTML = LEGEND[v];
+      const color = v === "wl" ? WL_COLOR : ["get", "wow_color"];
+      map.setPaintProperty("pts", "circle-color", color);
+    }
+
+    map.on("load", () => {
+      map.addSource("pts", { type: "geojson", data: DATA });
+      map.addLayer({ id: "pts", type: "circle", source: "pts",
+        paint: { "circle-color": WL_COLOR, "circle-radius": 11, "circle-stroke-width": 2, "circle-stroke-color": "#fff", "circle-opacity": .95 } });
+      const b = new maplibregl.LngLatBounds();
+      DATA.features.forEach(f => b.extend(f.geometry.coordinates));
+      if (!b.isEmpty()) map.fitBounds(b, { padding: 220, maxZoom: 18 });
+      setView(DEFAULT_VIEW);
+      const tip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: "tip", maxWidth: "280px" });
+      map.on("mousemove", "pts", e => {
+        map.getCanvas().style.cursor = "pointer";
+        const p = e.features[0].properties;
+        tip.setLngLat(e.lngLat).setHTML(
+          `<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>` +
+          `<div class="mrow">class ${p.bldgclass} · ${p.units} units · built ${p.year}</div>` +
+          `<div class="mrow">Shell (PLUTO owner): ${p.shell}</div>` +
+          `<div class="mrow">HPD registrant: ${p.officer}</div>` +
+          `<div class="mrow">WoW portfolio: #${p.wow_pf}</div>` +
+          `<div class="mrow" style="color:#155c3e">Owner group OG-15928 · joined by the 2015 deed</div>`
+        ).addTo(map);
+      });
+      map.on("mouseleave", "pts", () => { map.getCanvas().style.cursor = ""; tip.remove(); });
+      window._mapReady = true;
+    });
+    window.mapIdle = () => new Promise(res => map.once("idle", res));
+  </script>
+</body>
+
+</html>
