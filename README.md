@@ -15,9 +15,10 @@ Watchline adds three things:
 - A **deed veil-pierce** built from the ACRIS record (`CONNECTED_BY_DEED`) that catches
   shell-LLC ownership registrations hide — including the shell game's signature move: buy a
   block together, then re-deed each building into its own single-purpose LLC.
-- A **three-layer model** that keeps three questions ownership data routinely conflates
-  cleanly apart — who **owns** a building, what operational network it **runs through**, and
-  who **manages** it.
+- A **beneficial owner group** built on one rule — *don't ask one signal two questions*: a
+  shared office tells you what a building **operates through**, never who **owns** it, so
+  ownership is resolved as its own community, from ownership signals (record linkage and
+  deeds) and never from a shared address.
 
 Every ownership link is labeled **sourced or inferred** — a lead to verify, never a legal
 determination.
