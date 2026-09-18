@@ -186,8 +186,9 @@ held-parcel officers, and re-tests the price-rejected candidates against that an
 
 ## 5. Held-since branch precision fix — co-op/condo + public-grantor exclusion
 
-**Scope.** A *separate* precision fix, in the **held-since** branch of `_deed_sql` (not the
-nominal-consideration gate of §1–§4, which is the linked-successor `$0` branch and is untouched). The
+**Scope.** A *separate* precision fix, in the **held-since** grouping — applied in **both** deed paths
+(`_deed_sql` and `_JOINT_SQL`; see *Applied to both deed paths* below) (not the nominal-consideration
+gate of §1–§4, which is the linked-successor `$0` branch and is untouched). The
 held-since rule groups landlords whose buildings share one *still-latest* joint deed. Two failure modes
 make that shared deed prove not private co-ownership but a shared *program* or *building form*, fusing
 unrelated people into one owner group.
@@ -209,8 +210,8 @@ group's linking deed:
   (Lesten+Gordon-Ptashne), 332-336 E 77th St Assoc / class C6 (Bean+Osher), Bond Street Associates /
   C6 (Zasloff+Holman), John Gault Company / C6 (Astacio+Pablo).
 
-**The fix.** In `_deed_sql` (held-since candidate generation) only, drop a shared latest deed from
-forming a held group when either:
+**The fix.** In the held-since candidate generation (`_deed_sql`, and mirrored in `_JOINT_SQL` — see
+*Applied to both deed paths*), drop a shared latest deed from forming a held group when either:
 1. **Public / affordable-housing** — grantor (`partytype = 1`) **or** grantee (`partytype = 2`) matches
    the conservative keyword list `_HELD_PUBLIC_KW` (`HPD`, `HOUSING PRESERVATION`, `DEPARTMENT OF
    HOUSING`, `CITY OF NEW YORK`, `HDFC`, `HOUSING DEVELOPMENT FUND`, `HOUSING AUTHORITY`, `NYCHA`,
@@ -234,8 +235,24 @@ forming a held group when either:
 - Globally (all held-since deeds mapping to ≥2 landlord nodes, i.e. that actually form a merge): of
   **966** such deeds, the fix drops **211** (127 public-grantor/grantee, 100 co-op/condo, 16 overlap).
 - **Unchanged, as required:** the linked-successor `$0` cases (AXL joint deed `2015120200784001`,
-  Citadel) are recovered by `_restructured_groups`, never appear in the held-since candidate set, and
-  are untouched. Family/estate held-since groups remain. `_INST` / `_INST_RE` / `_retained` unchanged.
+  Citadel) are private, non-co-op conveyances, so the guard leaves them; they are recovered by
+  `_restructured_groups` as before. Family/estate held-since groups remain. `_INST` / `_INST_RE` /
+  `_retained` unchanged.
+
+**Applied to both deed paths (completeness).** `deed_node_groups` unions `_deed_sql` (branch A) with
+`_restructured_groups` (branch B) — and branch B *also* emits held-since parcels: `_retained` keeps a
+parcel when `ldoc == doc` (the joint deed is its latest). Filtering only branch A therefore let
+**post-2005** public/co-op held deeds re-enter through branch B (they clear `_JOINT_SQL`'s 2005+
+recency floor), silently undoing the fix for recent conveyances. The same guard (`_PUBLIC_LIKE` +
+`_COOP_CTE`, factored to a single source of truth) is now applied in `_JOINT_SQL` too. Verified
+before→after on `_restructured_groups` (deterministic, 2026-09-18): the leaking held deeds are removed —
+e.g. `2005070600401001` (City-of-NY grantor) and `2007061401549001` (majority co-op) — while the
+linked-successor `$0` recoveries AXL `2015120200784001` and Citadel
+`2008072300342001` (private, non-co-op) are retained; branch B's joint-deed set drops **31,163 → 30,767**.
+The invariant is guarded by `tests/test_deed_edges.py::test_joint_sql_mirrors_the_held_since_guard`.
+Conservative-by-design: deeds that are neither clearly public nor majority co-op (e.g. Grassmere
+Terrace, and a person-grantor group that is exactly 50% co-op) are deliberately kept — zero
+false-positive exclusions of private co-ownership.
 
 **Residual (deliberate).** One audited example is *not* dropped: Grassmere Terrace (Lugo+Emono), a
 class-C0 townhouse HOA whose grantee is a "HOME OWNERS ASSOCIATION" — caught by neither rule. Adding a

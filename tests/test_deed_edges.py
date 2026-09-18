@@ -154,3 +154,16 @@ def test_joint_sql_carries_the_restructuring_scope():
     assert de.RESTRUCT_MIN_DATE in sql                   # recency floor on the joint deed
     assert "partytype = 1" in de._LATEST_SQL             # grantor of the successor deed (the chain)
     assert "docamount" in de._LATEST_SQL                 # consideration threaded for the nominal gate
+
+
+def test_joint_sql_mirrors_the_held_since_guard():
+    # Branch B (_JOINT_SQL / _restructured_groups) ALSO emits held-since parcels — _retained keeps a
+    # parcel when `ldoc == doc` (the joint deed is its latest). So the held-since public/co-op guard
+    # MUST be mirrored here, or a public/co-op held deed dropped from _deed_sql (branch A) re-enters
+    # through this path for 2005+ joint deeds. Assert the guard is present AND literally shared.
+    sql = de._JOINT_SQL.format(max_parcels=de.MAX_PARCELS)
+    assert "partytype IN (1, 2)" in sql                        # public grantor OR grantee (both sides)
+    for kw in ("HPD", "HOUSING PRESERVATION", "NEIGHBORHOOD PARTNERSHIP", "H.E.L.P"):
+        assert kw in sql
+    assert "coop AS" in sql and "contactdescription" in sql    # co-op/condo majority exclusion
+    assert de._PUBLIC_LIKE in sql and de._COOP_CTE in sql       # single source of truth, shared w/ branch A

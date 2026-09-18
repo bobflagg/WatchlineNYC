@@ -130,6 +130,24 @@ _HELD_PUBLIC_KW = (
 # DOF/PLUTO building classes that mark a co-op (C6/C8/D0/D4) or condo (class starting with 'R').
 _COOP_CLASSES = ("C6", "C8", "D0", "D4")
 
+# Shared held-since exclusion fragments, applied in BOTH deed paths: _deed_sql (branch A) AND
+# _JOINT_SQL / _restructured_groups (branch B, whose _retained ALSO emits held-since parcels via
+# `ldoc == doc`). Filtering only branch A let public/co-op held deeds re-enter through branch B for
+# 2005+ joint deeds; keeping the guard in one place keeps the two paths consistent.
+_PUBLIC_LIKE = " OR ".join(f"upper(p.name) LIKE '%{k}%'" for k in _HELD_PUBLIC_KW)
+_COOP_CTE = f"""coop AS (                  -- co-op/condo bbls: DOF/PLUTO class OR HPD-plurality (coop_condo.py)
+        SELECT trim(bbl) AS bbl FROM pluto_latest
+        WHERE upper(trim(bldgclass)) IN ({", ".join(f"'{c}'" for c in _COOP_CLASSES)})
+           OR upper(trim(bldgclass)) LIKE 'R%%'                       -- condo classes (R0..R9,RR)
+        UNION
+        SELECT g.bbl AS bbl
+        FROM hpd_contacts c
+        JOIN hpd_registrations_grouped_by_bbl_with_contacts g ON g.registrationid = c.registrationid
+        WHERE c.type IN ('HeadOfficer','IndividualOwner','CorporateOwner')
+        GROUP BY g.bbl
+        HAVING avg(CASE WHEN c.contactdescription IN ('CO-OP','CONDO') THEN 1.0 ELSE 0.0 END) > 0.5
+    )"""
+
 
 def _norm(name: str) -> str:
     """Fold an entity name for identity comparison: uppercase, strip non-alphanumerics."""
@@ -137,12 +155,10 @@ def _norm(name: str) -> str:
 
 
 def _deed_sql(max_parcels: int) -> str:
-    # Held-since precision guard (see _HELD_PUBLIC_KW / _COOP_CLASSES): exclude a shared latest deed
-    # from proving co-ownership when it is a public/affordable-housing conveyance (grantor OR grantee)
-    # or a co-op/condo building's deed. Both drop unrelated co-beneficiaries / co-shareholders that a
-    # bare "shared latest deed" would otherwise fuse into one owner group.
-    public = " OR ".join(f"upper(p.name) LIKE '%{k}%'" for k in _HELD_PUBLIC_KW)
-    coop_classes = ", ".join(f"'{c}'" for c in _COOP_CLASSES)
+    # Held-since precision guard (branch A): exclude a shared latest deed from proving co-ownership
+    # when it is a public/affordable-housing conveyance (grantor OR grantee) or a co-op/condo
+    # building's deed. Mirrored in _JOINT_SQL (branch B) via the same _PUBLIC_LIKE / _COOP_CTE, so a
+    # held-since deed dropped here cannot re-enter through the linked-successor path.
     return f"""
         WITH latest AS (                        -- each building's most recent deed (staleness guard)
             SELECT DISTINCT ON (btrim(l.bbl)) btrim(l.bbl) AS bbl, m.documentid AS doc
@@ -152,24 +168,13 @@ def _deed_sql(max_parcels: int) -> str:
               AND COALESCE(m.docdate, m.recordedfiled) <= CURRENT_DATE
             ORDER BY btrim(l.bbl), COALESCE(m.docdate, m.recordedfiled) DESC NULLS LAST
         ),
-        coop AS (                               -- co-op/condo bbls: DOF/PLUTO class OR HPD plurality
-            SELECT trim(bbl) AS bbl FROM pluto_latest
-            WHERE upper(trim(bldgclass)) IN ({coop_classes})
-               OR upper(trim(bldgclass)) LIKE 'R%%'                       -- condo classes (R0..R9,RR)
-            UNION                               -- same rule owner_groups.py uses (coop_condo.py)
-            SELECT g.bbl AS bbl
-            FROM hpd_contacts c
-            JOIN hpd_registrations_grouped_by_bbl_with_contacts g ON g.registrationid = c.registrationid
-            WHERE c.type IN ('HeadOfficer','IndividualOwner','CorporateOwner')
-            GROUP BY g.bbl
-            HAVING avg(CASE WHEN c.contactdescription IN ('CO-OP','CONDO') THEN 1.0 ELSE 0.0 END) > 0.5
-        )
+        {_COOP_CTE}
         SELECT lt.doc AS doc, array_agg(DISTINCT lt.bbl) AS bbls
         FROM latest lt
         LEFT JOIN coop cc ON cc.bbl = lt.bbl
         WHERE NOT EXISTS (                      -- (1) public / affordable-housing grantor OR grantee
             SELECT 1 FROM real_property_parties p
-            WHERE p.documentid = lt.doc AND p.partytype IN (1, 2) AND ({public}))
+            WHERE p.documentid = lt.doc AND p.partytype IN (1, 2) AND ({_PUBLIC_LIKE}))
         GROUP BY lt.doc
         HAVING count(DISTINCT lt.bbl) >= {MIN_PARCELS}
            AND count(DISTINCT lt.bbl) <= {int(max_parcels)}
@@ -180,14 +185,20 @@ def _deed_sql(max_parcels: int) -> str:
 # --- Linked-successor guard (branch B): recover restructured joint purchases ------------------
 # A joint multi-parcel deed whose grantee later spun each parcel into its own single-purpose LLC.
 _JOINT_SQL = f"""
-    WITH jd AS (
+    WITH {_COOP_CTE},
+    jd AS (
         SELECT m.documentid AS doc, array_agg(DISTINCT btrim(l.bbl)) AS bbls
         FROM real_property_master m
         JOIN real_property_legals l ON l.documentid = m.documentid
+        LEFT JOIN coop cc ON cc.bbl = btrim(l.bbl)
         WHERE m.doctype ILIKE '%%DEED%%'
           AND COALESCE(m.docdate, m.recordedfiled) BETWEEN DATE '{RESTRUCT_MIN_DATE}' AND CURRENT_DATE
         GROUP BY m.documentid
         HAVING count(DISTINCT btrim(l.bbl)) BETWEEN {MIN_PARCELS} AND {{max_parcels}}
+           -- held-since guard (branch B), mirrors _deed_sql: drop deeds that are majority co-op/condo.
+           -- Counts DISTINCT bbls (legals can repeat per doc), so the fraction isn't row-count-skewed.
+           AND count(DISTINCT btrim(l.bbl)) FILTER (WHERE cc.bbl IS NOT NULL)::numeric
+               / count(DISTINCT btrim(l.bbl)) <= 0.5
     )
     SELECT jd.doc AS doc, jd.bbls AS bbls, g.grantees AS grantees
     FROM jd
@@ -196,6 +207,9 @@ _JOINT_SQL = f"""
         FROM real_property_parties WHERE partytype = 2 AND documentid IN (SELECT doc FROM jd)
         GROUP BY documentid
     ) g ON g.documentid = jd.doc
+    WHERE NOT EXISTS (                          -- public / affordable-housing grantor OR grantee (branch B)
+        SELECT 1 FROM real_property_parties p
+        WHERE p.documentid = jd.doc AND p.partytype IN (1, 2) AND ({_PUBLIC_LIKE}))
 """
 # Latest deed per parcel + that deed's grantor(s) (party1), grantee (party2), and docamount (the
 # recorded consideration, for the nominal-consideration gate), joined (not correlated).
