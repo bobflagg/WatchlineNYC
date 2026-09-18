@@ -333,7 +333,12 @@ need the same WoW-gate scrutiny as AXL/Citadel). So across all **130** deed-crit
 concealed-ownership payoff stays small; most of its work is ordinary co-ownership and Splink backstopping.
 
 **Residual — institutional over-merge (open item).** The 41 held-since bridges still contain a few
-**institutional over-merges** the conservative §5 keyword filter misses — e.g. `OG-40172` (114 buildings;
-distinct HDFCs + Columbia University). A future pass with broader institutional detection (owner-type /
-HDFC-corp signals, not a static keyword list) would tighten this; it is the one open item left in the
-deed-critical picture.
+**institutional over-merges** the conservative §5 keyword filter misses. Example: `OG-40172` (114
+buildings) fuses two distinct Harlem operators — Genevieve Outlaw (~64) and Malcolm Punter (~44) —
+because a building in each passed through one 2021 deed, **NYS Urban Development Corporation → Trustees of
+Columbia University** (16 Manhattanville parcels, Columbia's campus expansion). A government→university
+land conveyance is read as shared private ownership, ballooning the group to a false 114-building
+"owner." It slips through because neither party name matches `_HELD_PUBLIC_KW` and the buildings are not
+co-op/condo class. A future pass — reconciling the held filter with the broader institutional list
+`_INST_RE` (which already carries `UNIVERSITY` / `TRUSTEES` / `FOUNDATION` / `BANK`), or using owner-type
+signals — would catch these; it is the one open item left in the deed-critical picture.
