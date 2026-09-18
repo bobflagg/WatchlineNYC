@@ -273,16 +273,18 @@ often the deed edge is *load-bearing* and what kind of ownership it recovers. Re
 joined to owner groups; deed-only classification via ACRIS grantor/grantee + DOF building class + name
 similarity). Frame is **pre-§5-fix** unless noted.
 
-**Load-bearing footprint.** Of **6,528** multi-member owner groups:
-- **763** carry ≥1 `CONNECTED_BY_DEED` edge, but in **611** of those Splink alone already connects the
-  group — the deed is *redundant*.
-- The deed is **load-bearing in 152** ("deed-critical": removing the deed edges fragments the group
-  into ≥2 Splink-components). Those 152 = **75 deed-only** (no Splink at all among members) + **77
-  bridge** (deed joins ≥2 otherwise-separate Splink-clusters; not classified below).
+**Load-bearing footprint.** The **pre-§5-fix** audit (of 6,528 multi-member owner groups) found **763**
+groups carry ≥1 `CONNECTED_BY_DEED` edge, but in **611** Splink alone already connects them (the deed is
+*redundant*); the deed is **load-bearing in 152** ("deed-critical": removing the deed edges fragments the
+group into ≥2 Splink-components) = **75 deed-only** (no Splink among members) + **77 bridge** (deed joins
+≥2 otherwise-separate Splink-clusters). **After the §5 rebuild** (current graph, 6,521 groups) these
+tighten to **130 deed-critical — 63 deed-only + 67 bridge** — the fix dissolved ~22 spurious deed-critical
+groups and left **zero** public/co-op residual bridges.
 
-**Classification of the 75 deed-only groups** (assigned by *primary* mechanism; name-variant first, so
-these are a clean partition — §5 counts held-since more broadly by deed-shape, 61 of 75, because many
-name-variant groups also happen to share a held deed):
+**Classification of the 75 deed-only groups** (pre-§5-fix frame; the fix later removed the ~12 spurious
+held-since, leaving 63. Assigned by *primary* mechanism; name-variant first, so these are a clean
+partition — §5 counts held-since more broadly by deed-shape, 61 of 75, because many name-variant groups
+also happen to share a held deed):
 
 | Mechanism | n | What it is | Demo/precision value |
 |---|---|---|---|
@@ -314,7 +316,24 @@ layer, which *deliberately ignores* shared/aggregator addresses (to avoid the Mi
 name/Splink tie. In one line: **you need the deed precisely where you refused to trust the address**;
 aggregator-masking and `CONNECTED_BY_DEED` are two halves of one design.
 
-**Caveat / open item.** Only 75 of the 152 deed-critical groups (the deed-only ones) are classified
-here; the **77 bridge** groups (deed joining two Splink-clusters) are not yet characterized and are, by
-construction, *not* name-variant recoveries. Classifying them would complete the "what the deed buys"
-picture.
+**Classification of the 67 bridge groups** (current graph, post-§5 rebuild — the deed joins ≥2
+Splink-clusters; same ACRIS grantor/grantee + name method applied to the cross-cluster tie):
+
+| Bucket | n | What the deed bridges |
+|---|---|---|
+| **held-since** | 41 | a shared joint deed spanning ≥2 Splink-clusters (co-ownership) |
+| **name-variant** | 12 | Splink *under*-merged one person into clusters; the deed corroborates (e.g. IGHODARD/IGHODARO, MARITN/MARTIN KALT) |
+| **other** | 9 | multi-hop / unclear (large operators: Fruchthandler `OG-34289`, Beach Front `OG-13058`) |
+| **linked-successor `$0`** | 5 | common nominal grantor across clusters — the shell-game bridge (`2180 WALTON LLC`, `GC 26 LLC`) |
+| **public/co-op residual** | 0 | cleared by §5 ✓ |
+
+The bridge groups **mirror the deed-only picture** — dominated by ordinary co-ownership (41 held-since)
+and Splink recall-backstop (12 name-variant), with only **5** genuine veil-pierce-style recoveries (which
+need the same WoW-gate scrutiny as AXL/Citadel). So across all **130** deed-critical groups, the deed's
+concealed-ownership payoff stays small; most of its work is ordinary co-ownership and Splink backstopping.
+
+**Residual — institutional over-merge (open item).** The 41 held-since bridges still contain a few
+**institutional over-merges** the conservative §5 keyword filter misses — e.g. `OG-40172` (114 buildings;
+distinct HDFCs + Columbia University). A future pass with broader institutional detection (owner-type /
+HDFC-corp signals, not a static keyword list) would tighten this; it is the one open item left in the
+deed-critical picture.
