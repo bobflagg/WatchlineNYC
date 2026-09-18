@@ -181,3 +181,67 @@ PY
 The shared-principal measurement joins `hpd_registrations ⋈ hpd_contacts (type='HeadOfficer')` on
 `registrationid` to get one normalized `firstname+lastname` per bbl, anchors each joint deed on its
 held-parcel officers, and re-tests the price-rejected candidates against that anchor.
+
+---
+
+## 5. Held-since branch precision fix — co-op/condo + public-grantor exclusion
+
+**Scope.** A *separate* precision fix, in the **held-since** branch of `_deed_sql` (not the
+nominal-consideration gate of §1–§4, which is the linked-successor `$0` branch and is untouched). The
+held-since rule groups landlords whose buildings share one *still-latest* joint deed. Two failure modes
+make that shared deed prove not private co-ownership but a shared *program* or *building form*, fusing
+unrelated people into one owner group.
+
+**Audit (frame: the 75 "deed-only" owner groups — ≥2 members connected only by `CONNECTED_BY_DEED`,
+zero `CONNECTED_BY_SPLINK`; `justfixwow` + discovery graph, 2026-09-18, read-only, graph not rebuilt).**
+Of the 75, **61** are held-since (two members share a still-latest multi-parcel deed). Classifying each
+group's linking deed:
+
+- **Public / affordable-housing conveyance (10 groups)** — the linking deed's **grantor OR grantee** is
+  a government / nonprofit housing entity, so its two grantees are program *co-beneficiaries*, not
+  co-owners. The pre-existing `_INST` filter screened only the **grantee** side, so an *HPD-as-grantor*
+  conveyance TO two people slipped through. Examples: NYC HPD (Roccio+Guillen, Garcia+Ocon,
+  Geer+Geula), Dept. of Housing Preservation & Development (Rojas+Vargas), Neighborhood Partnership
+  HDFC (Rosa+Espinal), NYC Partnership program via L&M Madison (Imdad+Wolkoff), H.E.L.P.-Bronx
+  (Greenaway+Aquino).
+- **Co-op / condo building (6 groups)** — the parcel is owned by shareholders / unit-owners, so its
+  original/association deed fuses unrelated shareholders. Examples: 980 Fifth Ave Corp / class D4
+  (Lesten+Gordon-Ptashne), 332-336 E 77th St Assoc / class C6 (Bean+Osher), Bond Street Associates /
+  C6 (Zasloff+Holman), John Gault Company / C6 (Astacio+Pablo).
+
+**The fix.** In `_deed_sql` (held-since candidate generation) only, drop a shared latest deed from
+forming a held group when either:
+1. **Public / affordable-housing** — grantor (`partytype = 1`) **or** grantee (`partytype = 2`) matches
+   the conservative keyword list `_HELD_PUBLIC_KW` (`HPD`, `HOUSING PRESERVATION`, `DEPARTMENT OF
+   HOUSING`, `CITY OF NEW YORK`, `HDFC`, `HOUSING DEVELOPMENT FUND`, `HOUSING AUTHORITY`, `NYCHA`,
+   `NEIGHBORHOOD PARTNERSHIP`, `MUTUAL HOUSING`, `H.E.L.P`, `RESTORATION`, `SETTLEMENT`, `LAND BANK`,
+   `COMMISSIONER OF FINANCE`, `SECRETARY OF HOUSING`). Verified case-insensitively against the
+   merge-forming held set: every match is a genuine public/nonprofit entity — **zero** private-LLC
+   false positives.
+2. **Co-op / condo building (majority)** — a `coop` CTE unions the DOF/PLUTO building-class rule
+   (co-op `C6/C8/D0/D4`, condo class `R*`) with the project's existing HPD-`contactdescription`
+   plurality filter (`coop_condo.py`, the same rule `owner_groups.py` uses); a deed is dropped when
+   **>50%** of its held parcels are co-op/condo (matching `owner_groups.py`'s building-level
+   convention). Neither source alone suffices — the HPD filter catches 980 Fifth (Lesten) but misses
+   332-336 E 77th / Bond St / John Gault; the class filter catches those.
+
+**Measured effect (held-since candidate set, deterministic, 2026-09-18):**
+- On the 75-group audit frame: the fix removes **16 of the 61** held-since deed-only groups (10 by the
+  public-grantor/grantee rule, 6 by the co-op/condo-majority rule), retaining **45** — the family/estate
+  co-ownership (person grantor sharing a member surname: Curmi, Lax, Wilson, Damiani, Boiardi, D'Urso,
+  …), name-variant Splink-misses (out of scope), and benign private LLCs. This matches the ~16 spurious
+  groups (~36% of the held-since portion) found in the audit.
+- Globally (all held-since deeds mapping to ≥2 landlord nodes, i.e. that actually form a merge): of
+  **966** such deeds, the fix drops **211** (127 public-grantor/grantee, 100 co-op/condo, 16 overlap).
+- **Unchanged, as required:** the linked-successor `$0` cases (AXL joint deed `2015120200784001`,
+  Citadel) are recovered by `_restructured_groups`, never appear in the held-since candidate set, and
+  are untouched. Family/estate held-since groups remain. `_INST` / `_INST_RE` / `_retained` unchanged.
+
+**Residual (deliberate).** One audited example is *not* dropped: Grassmere Terrace (Lugo+Emono), a
+class-C0 townhouse HOA whose grantee is a "HOME OWNERS ASSOCIATION" — caught by neither rule. Adding a
+generic `OWNERS CORP` / `ASSOCIATION` keyword would risk nuking legitimate private entities, so the
+filter is left conservative (per the fix's precision-first intent); this one is left to a future pass.
+
+Reproduce with the audit scripts (deed-only groups from the graph → linking held-since deed → classify
+grantor/grantee + building class); the hermetic SQL-shape check is
+`tests/test_deed_edges.py::test_deed_sql_carries_the_held_since_precision_guard`.

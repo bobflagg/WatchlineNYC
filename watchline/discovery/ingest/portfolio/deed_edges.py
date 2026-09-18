@@ -52,8 +52,11 @@ partners = the deed analogue of the aggregator megaoffice). Such hub nodes are d
 (precision-safe: drops edges, never adds a wrong one).
 
 Scope: doctype ILIKE '%DEED%' (the 8 conveyance subtypes), 2..MAX_PARCELS lots (mega-deeds are
-bulk/institutional transfers), institutional grantees (HDFC/NYCHA/City) excluded. One clique per deed
-over the co-conveyed buildings' landlord nodes (star above STAR_ABOVE to bound edges).
+bulk/institutional transfers). Held-since branch also excludes public/affordable-housing conveyances
+(HPD/City/HDFC/program grantor OR grantee) and co-op/condo buildings — shared deeds that fuse
+unrelated co-beneficiaries / co-shareholders, not co-owners (see _HELD_PUBLIC_KW / _COOP_CLASSES and
+specs/deed-gate-review.md). One clique per deed over the co-conveyed buildings' landlord nodes (star
+above STAR_ABOVE to bound edges).
 
 Node mapping is the same explode-join on ``bbl`` that splink_bridge/llc_edges use. Neo4j-free;
 returns ``(src_nodeid, dst_nodeid, weight)`` so pipeline.py loads it as CONNECTED_BY_DEED.
@@ -102,6 +105,31 @@ _INST = ("HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA", "CITY
 _INST_RE = re.compile("|".join(_INST) + "|BANK|FANNIE|FREDDIE|AUTHORITY|CHURCH|FOUNDATION|"
                       "UNIVERSITY|COLLEGE|TRUSTEES|HOSPITAL", re.I)
 
+# HELD-SINCE PRECISION GUARD (branch A only). The held-since rule groups landlords whose buildings'
+# LATEST deed is one shared multi-parcel deed. Two failure modes make that shared deed prove NOT
+# private co-ownership but a shared *program* or *building form*, fusing unrelated people:
+#   (1) Public / affordable-housing conveyance — the linking deed's GRANTOR or GRANTEE is a
+#       government or nonprofit housing entity (HPD/City/HDFC/a partnership program), so its two
+#       grantees are co-*beneficiaries*, not co-owners. The pre-existing _INST filter only screened
+#       the GRANTEE side, so an HPD-as-grantor conveyance TO two people slipped through — this list
+#       screens both sides (partytype 1 AND 2). Kept deliberately narrow (governmental / affordable-
+#       housing names) so it never nukes a legitimate private LLC; a person grantor sharing a member
+#       surname (family/estate co-ownership) is left untouched, as it should be.
+#   (2) Co-op / condo building — the parcel is owned by shareholders / unit-owners, not one landlord,
+#       so its original/association deed fuses unrelated shareholders. See coop_condo.py: co-op/condo
+#       buildings have no place in the ownership layer. We drop a held deed whose parcels are majority
+#       co-op/condo (matching owner_groups.py's >50% building-level convention).
+# See specs/deed-gate-review.md (held-since precision fix). Does NOT touch the linked-successor $0
+# branch (_retained / _restructured_groups), which is a separate signal.
+_HELD_PUBLIC_KW = (
+    "HPD", "HOUSING PRESERVATION", "DEPARTMENT OF HOUSING", "CITY OF NEW YORK",
+    "HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA",
+    "NEIGHBORHOOD PARTNERSHIP", "MUTUAL HOUSING", "H.E.L.P", "RESTORATION",
+    "SETTLEMENT", "LAND BANK", "COMMISSIONER OF FINANCE", "SECRETARY OF HOUSING",
+)
+# DOF/PLUTO building classes that mark a co-op (C6/C8/D0/D4) or condo (class starting with 'R').
+_COOP_CLASSES = ("C6", "C8", "D0", "D4")
+
 
 def _norm(name: str) -> str:
     """Fold an entity name for identity comparison: uppercase, strip non-alphanumerics."""
@@ -109,7 +137,12 @@ def _norm(name: str) -> str:
 
 
 def _deed_sql(max_parcels: int) -> str:
-    inst = " OR ".join(f"upper(p.name) LIKE '%{i}%'" for i in _INST)
+    # Held-since precision guard (see _HELD_PUBLIC_KW / _COOP_CLASSES): exclude a shared latest deed
+    # from proving co-ownership when it is a public/affordable-housing conveyance (grantor OR grantee)
+    # or a co-op/condo building's deed. Both drop unrelated co-beneficiaries / co-shareholders that a
+    # bare "shared latest deed" would otherwise fuse into one owner group.
+    public = " OR ".join(f"upper(p.name) LIKE '%{k}%'" for k in _HELD_PUBLIC_KW)
+    coop_classes = ", ".join(f"'{c}'" for c in _COOP_CLASSES)
     return f"""
         WITH latest AS (                        -- each building's most recent deed (staleness guard)
             SELECT DISTINCT ON (btrim(l.bbl)) btrim(l.bbl) AS bbl, m.documentid AS doc
@@ -118,15 +151,29 @@ def _deed_sql(max_parcels: int) -> str:
             WHERE m.doctype ILIKE '%%DEED%%'
               AND COALESCE(m.docdate, m.recordedfiled) <= CURRENT_DATE
             ORDER BY btrim(l.bbl), COALESCE(m.docdate, m.recordedfiled) DESC NULLS LAST
+        ),
+        coop AS (                               -- co-op/condo bbls: DOF/PLUTO class OR HPD plurality
+            SELECT trim(bbl) AS bbl FROM pluto_latest
+            WHERE upper(trim(bldgclass)) IN ({coop_classes})
+               OR upper(trim(bldgclass)) LIKE 'R%%'                       -- condo classes (R0..R9,RR)
+            UNION                               -- same rule owner_groups.py uses (coop_condo.py)
+            SELECT g.bbl AS bbl
+            FROM hpd_contacts c
+            JOIN hpd_registrations_grouped_by_bbl_with_contacts g ON g.registrationid = c.registrationid
+            WHERE c.type IN ('HeadOfficer','IndividualOwner','CorporateOwner')
+            GROUP BY g.bbl
+            HAVING avg(CASE WHEN c.contactdescription IN ('CO-OP','CONDO') THEN 1.0 ELSE 0.0 END) > 0.5
         )
         SELECT lt.doc AS doc, array_agg(DISTINCT lt.bbl) AS bbls
         FROM latest lt
-        WHERE NOT EXISTS (
+        LEFT JOIN coop cc ON cc.bbl = lt.bbl
+        WHERE NOT EXISTS (                      -- (1) public / affordable-housing grantor OR grantee
             SELECT 1 FROM real_property_parties p
-            WHERE p.documentid = lt.doc AND p.partytype = 2 AND ({inst}))
+            WHERE p.documentid = lt.doc AND p.partytype IN (1, 2) AND ({public}))
         GROUP BY lt.doc
         HAVING count(DISTINCT lt.bbl) >= {MIN_PARCELS}
            AND count(DISTINCT lt.bbl) <= {int(max_parcels)}
+           AND avg(CASE WHEN cc.bbl IS NOT NULL THEN 1.0 ELSE 0.0 END) <= 0.5  -- (2) not majority co-op/condo
     """
 
 

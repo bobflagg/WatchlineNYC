@@ -46,7 +46,27 @@ def test_deed_sql_carries_the_scope_filters():
     assert "DISTINCT ON (btrim(l.bbl))" in sql         # staleness guard: each building's LATEST deed
     assert "CURRENT_DATE" in sql                       # ignore future-dated bad deeds
     assert f"<= {de.MAX_PARCELS}" in sql               # parcel cap (mega-deed exclusion)
-    assert "partytype = 2" in sql and "HDFC" in sql    # institutional-grantee exclusion
+    assert "partytype IN (1, 2)" in sql and "HDFC" in sql   # public grantor/grantee exclusion (both sides)
+
+
+def test_deed_sql_carries_the_held_since_precision_guard():
+    # Held-since precision fix (specs/deed-gate-review.md): a shared latest deed must NOT prove
+    # co-ownership when it is a public/affordable-housing conveyance or a co-op/condo building's deed
+    # -- those fuse unrelated co-beneficiaries / co-shareholders, not co-owners.
+    sql = de._deed_sql(de.MAX_PARCELS)
+    # (1) public / affordable-housing GRANTOR OR GRANTEE (both party sides; broadened keyword list)
+    assert "partytype IN (1, 2)" in sql
+    for kw in ("HPD", "HOUSING PRESERVATION", "NEIGHBORHOOD PARTNERSHIP", "H.E.L.P"):
+        assert kw in sql
+    # (2) co-op/condo building-level exclusion: DOF/PLUTO class OR HPD contactdescription plurality,
+    # dropping deeds whose parcels are MAJORITY co-op/condo (owner_groups.py's >50% convention).
+    assert "pluto_latest" in sql and "bldgclass" in sql
+    assert "'C6'" in sql and "LIKE 'R" in sql          # co-op classes (C6/C8/D0/D4) + condo (R*)
+    assert "contactdescription" in sql                 # HPD co-op/condo plurality (coop_condo.py rule)
+    assert "<= 0.5" in sql                              # drop deeds that are MAJORITY co-op/condo
+    # the linked-successor $0 branch is untouched by this guard
+    assert de._INST == ("HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA",
+                        "CITY OF NEW YORK")
 
 
 def test_hub_nodes_drops_serial_co_investors():
