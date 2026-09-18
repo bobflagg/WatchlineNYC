@@ -332,13 +332,55 @@ and Splink recall-backstop (12 name-variant), with only **5** genuine veil-pierc
 need the same WoW-gate scrutiny as AXL/Citadel). So across all **130** deed-critical groups, the deed's
 concealed-ownership payoff stays small; most of its work is ordinary co-ownership and Splink backstopping.
 
-**Residual — institutional over-merge (open item).** The 41 held-since bridges still contain a few
-**institutional over-merges** the conservative §5 keyword filter misses. Example: `OG-40172` (114
-buildings) fuses two distinct Harlem operators — Genevieve Outlaw (~64) and Malcolm Punter (~44) —
-because a building in each passed through one 2021 deed, **NYS Urban Development Corporation → Trustees of
-Columbia University** (16 Manhattanville parcels, Columbia's campus expansion). A government→university
-land conveyance is read as shared private ownership, ballooning the group to a false 114-building
-"owner." It slips through because neither party name matches `_HELD_PUBLIC_KW` and the buildings are not
-co-op/condo class. A future pass — reconciling the held filter with the broader institutional list
-`_INST_RE` (which already carries `UNIVERSITY` / `TRUSTEES` / `FOUNDATION` / `BANK`), or using owner-type
-signals — would catch these; it is the one open item left in the deed-critical picture.
+**Institutional over-merge — RESOLVED (widened held-since exclusion).** The §5 held-since guard screened
+only housing-program names (`_HELD_PUBLIC_KW`), so it missed **institutional** conveyances: a single
+government→university land transfer, read as shared private ownership, fused two unrelated operators into
+one giant owner group. The flagship case: two distinct Harlem operators — Genevieve Outlaw (~64
+buildings) and Malcolm Punter (~44) — were bridged into a false ~114-building "owner" because a building
+in each passed through one 2021 deed, **`2022011101555001`**: **NYS Urban Development Corporation →
+Trustees of Columbia University** ($3M, 16 Manhattanville parcels, Columbia's campus expansion). Neither
+party matched `_HELD_PUBLIC_KW` and the parcels are not co-op/condo, so it slipped the §5 guard.
+
+**The fix.** The held-since exclusion now screens the union `_HELD_KW = _HELD_PUBLIC_KW ∪ _INST_KW` on
+**both** party sides (`partytype IN (1,2)`) in **both** deed paths (`_deed_sql` and `_JOINT_SQL`, via the
+shared `_PUBLIC_LIKE` — one source of truth). `_INST_KW` is a **precision-tuned** institutional list:
+
+> `AUTHORITY`, `BANK`, `HOSPITAL`, `URBAN DEVELOPMENT`, `STATE OF NEW YORK`, `REDEVELOPMENT`, `LAND
+> TRUST`, `TRUSTEES OF`, `FANNIE MAE`, `FREDDIE MAC`.
+
+`URBAN DEVELOPMENT` catches the UDC grantor and `TRUSTEES OF` the Columbia grantee, so `2022011101555001`
+is excluded on both sides. Crucially, the list is **deliberately not** the bare terms in `_INST_RE`
+(`UNIVERSITY`/`CHURCH`/`FOUNDATION`/`COLLEGE`/`TRUSTEES`/`FANNIE`): as a substring `LIKE` on every held
+deed's parties, those bare words each also swept up **private** owners named for a street or a person —
+the same "nuke a private LLC / family trust" failure the design forbids for bare `TRUST`/`CORP`. Verified
+against the merge-forming held set (2026-09-18): `UNIVERSITY` hit `1970 UNIVERSITY LLC` and `UNIVERSITY
+PLACE REALTY LLC` (University Ave / Pl); `CHURCH` hit `97-99 CHURCH AVENUE REALTY LLC` (Church Ave);
+`FOUNDATION` hit `FOUNDATIONS DEVELOPMENT 822 LLC` (a developer); `TRUSTEES` hit `ELEANOR SIMONETTI, AS
+CO-TRUSTEES` (a 7-parcel **family** trust); `FANNIE` hit the person `ZUCKER FANNIE`. So the collision-prone
+words are dropped and replaced by unambiguous anchors (`TRUSTEES OF` never matches `AS CO-TRUSTEES`;
+`FANNIE MAE`/`FREDDIE MAC` never a first name). `_INST_RE` itself (branch B's grantee screen) is left
+unchanged — it is already gated by the nominal-consideration + successor-size checks, so it tolerates the
+looser filter.
+
+**Measured effect (read-only, deterministic, 2026-09-18; graph not rebuilt).**
+- Deed `2022011101555001` is now **excluded from `_deed_sql` (branch A) AND `_JOINT_SQL` (branch B)** — so
+  the Outlaw+Punter ~114-building over-merge **no longer forms**.
+- **Branch A** (held deeds mapping to ≥2 landlord nodes, i.e. that form a merge): of **1,024** such
+  deeds, the widened list drops **9 more** than the housing-only filter (256 → 265). All nine are
+  institutional — the Columbia/UDC transfer, the Dormitory Authority of the State of New York, three
+  urban-renewal **Redevelopment** companies (E. Reyes Apartments, South 3rd St, Crotona Park), and four
+  institutional lenders (US Bank as trustee, Chemical Bank, Green Point Savings Bank, Ideal Mortgage
+  Bankers). **Zero private false positives** — the five private-LLC / family-trust / person collisions
+  listed above are all retained.
+- **Branch B** (`_JOINT_SQL` candidate set): the SQL-level filter drops **508** more institutional joint
+  deeds (56,191 → 55,683); most were already removed downstream by `_INST_RE`, so the net effect on final
+  recoveries is small, but the exclusion is now enforced at the SQL level too.
+- **Unaffected, as required:** the linked-successor `$0` recoveries **AXL** `2015120200784001` (2 bbls)
+  and **Citadel** `2008072300342001` (15 bbls) are private conveyances, so `_restructured_groups` still
+  recovers them; family/estate held-since groups (person grantor sharing a member surname — including the
+  Simonetti 7-parcel co-trustee group) remain; and the §5 co-op/public exclusions still hold.
+
+Guarded by `tests/test_deed_edges.py::test_held_since_guard_screens_the_institutional_union` (union +
+zero-private-collision invariants) and the institutional-keyword assertions added to
+`test_deed_sql_carries_the_held_since_precision_guard` / `test_joint_sql_mirrors_the_held_since_guard`.
+This closes the last open item in the deed-critical picture.

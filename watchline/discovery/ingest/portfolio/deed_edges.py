@@ -52,11 +52,12 @@ partners = the deed analogue of the aggregator megaoffice). Such hub nodes are d
 (precision-safe: drops edges, never adds a wrong one).
 
 Scope: doctype ILIKE '%DEED%' (the 8 conveyance subtypes), 2..MAX_PARCELS lots (mega-deeds are
-bulk/institutional transfers). Held-since branch also excludes public/affordable-housing conveyances
-(HPD/City/HDFC/program grantor OR grantee) and co-op/condo buildings — shared deeds that fuse
-unrelated co-beneficiaries / co-shareholders, not co-owners (see _HELD_PUBLIC_KW / _COOP_CLASSES and
-specs/deed-gate-review.md). One clique per deed over the co-conveyed buildings' landlord nodes (star
-above STAR_ABOVE to bound edges).
+bulk/institutional transfers). Held-since branch also excludes public/affordable-housing AND broader
+institutional conveyances (HPD/City/HDFC/program, plus university/state-agency/bank/foundation grantor
+OR grantee) and co-op/condo buildings — shared deeds that fuse unrelated co-beneficiaries /
+co-shareholders / institutional co-parties, not co-owners (see _HELD_KW = _HELD_PUBLIC_KW ∪ _INST_KW,
+_COOP_CLASSES, and specs/deed-gate-review.md §5–§6). One clique per deed over the co-conveyed
+buildings' landlord nodes (star above STAR_ABOVE to bound edges).
 
 Node mapping is the same explode-join on ``bbl`` that splink_bridge/llc_edges use. Neo4j-free;
 returns ``(src_nodeid, dst_nodeid, weight)`` so pipeline.py loads it as CONNECTED_BY_DEED.
@@ -100,21 +101,67 @@ SUCCESSOR_MAX = 3
 NOMINAL_MAX = 100
 # Only recover restructuring from joint purchases this recent (current-ownership relevance; bounds cost).
 RESTRUCT_MIN_DATE = "2005-01-01"
-# Institutional grantees whose "co-ownership" is not a private owner.
+# Institutional grantees whose "co-ownership" is not a private owner. _INST_RE is branch B's grantee
+# screen (see _restructured_groups); left UNCHANGED here — branch B is already gated by the
+# nominal-consideration + successor-size checks, so it tolerates this looser substring filter. The
+# held-since guard is NOT so gated, so it uses the precision-tuned _INST_KW below, not this regex.
 _INST = ("HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA", "CITY OF NEW YORK")
 _INST_RE = re.compile("|".join(_INST) + "|BANK|FANNIE|FREDDIE|AUTHORITY|CHURCH|FOUNDATION|"
                       "UNIVERSITY|COLLEGE|TRUSTEES|HOSPITAL", re.I)
 
+# Institutional grantor/grantee terms BEYOND the housing-program names in _HELD_PUBLIC_KW — screened on
+# BOTH party sides in the held-since guard (folded into _HELD_KW / _PUBLIC_LIKE below), the single source
+# of truth shared by both held paths (_deed_sql and _JOINT_SQL).
+#
+# WHY — the institutional over-merge failure. _HELD_PUBLIC_KW is deliberately narrow (housing-program
+# names), so it misses institutional conveyances: a single government->university land transfer, read as
+# shared private ownership, fuses two unrelated operators into one giant owner group. Verified vs ACRIS
+# (2026-09-18): joint held deed 2022011101555001 (2021, $3M, 16 parcels) conveyed NEW YORK STATE URBAN
+# DEVELOPMENT CORPORATION -> TRUSTEES OF COLUMBIA UNIVERSITY (Columbia's Manhattanville campus
+# expansion); one Genevieve Outlaw building (~64-building Harlem cluster) and one Malcolm Punter building
+# (~44) both passed through it, bridging the two into a false ~114-building "owner." Neither party
+# matched _HELD_PUBLIC_KW and the parcels aren't co-op/condo, so it slipped the §5 guard. "URBAN
+# DEVELOPMENT" catches the UDC grantor; "TRUSTEES OF" catches the Columbia grantee — so the deed is
+# excluded on both sides.
+#
+# PRECISION-FIRST (verified against the merge-forming held set, 2026-09-18). These are DELIBERATELY NOT
+# the bare terms in _INST_RE. As a substring LIKE on both party sides of every held deed, the bare
+# institutional words each also swept up PRIVATE owners named for a street or a person — the same
+# "nuke a private LLC / family trust" failure the design forbids for bare "TRUST"/"CORP":
+#   - "UNIVERSITY" hit `1970 UNIVERSITY LLC` and `UNIVERSITY PLACE REALTY LLC` (University Ave / Pl);
+#   - "CHURCH"     hit `97-99 CHURCH AVENUE REALTY LLC` (Church Ave);
+#   - "FOUNDATION" hit `FOUNDATIONS DEVELOPMENT 822 LLC` (a developer);
+#   - "TRUSTEES"   hit `ELEANOR SIMONETTI, AS CO-TRUSTEES` (a 7-parcel FAMILY trust — the worst case);
+#   - "FANNIE"     hit the person `ZUCKER FANNIE`.
+# So the collision-prone words are replaced by unambiguous anchors: "TRUSTEES OF" (catches "TRUSTEES OF
+# COLUMBIA UNIVERSITY", never "AS CO-TRUSTEES"), "FANNIE MAE"/"FREDDIE MAC" (the GSEs, never a first
+# name). "UNIVERSITY"/"COLLEGE"/"CHURCH"/"FOUNDATION" are dropped entirely (Columbia is already caught by
+# URBAN DEVELOPMENT + TRUSTEES OF). Still NO bare "TRUST"/"CORP". "AUTHORITY" as a substring already
+# subsumes DORMITORY / PORT AUTHORITY, and "BANK" matched only institutional lenders (US Bank, Chemical
+# Bank, …) in the merge-forming set. Result: the Columbia/UDC over-merge is dropped with ZERO private
+# false positives (see specs/deed-gate-review.md §6).
+_INST_KW = (
+    "AUTHORITY", "BANK", "HOSPITAL",
+    "URBAN DEVELOPMENT", "STATE OF NEW YORK", "REDEVELOPMENT", "LAND TRUST",
+    "TRUSTEES OF", "FANNIE MAE", "FREDDIE MAC",
+)
+
 # HELD-SINCE PRECISION GUARD (branch A only). The held-since rule groups landlords whose buildings'
 # LATEST deed is one shared multi-parcel deed. Two failure modes make that shared deed prove NOT
 # private co-ownership but a shared *program* or *building form*, fusing unrelated people:
-#   (1) Public / affordable-housing conveyance — the linking deed's GRANTOR or GRANTEE is a
-#       government or nonprofit housing entity (HPD/City/HDFC/a partnership program), so its two
-#       grantees are co-*beneficiaries*, not co-owners. The pre-existing _INST filter only screened
-#       the GRANTEE side, so an HPD-as-grantor conveyance TO two people slipped through — this list
-#       screens both sides (partytype 1 AND 2). Kept deliberately narrow (governmental / affordable-
-#       housing names) so it never nukes a legitimate private LLC; a person grantor sharing a member
-#       surname (family/estate co-ownership) is left untouched, as it should be.
+#   (1) Public / affordable-housing OR institutional conveyance — the linking deed's GRANTOR or
+#       GRANTEE is a government / nonprofit housing entity (HPD/City/HDFC/a partnership program) OR a
+#       broader institution (state agency, bank, hospital, a university via its board of trustees), so
+#       its two grantees are co-*beneficiaries* / co-parties of an institutional transfer, not
+#       co-owners. The pre-existing _INST filter only screened the GRANTEE side, so an HPD-as-grantor
+#       conveyance TO two people slipped through — this screens both sides (partytype 1 AND 2). The
+#       keyword set is the UNION _HELD_KW = _HELD_PUBLIC_KW ∪ _INST_KW: the narrow housing-program list
+#       widened with the precision-tuned institutional terms, so a government->university transfer (NYS
+#       UDC -> Columbia, deed 2022011101555001) no longer fuses two unrelated operators (the
+#       Outlaw+Punter ~114-building over-merge; see _INST_KW). Still precision-first — no bare
+#       TRUST/CORP/UNIVERSITY-style substrings that would nuke private street-named LLCs or family
+#       trusts — so a person grantor sharing a member surname (family/estate co-ownership) is left
+#       untouched, as it should be.
 #   (2) Co-op / condo building — the parcel is owned by shareholders / unit-owners, not one landlord,
 #       so its original/association deed fuses unrelated shareholders. See coop_condo.py: co-op/condo
 #       buildings have no place in the ownership layer. We drop a held deed whose parcels are majority
@@ -134,7 +181,10 @@ _COOP_CLASSES = ("C6", "C8", "D0", "D4")
 # _JOINT_SQL / _restructured_groups (branch B, whose _retained ALSO emits held-since parcels via
 # `ldoc == doc`). Filtering only branch A let public/co-op held deeds re-enter through branch B for
 # 2005+ joint deeds; keeping the guard in one place keeps the two paths consistent.
-_PUBLIC_LIKE = " OR ".join(f"upper(p.name) LIKE '%{k}%'" for k in _HELD_PUBLIC_KW)
+# _HELD_KW = the UNION _HELD_PUBLIC_KW ∪ _INST_KW (housing-program names widened with the institutional
+# terms), order-preserving deduped — the single keyword set both paths screen on both party sides.
+_HELD_KW = tuple(dict.fromkeys(_HELD_PUBLIC_KW + _INST_KW))
+_PUBLIC_LIKE = " OR ".join(f"upper(p.name) LIKE '%{k}%'" for k in _HELD_KW)
 _COOP_CTE = f"""coop AS (                  -- co-op/condo bbls: DOF/PLUTO class OR HPD-plurality (coop_condo.py)
         SELECT trim(bbl) AS bbl FROM pluto_latest
         WHERE upper(trim(bldgclass)) IN ({", ".join(f"'{c}'" for c in _COOP_CLASSES)})

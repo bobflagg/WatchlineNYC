@@ -58,6 +58,11 @@ def test_deed_sql_carries_the_held_since_precision_guard():
     assert "partytype IN (1, 2)" in sql
     for kw in ("HPD", "HOUSING PRESERVATION", "NEIGHBORHOOD PARTNERSHIP", "H.E.L.P"):
         assert kw in sql
+    # widened INSTITUTIONAL exclusion (§6 fix for the NYS-UDC -> Columbia over-merge), precision-tuned:
+    # state-agency / bank / board-of-trustees terms screened on both party sides. "URBAN DEVELOPMENT"
+    # catches the UDC grantor, "TRUSTEES OF" the Columbia grantee -- WITHOUT bare UNIVERSITY/CHURCH/etc.
+    for kw in ("URBAN DEVELOPMENT", "TRUSTEES OF", "STATE OF NEW YORK", "AUTHORITY", "BANK", "REDEVELOPMENT"):
+        assert kw in sql
     # (2) co-op/condo building-level exclusion: DOF/PLUTO class OR HPD contactdescription plurality,
     # dropping deeds whose parcels are MAJORITY co-op/condo (owner_groups.py's >50% convention).
     assert "pluto_latest" in sql and "bldgclass" in sql
@@ -67,6 +72,37 @@ def test_deed_sql_carries_the_held_since_precision_guard():
     # the linked-successor $0 branch is untouched by this guard
     assert de._INST == ("HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA",
                         "CITY OF NEW YORK")
+
+
+def _held_hit(name):
+    """True when a party name is screened out by the held-since keyword set (_HELD_KW), the way
+    _PUBLIC_LIKE's LIKE '%kw%' would match it."""
+    u = name.upper()
+    return any(k.upper() in u for k in de._HELD_KW)
+
+
+def test_held_since_guard_screens_the_institutional_union():
+    # §6 institutional over-merge fix: the held-since keyword set is the UNION of the housing-program
+    # names and the precision-tuned institutional terms, kept as a single source of truth (_HELD_KW).
+    assert set(de._HELD_PUBLIC_KW) <= set(de._HELD_KW)
+    assert set(de._INST_KW) <= set(de._HELD_KW)
+    for kw in ("URBAN DEVELOPMENT", "STATE OF NEW YORK", "TRUSTEES OF", "LAND TRUST", "AUTHORITY"):
+        assert kw in de._HELD_KW
+    # BOTH parties of the NYS-UDC -> Columbia bridge deed 2022011101555001 are screened out...
+    assert _held_hit("NEW YORK STATE URBAN DEVELOPMENT CORPORATION")            # grantor (URBAN DEVELOPMENT)
+    assert _held_hit("TRUSTEES OF COLUMBIA UNIVERSITY IN THE CITY OF NEW")      # grantee (TRUSTEES OF)
+    # ...WITHOUT the bare-substring collisions that nuke private street-named LLCs / persons / family
+    # trusts (the precision-first requirement -- these must all be KEPT, i.e. NOT screened out):
+    for private in ("1970 UNIVERSITY LLC", "UNIVERSITY PLACE REALTY LLC", "97-99 CHURCH AVENUE REALTY LLC",
+                    "FOUNDATIONS DEVELOPMENT 822 LLC", "ELEANOR SIMONETTI, AS CO-TRUSTEES", "ZUCKER FANNIE",
+                    "GENEVIEVE OUTLAW", "MALCOLM PUNTER"):
+        assert not _held_hit(private), private
+    # precision-first: NO bare TRUST / CORP / CORPORATION / UNIVERSITY / CHURCH / FOUNDATION / TRUSTEES.
+    for banned in ("TRUST", "CORP", "CORPORATION", "UNIVERSITY", "CHURCH", "FOUNDATION", "TRUSTEES",
+                   "FANNIE", "FREDDIE", "COLLEGE"):
+        assert banned not in de._HELD_KW and banned not in de._INST_KW
+    # branch B's _INST_RE is deliberately left at its looser original definition (unchanged).
+    assert de._INST == ("HDFC", "HOUSING DEVELOPMENT FUND", "HOUSING AUTHORITY", "NYCHA", "CITY OF NEW YORK")
 
 
 def test_hub_nodes_drops_serial_co_investors():
@@ -164,6 +200,9 @@ def test_joint_sql_mirrors_the_held_since_guard():
     sql = de._JOINT_SQL.format(max_parcels=de.MAX_PARCELS)
     assert "partytype IN (1, 2)" in sql                        # public grantor OR grantee (both sides)
     for kw in ("HPD", "HOUSING PRESERVATION", "NEIGHBORHOOD PARTNERSHIP", "H.E.L.P"):
+        assert kw in sql
+    # widened institutional exclusion mirrored here too (must match branch A -- see §6 UDC/Columbia fix)
+    for kw in ("URBAN DEVELOPMENT", "TRUSTEES OF", "STATE OF NEW YORK", "AUTHORITY", "BANK", "REDEVELOPMENT"):
         assert kw in sql
     assert "coop AS" in sql and "contactdescription" in sql    # co-op/condo majority exclusion
     assert de._PUBLIC_LIKE in sql and de._COOP_CTE in sql       # single source of truth, shared w/ branch A
