@@ -262,3 +262,59 @@ filter is left conservative (per the fix's precision-first intent); this one is 
 Reproduce with the audit scripts (deed-only groups from the graph → linking held-since deed → classify
 grantor/grantee + building class); the hermetic SQL-shape check is
 `tests/test_deed_edges.py::test_deed_sql_carries_the_held_since_precision_guard`.
+
+
+## 6. What does `CONNECTED_BY_DEED` actually buy? — classification of the deed-critical owner groups
+
+Motivation: `CONNECTED_BY_DEED` is one of the two owner-group edge sets (owner group = connected
+components of `CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED`). This section measures, on the live graph, how
+often the deed edge is *load-bearing* and what kind of ownership it recovers. Read-only, vintage
+**2026-09-18** (discovery graph + `justfixwow`; deed-critical via GDS WCC over `CONNECTED_BY_SPLINK`
+joined to owner groups; deed-only classification via ACRIS grantor/grantee + DOF building class + name
+similarity). Frame is **pre-§5-fix** unless noted.
+
+**Load-bearing footprint.** Of **6,528** multi-member owner groups:
+- **763** carry ≥1 `CONNECTED_BY_DEED` edge, but in **611** of those Splink alone already connects the
+  group — the deed is *redundant*.
+- The deed is **load-bearing in 152** ("deed-critical": removing the deed edges fragments the group
+  into ≥2 Splink-components). Those 152 = **75 deed-only** (no Splink at all among members) + **77
+  bridge** (deed joins ≥2 otherwise-separate Splink-clusters; not classified below).
+
+**Classification of the 75 deed-only groups** (assigned by *primary* mechanism; name-variant first, so
+these are a clean partition — §5 counts held-since more broadly by deed-shape, 61 of 75, because many
+name-variant groups also happen to share a held deed):
+
+| Mechanism | n | What it is | Demo/precision value |
+|---|---|---|---|
+| **held-since** (shared joint deed) | 44 | co-ownership via one still-latest deed | mostly ordinary; ~⅓ spurious |
+| **name-variant** (Splink miss) | 22 | one person, spelling/order variants the deed corroborated | recall backstop, not a veil-pierce |
+| **linked-successor `$0`** (shell game) | 5 | bulk buy → per-parcel `$0` shells | the concealed-ownership payoff |
+| **other** (multi-hop chains) | 4 | recovered through a deed chain | case-by-case |
+
+- The **44 held-since** break down (by linking grantor) into **9 public/affordable**, **16
+  family/estate** (person grantor sharing a member surname — legitimate co-ownership), **19 private
+  company/other**; **9** are majority co-op/condo buildings. **~16 are spurious** (public/HDFC/city
+  grantor or majority co-op/condo — co-op shareholders / program co-beneficiaries fused as one owner);
+  **§5 removes these** and keeps the family/estate and benign-private ones.
+- The **5 linked-successor `$0`** are only ~2 clean concealed-ownership veil-pierces: **AXL**
+  (`OG-15928`, 2 houses, grantor `AXL HOME LLC`) and **Citadel** (`OG-67966`, 15 buildings, grantor
+  `CITADEL ESTATES LLC`). The other three are weaker: **Roubeni** (`ORIENT PARK LLC`) is a convoluted
+  multi-shell tangle, and **Brates**/**Guo** are `$0` *intra-family* transfers (person grantor).
+
+**Where the deed's value actually lives — the owner-group layer, not WoW-portfolio splits.** A clean
+"deed reunites what real WoW *split*" example is *rare*: checked against JustFix `wow.wow_portfolios`
+(not the graph's own `Portfolio` nodes), **AXL is essentially the only one**. Citadel and Roubeni
+*fail* that gate — real WoW **over-merges** their shells into one aggregator portfolio (Citadel: 83
+buildings / 33 landlords at `1330 Eastern Pkwy`; Roubeni: 32 buildings / 15 landlords), so relative to
+WoW they are over-lumps, not splits. The reason is structural: shell operators register from a shared
+back-office, and WoW merges on that address (it does not mask aggregators), so the sets a deed would
+reunite are already grouped by WoW. The deed's payoff is therefore concentrated in the **owner-group**
+layer, which *deliberately ignores* shared/aggregator addresses (to avoid the Miller-style false
+*merge*) — and that masking is exactly what would otherwise false-*split* a shell operator with no
+name/Splink tie. In one line: **you need the deed precisely where you refused to trust the address**;
+aggregator-masking and `CONNECTED_BY_DEED` are two halves of one design.
+
+**Caveat / open item.** Only 75 of the 152 deed-critical groups (the deed-only ones) are classified
+here; the **77 bridge** groups (deed joining two Splink-clusters) are not yet characterized and are, by
+construction, *not* name-variant recoveries. Classifying them would complete the "what the deed buys"
+picture.
