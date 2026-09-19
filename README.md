@@ -5,25 +5,77 @@ journalists, tenant advocates, watchdog agencies, and the public investigate hou
 conditions and ownership accountability using evidence from the city's public record.
 
 It builds on the foundational work of [JustFix](https://www.justfix.org/en/) and its Who
-Owns What, and pushes past the limits every registration-based ownership tool inherits.
-Watchline adds three things:
-
-- **Precision-first record linkage** (probabilistic entity resolution with
-  [Splink](https://moj-analytical-services.github.io/splink/)) that resolves one owner across
-  dozens of differently-named LLCs — reuniting portfolios that a single name or address typo
-  fractures, without fusing two different people.
-- A **deed veil-pierce** built from the ACRIS record (`CONNECTED_BY_DEED`) that catches
-  shell-LLC ownership registrations hide — including the shell game's signature move: buy a
-  block together, then re-deed each building into its own single-purpose LLC.
-- A **beneficial owner group** built on one rule — *don't ask one signal two questions*: a
-  shared office tells you what a building **operates through**, never who **owns** it, so
-  ownership is resolved as its own community, from ownership signals (record linkage and
-  deeds) and never from a shared address.
+Owns What (WoW), and pushes past the limits every registration-based ownership tool
+inherits. WoW builds a landlord's portfolio as a connected component of a graph over
+shared registration **names** and **addresses** — which fails in two opposite directions:
+it **splits** one owner into many, and it **merges** many owners into one. This README
+walks the same arc as the [talk](https://bobflagg.github.io/WatchlineNYC/docs/meetup/):
+resolve the false splits, resolve the false merges, then make all of it answerable in
+plain English.
 
 Every ownership link is labeled **sourced or inferred** — a lead to verify, never a legal
-determination.
+determination. *(The groupings below are algorithmic inferences from public records.)*
 
-On top of that sits a **conversational interface** so anyone can ask a question in plain
+## 1 · Resolving false splits — `CONNECTED_BY_SPLINK`
+
+**The false split:** one owner, filed under dozens of differently-named LLCs — or one
+office address typed a dozen inconsistent ways — fractures into many separate portfolios.
+WoW links only on an *exact* name or address match, so a one-character typo
+(`4 WEST 51` vs `424 WEST 51`) is enough to break a real portfolio in two.
+
+**The fix:** probabilistic record linkage with
+[Splink](https://moj-analytical-services.github.io/splink/). Match an owner across name
+and address variants, add a `CONNECTED_BY_SPLINK` edge between the records that are the
+same party, and recompute the components — the portfolio comes back whole. Precision-first:
+it reunites variants without ever fusing two different people.
+
+Two interactive comparison maps show it — toggle between Who Owns What and Watchline,
+hover a building for detail:
+
+- **[Croman — 127 buildings, one owner](https://bobflagg.github.io/WatchlineNYC/docs/maps/croman.html):**
+  Watchline unifies Steven Croman's 127 buildings that Who Owns What splits across six
+  portfolios on a one-character address typo.
+  ([Full de-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/croman.html) —
+  WoW's six portfolios reunited into one.)
+- **[Escobar — 26 buildings, one owner split in two](https://bobflagg.github.io/WatchlineNYC/docs/maps/escobar.html):**
+  Ramon Escobar's single Bronx office is filed a dozen inconsistent ways (misspellings, and
+  two records with a blank ZIP), and Who Owns What links only on an *exact* address match — so
+  his Bronx portfolio fractures in two. Watchline keeps all 26 buildings together as one owner.
+  ([Full node-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/escobar.html) —
+  why the raw table holds five nodes.)
+
+## 2 · Resolving false merges — the beneficial owner group (`CONNECTED_BY_DEED`)
+
+**The false merge:** Who Owns What groups many separate owners as one because their LLCs
+share a registration office. One rule fixes it — *don't ask one signal two questions*: a
+shared office tells you what a building **operates through**, never who **owns** it.
+
+**The fix:** resolve ownership as its own community — the **beneficial owner group** — built
+only from ownership signals (record linkage and deeds) and never from a shared address. Drop
+the address edge, recompute the components, and a shared-office over-merge dissolves back into
+the distinct owners it always was.
+
+`CONNECTED_BY_DEED` is the second ownership signal in that community. Built from the ACRIS
+record, it catches what registrations hide — the shell game's signature move: buy a block
+together, then re-deed each building into its own `$0` single-purpose LLC — and it holds a
+genuine owner group together when nothing else does: strip the deed and the group shatters
+into the separate registrants it was filed as.
+
+- **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
+  Who Owns What groups 27 buildings as a single owner because they share one registration
+  office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
+  actually are — a more accurate, disaggregated view of the same public records.
+  ([Full over-merge analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/miller.html) —
+  the shared office, and why the seven owners stay apart.)
+- **[The deed holds an owner group together](https://bobflagg.github.io/WatchlineNYC/docs/maps/citadel.html):**
+  Fifteen Brooklyn buildings, one 2008 deed, and twelve `$0` shells that share only a masked
+  aggregator office Watchline ignores. Toggle the deed off and the owner group shatters into
+  three registrants; toggle it on and it resolves to the single owner it is — the deed is
+  precisely the edge you need where you refused to trust the address.
+
+## 3 · Making the data accessible
+
+On top of the graph sits a **conversational interface** so anyone can ask a question in plain
 English and get an evidence-based, cited answer. The AI is an **orchestrator, not a reasoner**:
 it turns a question into structured queries, retrieves evidence from the knowledge graph,
 applies the reliability rules, and explains the result — it never asserts anything the records
@@ -36,42 +88,14 @@ court record across it, and the public enforcement history. Ownership links are 
 *inferred* (leads to verify, not legal determinations); conditions and enforcement figures are
 directly sourced public records.
 
-A [slide deck](https://bobflagg.github.io/WatchlineNYC/docs/meetup/) walks
-through the approach — precision-first owner resolution, the three-layer ownership model
-(management vs. operational nexus vs. owner identity), and the reliability tagging that labels
-every answer as sourced or inferred.
-
-Three interactive comparison maps show how Watchline's owner-identity layer diverges from
-Who Owns What — in **both** directions. Toggle between the two systems; hover a building
-for details. *(These groupings are algorithmic inferences from public records — leads to
-verify, not determinations of legal ownership.)*
-
-- **[Croman — 127 buildings, one owner](https://bobflagg.github.io/WatchlineNYC/docs/maps/croman.html):**
-  Watchline unifies Steven Croman's 127 buildings that Who Owns What splits across six
-  portfolios on a one-character address typo (`4 WEST 51` vs `424 WEST 51`).
-  ([Full de-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/croman.html) —
-  WoW's six portfolios reunited into one.)
-- **[Escobar — 26 buildings, one owner split in two](https://bobflagg.github.io/WatchlineNYC/docs/maps/escobar.html):**
-  Ramon Escobar's single Bronx office is filed a dozen inconsistent ways (misspellings, and two
-  records with a blank ZIP), and Who Owns What links only on an *exact* address match — so his
-  Bronx portfolio fractures into two. Watchline keeps all 26 buildings together as one owner.
-  ([Full node-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/escobar.html) —
-  why the raw table holds five nodes.)
-- **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
-  Who Owns What groups 27 buildings as a single owner because they share one registration
-  office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
-  actually are — a more accurate, disaggregated view of the same public records.
-  ([Full over-merge analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/miller.html) —
-  the shared office, and why the seven owners stay apart.)
-
-Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
+Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) show the
 owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
 fractured by brittle address matching (Escobar — 26 buildings reunited), and one held together by
 nothing but a shared ACRIS deed (AXL — a Flushing pair that reads as two owners but was one 2015
-purchase, re-titled into two $0 shells). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
-seven owners) or a managing agent (Levitov — one operator, five separate owners). Together they are
-the answer, in data, to *"doesn't it just merge everything?"* — every ownership link labeled an
-inference to verify, not a legal determination, and drawn from the public record.
+purchase, re-titled into two `$0` shells). And it *declines* to merge parties that share only an
+office (Miller — one Lakewood suite, seven owners) or a managing agent (Levitov — one operator,
+five separate owners). Together they are the answer, in data, to *"doesn't it just merge
+everything?"* — every ownership link labeled an inference to verify, not a legal determination.
 
 New to the project or skeptical of the approach? The
 [**FAQ**](https://bobflagg.github.io/WatchlineNYC/docs/faq/) gives straight answers on what the
