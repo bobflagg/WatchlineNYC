@@ -498,7 +498,7 @@ produced. Keeping those out is what lets slides 3, 5, and 11 be believed.
 |---|---|---|
 | 2 | 118 buildings, 107 LLC names | WoW portfolio #87254 (`wow.wow_portfolios`, `landlord_names=["STEVEN CROMAN",…]`) → its BBLs → distinct `public.pluto_latest.ownername`. AG case: public record. |
 | 5 | 17 GAY LLC vs Steven Croman | `lookup_building_ownership("1005930008")`: `dof_ownername` (Type I) vs `APPARENT_CONTROL`→Landlord (Type II). |
-| 6① | ≈1.0 precision, 0 cross-surname | 105-record gold set, `eval/run_full.py` precision guard; threshold 0.999. |
+| 6① | ≈1.0 precision, 0 cross-surname | 105-record gold set, `nlr.eval.run_full` precision guard; threshold 0.999. |
 | 6② | 39,456 / ~780 / ~620 | `compare_kg --divergence` (materialized `wow.wow_portfolios` ∩ `IN_OWNER_GROUP`). |
 | 6③ | ~530-pair blind eval, not run | The eval-sample frame (5 strata) via `score.py`; needs blind adjudication. |
 | 7 | 138 owners / 453 buildings @ 770 Lexington | Raw HPD: distinct HeadOfficer/owner names with `businesshousenumber='770'`, street `LEXINGTON%`. WoW matching (`landlords_with_connections.sql`) has no aggregator cap. |

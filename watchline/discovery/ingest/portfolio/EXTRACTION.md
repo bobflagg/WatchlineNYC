@@ -1,6 +1,6 @@
 # Extraction plan — carve the linkage pipeline into a standalone repo
 
-**Status: DONE (Phase 1) — the resolution engine now lives in
+**Status: DONE (Phases 1 & 2) — the resolution engine and its eval harness now live in
 [`nyc-landlord-resolution`](https://github.com/bobflagg/nyc-landlord-resolution) (`nlr`),
 and this pipeline depends on it.** The forked `splink_source.py` has been removed; the
 KG-coupled modules import `nlr.splink_source` (pinned to a git tag in `pyproject.toml`'s
@@ -10,10 +10,16 @@ KG-coupled modules import `nlr.splink_source` (pinned to a git tag in `pyproject
 
 The engine swap is **behavior-preserving on the Postgres path** — `nlr`'s `splink_source`
 is a strict superset of the old fork (same constants, SQL, vetoes; the only delta is an
-inert DuckDB branch). **Phase 2 (not yet done):** dedupe the duplicated `eval/` scripts
-(`build_gold`, `run_eval`, `run_full`, `run_loop`, `scorer`, `gold_set.csv`) against `nlr`'s
-copies — first relocate `TARGET_WHERE`/`NBR_WHERE` (imported by `compare_kg.py`) out of the
-to-be-deleted `eval/build_gold.py`.
+inert DuckDB branch).
+
+**Phase 2 (done):** the duplicated resolution-eval scripts — `build_gold`, `run_eval`,
+`run_full`, `run_loop`, `scorer`, `gold_set.csv` — have been removed; run them from `nlr`
+instead (`uv run python -m nlr.eval.run_eval`, with `PG*` / `.env` set). `compare_kg.py`
+now imports `TARGET_WHERE`/`NBR_WHERE` from `nlr.eval.build_gold` (they were already there,
+identical). What stayed in `eval/` is the **Watchline-specific** tooling only: the WoW gate
+(`wow_gate.py`, `score.py`), the cutover scorers (`cutover_frame.py`, `cutover_score.py`),
+and the sampling/QA/manifest/map helpers (`sample.py`, `frame_qa.py`, `manifest.py`,
+`portfolio_map.py`).
 
 The historical extraction plan is preserved below for reference. Read alongside
 [`CLAUDE.md`](./CLAUDE.md) (the working notes).

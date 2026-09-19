@@ -24,7 +24,7 @@ import pandas as pd
 
 from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 from nlr import splink_source as ss
-from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE
+from nlr.eval.build_gold import TARGET_WHERE, NBR_WHERE
 
 KG_FRAGMENTATION = """
 UNWIND $bbls AS bbl
