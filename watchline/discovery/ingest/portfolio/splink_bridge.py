@@ -30,7 +30,7 @@ from itertools import combinations
 
 import pandas as pd
 
-from watchline.discovery.ingest.portfolio import splink_source as ss
+from nlr import splink_source as ss
 from watchline.discovery.ingest.portfolio import aggregator_officer_audit as aoa
 
 # Splink edges dominate name (~1.5) / address (~1.0) links so that when a merged component

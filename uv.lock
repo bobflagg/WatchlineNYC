@@ -1558,6 +1558,18 @@ wheels = [
 ]
 
 [[package]]
+name = "nyc-landlord-resolution"
+version = "0.1.0"
+source = { git = "https://github.com/bobflagg/nyc-landlord-resolution.git?rev=v0.1.0#0e2253d11fee1ed9f60bc17f02db90abd77a1885" }
+dependencies = [
+    { name = "duckdb" },
+    { name = "pandas" },
+    { name = "psycopg2-binary" },
+    { name = "python-dotenv" },
+    { name = "splink" },
+]
+
+[[package]]
 name = "opentelemetry-api"
 version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2852,6 +2864,7 @@ dependencies = [
 
 [package.optional-dependencies]
 ingest = [
+    { name = "nyc-landlord-resolution" },
     { name = "psycopg2-binary" },
     { name = "splink" },
 ]
@@ -2875,6 +2888,7 @@ requires-dist = [
     { name = "langsmith", extras = ["claude-agent-sdk"], specifier = ">=0.3.4" },
     { name = "markdown-it-py", specifier = ">=4.2.0" },
     { name = "neo4j", specifier = ">=6.2.0" },
+    { name = "nyc-landlord-resolution", marker = "extra == 'ingest'", git = "https://github.com/bobflagg/nyc-landlord-resolution.git?rev=v0.1.0" },
     { name = "psycopg2-binary", marker = "extra == 'ingest'", specifier = ">=2.9.12" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "splink", marker = "extra == 'ingest'", specifier = ">=4.0.16" },

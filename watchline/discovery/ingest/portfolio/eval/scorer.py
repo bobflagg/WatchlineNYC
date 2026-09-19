@@ -60,7 +60,7 @@ def sweep(preds, nodes, gold_df, thresholds=(0.80, 0.88, 0.92, 0.95, 0.98),
     table (one row per threshold) so the F1-maximizing operating point is visible.
     ``nodes`` is the record frame (supplies the singleton universe); ``name_freq``
     enables the common-name veto so the sweep matches the production model."""
-    from watchline.discovery.ingest.portfolio import splink_source as ss
+    from nlr import splink_source as ss
 
     rows = []
     for t in thresholds:

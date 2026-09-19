@@ -34,7 +34,7 @@ from pathlib import Path
 import pandas as pd
 
 from watchline.shared.connections import pg_conn
-from watchline.discovery.ingest.portfolio import splink_source as ss
+from nlr import splink_source as ss
 
 OUT = Path(__file__).parent / "gold_set.csv"
 MAX_DECOYS = 20

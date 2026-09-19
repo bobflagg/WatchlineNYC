@@ -1,9 +1,22 @@
 # Extraction plan — carve the linkage pipeline into a standalone repo
 
-**Status: not yet — a decision banked, not an action.** This records *how* and
-*when* to lift the entity-linking + portfolio-construction pipeline out of
-WatchlineNYC into its own shareable repo. Read alongside [`CLAUDE.md`](./CLAUDE.md)
-(the working notes). Nothing here changes until the validation gate below clears.
+**Status: DONE (Phase 1) — the resolution engine now lives in
+[`nyc-landlord-resolution`](https://github.com/bobflagg/nyc-landlord-resolution) (`nlr`),
+and this pipeline depends on it.** The forked `splink_source.py` has been removed; the
+KG-coupled modules import `nlr.splink_source` (pinned to a git tag in `pyproject.toml`'s
+`ingest` extra). What stayed here: the KG adapters (`splink_bridge.py`), the other two
+`CONNECTED_BY_SPLINK` sources (`curated_owners.py`, `llc_edges.py`), the deed edge builder
+(`deed_edges.py`), and the owner-group community pass (`owner_groups.py`).
+
+The engine swap is **behavior-preserving on the Postgres path** — `nlr`'s `splink_source`
+is a strict superset of the old fork (same constants, SQL, vetoes; the only delta is an
+inert DuckDB branch). **Phase 2 (not yet done):** dedupe the duplicated `eval/` scripts
+(`build_gold`, `run_eval`, `run_full`, `run_loop`, `scorer`, `gold_set.csv`) against `nlr`'s
+copies — first relocate `TARGET_WHERE`/`NBR_WHERE` (imported by `compare_kg.py`) out of the
+to-be-deleted `eval/build_gold.py`.
+
+The historical extraction plan is preserved below for reference. Read alongside
+[`CLAUDE.md`](./CLAUDE.md) (the working notes).
 
 ## Why a separate repo
 

@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from watchline.shared.connections import pg_conn
-from watchline.discovery.ingest.portfolio import splink_source as ss
+from nlr import splink_source as ss
 from watchline.discovery.ingest.portfolio.eval import scorer
 from watchline.discovery.ingest.portfolio.eval.build_gold import TARGET_WHERE, NBR_WHERE, OFFICE_WHERE
 
