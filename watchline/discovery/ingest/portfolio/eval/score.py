@@ -19,7 +19,7 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
-from watchline.shared.connections import pg_conn
+from watchline.shared.connections import pg_conn, neo4j_driver, NEO4J_DISCOVERY_DATABASE
 
 DEED_SIGNALS = {"acris-deed", "acris-deed-linked-successor"}
 ADJUDICATOR = "adjudicator"          # annotator_id whose label is the gold when annotators disagree
@@ -175,20 +175,86 @@ def _fmt(w):  # (p, lo, hi) -> "0.91 [0.85,0.95]"
     return f"{w[0]:.2f} [{w[1]:.2f},{w[2]:.2f}]" if w else "-"
 
 
+def gate_mode(og_ids: list[str] | None, out_dir: Path) -> dict:
+    """Run the hardened WoW veil-pierce gate (``wow_gate.py``) over candidate ``CONNECTED_BY_DEED`` owner
+    groups: which are genuine WoW false-splits the deed uniquely recovers (PASS) vs WoW over-lumps WoW
+    already groups on a shared aggregator address (FAIL)? With no ``og_ids`` the population is the
+    *deed-only* groups (members tied ONLY by ``CONNECTED_BY_DEED``, no ``CONNECTED_BY_SPLINK``) — the
+    natural candidate set; pass owner_group_id(s) to gate specific groups (e.g. bridge candidates).
+
+    Analysis-only: reads the live discovery graph + ``wow.wow_portfolios``, writes nothing to either.
+    Writes ``<out_dir>/wow_gate.json`` and returns the summary dict."""
+    from . import wow_gate
+
+    ENUM = ("MATCH (a:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup)<-[:IN_OWNER_GROUP]-(b:Landlord) "
+            "WHERE id(a) < id(b) "
+            "WITH og, sum(CASE WHEN EXISTS((a)-[:CONNECTED_BY_DEED]-(b)) THEN 1 ELSE 0 END) AS d, "
+            "         sum(CASE WHEN EXISTS((a)-[:CONNECTED_BY_SPLINK]-(b)) THEN 1 ELSE 0 END) AS s "
+            "WHERE d >= 1 AND s = 0 "
+            "MATCH (m:Landlord)-[:IN_OWNER_GROUP]->(og) "
+            "RETURN og.owner_group_id AS og, apoc.coll.toSet(apoc.coll.flatten(collect(m.bbls))) AS bbls")
+    BY_ID = ("MATCH (m:Landlord)-[:IN_OWNER_GROUP]->(og:OwnerGroup) WHERE og.owner_group_id IN $ids "
+             "RETURN og.owner_group_id AS og, apoc.coll.toSet(apoc.coll.flatten(collect(m.bbls))) AS bbls")
+
+    drv = neo4j_driver()
+    try:
+        with drv.session(database=NEO4J_DISCOVERY_DATABASE) as s:
+            rows = (s.run(BY_ID, ids=og_ids) if og_ids else s.run(ENUM)).data()
+    finally:
+        drv.close()
+
+    conn = pg_conn()
+    results = []
+    try:
+        for r in rows:
+            res = wow_gate.gate_bbls(conn, r["bbls"])
+            results.append({"owner_group": r["og"], "buildings": len(r["bbls"]),
+                            "passed": res.passed, "reasons": res.reasons})
+    finally:
+        conn.close()
+
+    results.sort(key=lambda x: (x["passed"], -x["buildings"]))   # fails first, largest first
+    n_pass = sum(1 for x in results if x["passed"])
+    out = {"population": "specified" if og_ids else "deed-only",
+           "n_candidates": len(results), "n_pass": n_pass, "n_fail": len(results) - n_pass,
+           "results": results}
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "wow_gate.json").write_text(json.dumps(out, indent=2))
+    return out
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--key", required=True)
-    ap.add_argument("--annotations", required=True)
+    ap.add_argument("--key")
+    ap.add_argument("--annotations")
     ap.add_argument("--out", default="eval_out")
+    ap.add_argument("--gate", action="store_true",
+                    help="WoW veil-pierce gate mode: score candidate CONNECTED_BY_DEED owner groups as "
+                         "genuine WoW false-splits (PASS) vs over-lumps (FAIL) via wow_gate.py. "
+                         "Default population = deed-only groups; restrict with --owner-group.")
+    ap.add_argument("--owner-group", dest="owner_groups", action="append", default=[], metavar="OG-ID",
+                    help="(with --gate) gate only these owner_group_id(s); repeatable.")
     a = ap.parse_args()
-    rep = score(a.key, a.annotations, Path(a.out))
-    print(f"pairs {rep['n_pairs']}  κ={rep['kappa']}")
-    for st, m in rep["strata"].items():
-        if "strict_precision" in m:
-            print(f"  {st:<28} precision strict {_fmt(m['strict_precision'])} · "
-                  f"inclusive {_fmt(m['inclusive_precision'])} · C2 {m['c2_share']} · cov {m['coverage']}")
-        else:
-            print(f"  {st:<28} split-precision {_fmt(m['split_precision'])} · cov {m['coverage']}")
-    h = rep["head_to_head"]
-    print(f"  vs WoW: discordant {h['discordant']} · watchline✓/wow✗ {h['watchline_right_wow_wrong']} · "
-          f"wow✓/watchline✗ {h['wow_right_watchline_wrong']} · McNemar p={h['mcnemar_p']}")
+
+    if a.gate:
+        rep = gate_mode(a.owner_groups or None, Path(a.out))
+        print(f"WoW veil-pierce gate [{rep['population']}]: {rep['n_pass']}/{rep['n_candidates']} PASS · "
+              f"{rep['n_fail']} over-lumps  ->  {Path(a.out) / 'wow_gate.json'}")
+        for r in rep["results"]:
+            tag = "PASS" if r["passed"] else "FAIL"
+            reason = "" if r["passed"] else f"  — {r['reasons'][0]}" if r["reasons"] else ""
+            print(f"  {tag}  {r['owner_group']:<14} {r['buildings']:>4} bldgs{reason}")
+    else:
+        if not (a.key and a.annotations):
+            ap.error("--key and --annotations are required (or use --gate)")
+        rep = score(a.key, a.annotations, Path(a.out))
+        print(f"pairs {rep['n_pairs']}  κ={rep['kappa']}")
+        for st, m in rep["strata"].items():
+            if "strict_precision" in m:
+                print(f"  {st:<28} precision strict {_fmt(m['strict_precision'])} · "
+                      f"inclusive {_fmt(m['inclusive_precision'])} · C2 {m['c2_share']} · cov {m['coverage']}")
+            else:
+                print(f"  {st:<28} split-precision {_fmt(m['split_precision'])} · cov {m['coverage']}")
+        h = rep["head_to_head"]
+        print(f"  vs WoW: discordant {h['discordant']} · watchline✓/wow✗ {h['watchline_right_wow_wrong']} · "
+              f"wow✓/watchline✗ {h['wow_right_watchline_wrong']} · McNemar p={h['mcnemar_p']}")
