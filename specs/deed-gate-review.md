@@ -281,6 +281,41 @@ group into ≥2 Splink-components) = **75 deed-only** (no Splink among members) 
 tighten to **130 deed-critical — 63 deed-only + 67 bridge** — the fix dissolved ~22 spurious deed-critical
 groups and left **zero** public/co-op residual bridges.
 
+### 6a. Owner-group-internal view — dropping the deed *would* false-split owners (the WoW-independent case)
+
+Set WoW aside and ask the question that actually justifies the edge: **within our own ownership layer,
+would dropping `CONNECTED_BY_DEED` false-split owner groups?** Yes — and materially. By definition the
+**130 deed-critical** groups fragment if the deed is removed: their members have *no other tie* (no name,
+address, or Splink) across ≥2 of their pieces, so the deed is the only thing holding them together. Are
+those fragmentations *false* splits (a genuine owner torn apart) or *correct* un-merges (a spurious merge
+undone)? By mechanism (buckets detailed below; deed-only + bridge combined):
+
+- **name-variant (~34)** → **false-split a single person** (spelling/order variants); unambiguous, though
+  it is really a **Splink recall backstop** — ideally Splink merges that person and the deed just patches
+  the gap.
+- **linked-successor `$0` (~10)** → **false-split a genuine single owner** (AXL, Citadel, the family `$0`
+  transfers); unambiguous.
+- **held-since (~73)** → **mixed.** Splitting genuine co-ownership (family/estate, a shared holding entity
+  on one deed) is a false split; but two people who merely share *one* coincidental deed, whose broader
+  portfolios are not one owner, are an over-merge where dropping the deed would be *correct*. Note "held
+  co-owners = one owner group" is itself a modeling choice — co-grantees are co-owners, not necessarily
+  one *beneficial* owner.
+- **other (~13)** → unverified.
+
+**So dropping the deed would predominantly cause false splits** — at minimum the **~44** name-variant +
+linked-successor groups (unambiguously one person / one owner), plus a substantial share of the ~73
+held-since. Not *all* 130 (the held-since bucket is a genuine mix, "other" is unverified), and the
+spurious co-op/HDFC/institutional deeds that *would* have been correct un-merges were already removed by
+the §5/§6 fixes — so what remains is mostly legitimate.
+
+**Why this frame is favorable where §6's WoW comparison was not — same fact, two sides.** Internally we
+*correctly mask aggregator addresses* (to avoid the Miller-style false *merge*); that masking is exactly
+what strands these parties with no tie but the deed, so the deed does real anti-false-split work *here*.
+WoW does **not** mask aggregators, so it already lumps most of them together — which is why the deed
+rarely "beats WoW" (only AXL) yet is load-bearing in our layer. **You need the deed precisely where you
+refused to trust the address**; aggregator-masking and `CONNECTED_BY_DEED` are two halves of one design.
+This — not concealed-empire discovery — is the edge's defensible justification.
+
 **Classification of the 75 deed-only groups** (pre-§5-fix frame; the fix later removed the ~12 spurious
 held-since, leaving 63. Assigned by *primary* mechanism; name-variant first, so these are a clean
 partition — §5 counts held-since more broadly by deed-shape, 61 of 75, because many name-variant groups
