@@ -66,8 +66,8 @@ verify, not determinations of legal ownership.)*
 
 Four worked [**case studies**](https://bobflagg.github.io/WatchlineNYC/docs/cases/) follow the
 owner-identity layer deciding in **both** directions. It *merges* owners Who Owns What splits — one
-fractured by brittle address matching (Escobar — 26 buildings reunited), and one WoW can't see at all: two houses
-tied only by a shared ACRIS deed (AXL — a Flushing pair that reads as two owners but was one 2015
+fractured by brittle address matching (Escobar — 26 buildings reunited), and one held together by
+nothing but a shared ACRIS deed (AXL — a Flushing pair that reads as two owners but was one 2015
 purchase, re-titled into two $0 shells). And it *declines* to merge parties that share only an office (Miller — one Lakewood suite,
 seven owners) or a managing agent (Levitov — one operator, five separate owners). Together they are
 the answer, in data, to *"doesn't it just merge everything?"* — every ownership link labeled an
