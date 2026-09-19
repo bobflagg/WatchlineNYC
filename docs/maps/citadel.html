@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio map · OG-67966 (Citadel)</title>
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <style>
+    :root { --ink:#1a2129; --soft:#5b6570; --line:#d9ddd6; --panel:#fff; }
+    html,body { margin:0; height:100%; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); }
+    #map { position:absolute; inset:0; }
+    .card { position:absolute; top:12px; left:12px; z-index:2; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.12); max-width:330px; overflow:hidden; }
+    .card h1 { font-size:.95rem; margin:0; padding:11px 14px; border-bottom:1px solid var(--line); }
+    .card h1 small { display:block; color:var(--soft); font-weight:400; font-size:.72rem; margin-top:2px; }
+    .toggle { display:flex; padding:10px 14px 6px; gap:8px; }
+    .toggle button { flex:1; font:inherit; font-size:.8rem; padding:7px 4px; border:1px solid var(--line); background:#f6f7f4; color:var(--ink); border-radius:6px; cursor:pointer; }
+    .toggle button.on { background:var(--ink); color:#fff; border-color:var(--ink); font-weight:600; }
+    .legend { padding:4px 14px 12px; max-height:46vh; overflow-y:auto; }
+    .legend .row { font-size:.78rem; margin:8px 0; padding-left:20px; position:relative; }
+    .legend .dot { position:absolute; left:0; top:2px; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,.35); }
+    .legend .nm { color:var(--ink); font-weight:600; }
+    .legend .addr { color:var(--soft); font-family:ui-monospace,monospace; font-size:.72rem; }
+    .note { padding:0 14px 12px; font-size:.72rem; color:var(--soft); }
+    .maplibregl-popup-content { font:13px/1.4 -apple-system,sans-serif; padding:9px 12px; border-radius:7px; box-shadow:0 2px 10px rgba(0,0,0,.18); }
+    .pp { color:#5b6570; font-family:ui-monospace,monospace; font-size:.72rem; }
+    .tip .mrow { margin-top:4px; font-size:.78rem; color:var(--ink); }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="card">
+    <h1>One owner behind twelve shells<small>15 buildings · bought on one 2008 deed, re-titled into 12 $0 shells ·
+        without the deed edge → 3 fragments</small></h1>
+    <div class="toggle">
+      <button id="b-split" class="on" onclick="setView('split')">Without deed</button>
+      <button id="b-owner" onclick="setView('owner')">One owner (deed)</button>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="note"><b>Algorithmic inferences from public records — leads to verify, not determinations of legal
+      ownership. Data as of 2026-09-19.</b><br>The three registrants share only a masked aggregator office, so only
+      <code>CONNECTED_BY_DEED</code> links them; remove it and this owner group splits three ways. Coordinates: NYC
+      DOF/PLUTO. Owner identity: discovery graph. Base tiles © Esri.</div>
+  </div>
+  <script>
+    const DATA={"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9562657,40.6707864]},"properties":{"bbl":"3012590047","address":"377 EASTERN PARKWAY","bldgclass":"C1","units":38,"year":1905,"shell":"RIPPLE EP LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.957463,40.6699716]},"properties":{"bbl":"3012660012","address":"348 EASTERN PARKWAY","bldgclass":"C1","units":32,"year":1914,"shell":"RIPPLE EP LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9543668,40.6695176]},"properties":{"bbl":"3012670016","address":"426 EASTERN PARKWAY","bldgclass":"D1","units":65,"year":1926,"shell":"FRANKLINS TOWER 26 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9353094,40.6682678]},"properties":{"bbl":"3013950059","address":"1655 UNION STREET","bldgclass":"C1","units":31,"year":1923,"shell":"MORNING DEW 18 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9358685,40.6678536]},"properties":{"bbl":"3014010017","address":"1602 UNION STREET","bldgclass":"C1","units":23,"year":1923,"shell":"MORNING DEW 18 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9355982,40.667837]},"properties":{"bbl":"3014010021","address":"1608 UNION STREET","bldgclass":"C1","units":23,"year":1922,"shell":"MORNING DEW 18 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9187996,40.6594768]},"properties":{"bbl":"3046510036","address":"322 ROCKAWAY PARKWAY","bldgclass":"C1","units":42,"year":1930,"shell":"SCARLET BEGONIAS LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9630855,40.6523439]},"properties":{"bbl":"3050610010","address":"59 ST PAULS PLACE","bldgclass":"D1","units":53,"year":1929,"shell":"SUNRISE 57 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9581033,40.6434161]},"properties":{"bbl":"3051640017","address":"1110 FLATBUSH AVENUE","bldgclass":"S2","units":2,"year":1910,"shell":"ETERNITY 11 LLC","officer":"MICHAEL ROTH","reg":"MICHAEL ROTH","reg_color":"#dc2626"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9579588,40.6384041]},"properties":{"bbl":"3052060031","address":"636 EAST 21 STREET","bldgclass":"C1","units":24,"year":1931,"shell":"SUGAREE LLC","officer":"THOMAS FORDE","reg":"THOMAS FORDE","reg_color":"#d97706"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9535258,40.6399614]},"properties":{"bbl":"3052110017","address":"2415 NEWKIRK AVENUE","bldgclass":"C1","units":62,"year":1934,"shell":"STELLA BLUE REALTY LLC","officer":"THOMAS FORDE","reg":"THOMAS FORDE","reg_color":"#d97706"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9538862,40.639882]},"properties":{"bbl":"3052110026","address":"2401 NEWKIRK AVENUE","bldgclass":"D7","units":45,"year":1931,"shell":"BLUE MOON 24 LLC","officer":"THOMAS FORDE","reg":"THOMAS FORDE","reg_color":"#d97706"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9556813,40.638804]},"properties":{"bbl":"3052230071","address":"2304 NEWKIRK AVENUE","bldgclass":"C1","units":29,"year":1931,"shell":"BIRD SONG 18 LLC","officer":"MICHAEL ROTH","reg":"MICHAEL ROTH","reg_color":"#dc2626"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9559281,40.6252201]},"properties":{"bbl":"3076020035","address":"1517 OCEAN AVENUE","bldgclass":"C1","units":45,"year":1925,"shell":"PICASSO MOON 72 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-73.9411791,40.625993]},"properties":{"bbl":"3076170063","address":"1022 EAST 36 STREET","bldgclass":"C1","units":51,"year":1925,"shell":"HALF STEP 36 LLC","officer":"LEROY FORDE","reg":"LEROY FORDE","reg_color":"#2563eb"}}]};
+    const OWNER_COLOR="#1c7c54";
+    const LEGEND={owner:`<div class="row"><span class="dot" style="background:#1c7c54"></span><b>One beneficial owner group</b> · 15 buildings<br><span class="addr">held together only by a single 2008 deed (OG-67966)</span></div>`, split:`<div class="row"><span class="dot" style="background:#2563eb"></span>registers as <span class="nm">Leroy Forde</span> · 10 bldgs<br><span class="addr">1330 Eastern Pkwy 6A (aggregator) — no identity link</span></div>
+<div class="row"><span class="dot" style="background:#dc2626"></span>registers as <span class="nm">Michael Roth</span> · 2 bldgs<br><span class="addr">1330 Eastern Pkwy 6A (aggregator) — no identity link</span></div>
+<div class="row"><span class="dot" style="background:#d97706"></span>registers as <span class="nm">Thomas Forde</span> · 3 bldgs<br><span class="addr">1330 Eastern Pkwy 6A (aggregator) — no identity link</span></div>
+`};
+    const map=new maplibregl.Map({container:"map",
+      style:{version:8,sources:{esristreet:{type:"raster",tileSize:256,maxzoom:19,tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],attribution:"Tiles \u00a9 Esri"}},layers:[{id:"esristreet",type:"raster",source:"esristreet"}]},
+      center:[-73.95,40.65],zoom:12});
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
+    function setView(v){
+      document.getElementById("b-owner").classList.toggle("on",v==="owner");
+      document.getElementById("b-split").classList.toggle("on",v==="split");
+      document.getElementById("legend").innerHTML=LEGEND[v];
+      map.setPaintProperty("pts","circle-color", v==="owner"?OWNER_COLOR:["get","reg_color"]);
+    }
+    map.on("load",()=>{
+      map.addSource("pts",{type:"geojson",data:DATA});
+      map.addLayer({id:"pts",type:"circle",source:"pts",paint:{"circle-color":OWNER_COLOR,"circle-radius":["interpolate",["linear"],["zoom"],10,6,15,11],"circle-stroke-width":1.4,"circle-stroke-color":"#fff","circle-opacity":.92}});
+      const b=new maplibregl.LngLatBounds(); DATA.features.forEach(f=>b.extend(f.geometry.coordinates));
+      if(!b.isEmpty()) map.fitBounds(b,{padding:80,maxZoom:15});
+      setView("split");
+      const tip=new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:12,className:"tip",maxWidth:"280px"});
+      map.on("mousemove","pts",e=>{map.getCanvas().style.cursor="pointer";const p=e.features[0].properties;
+        tip.setLngLat(e.lngLat).setHTML(`<b>${p.address}</b><br><span class="pp">BBL ${p.bbl}</span>`+
+          `<div class="mrow">class ${p.bldgclass} · ${p.units} units · built ${p.year}</div>`+
+          `<div class="mrow">Shell (PLUTO owner): ${p.shell}</div>`+
+          `<div class="mrow">HPD registrant: ${p.officer}</div>`+
+          `<div class="mrow" style="color:#155c3e">Owner group OG-67966 · joined by the 2008 deed</div>`).addTo(map);});
+      map.on("mouseleave","pts",()=>{map.getCanvas().style.cursor="";tip.remove();});
+      window._mapReady=true;
+    });
+    window.mapIdle=()=>new Promise(res=>map.once("idle",res));
+  </script>
+</body>
+</html>
