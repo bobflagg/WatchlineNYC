@@ -41,7 +41,7 @@ through the approach — precision-first owner resolution, the three-layer owner
 (management vs. operational nexus vs. owner identity), and the reliability tagging that labels
 every answer as sourced or inferred.
 
-Four interactive comparison maps show how Watchline's owner-identity layer diverges from
+Three interactive comparison maps show how Watchline's owner-identity layer diverges from
 Who Owns What — in **both** directions. Toggle between the two systems; hover a building
 for details. *(These groupings are algorithmic inferences from public records — leads to
 verify, not determinations of legal ownership.)*
@@ -57,11 +57,6 @@ verify, not determinations of legal ownership.)*
   Bronx portfolio fractures into two. Watchline keeps all 26 buildings together as one owner.
   ([Full node-fragmentation analysis](https://bobflagg.github.io/WatchlineNYC/docs/cases/escobar.html) —
   why the raw table holds five nodes.)
-- **[164th Street — two houses, two owners, one deed](https://bobflagg.github.io/WatchlineNYC/docs/maps/axl.html):**
-  Two adjacent Flushing row houses bought together on a single 2015 deed, then re-titled into two
-  single-purpose shells at $0 — so Who Owns What files them under two unrelated owners. Watchline
-  reunites them on the deed alone: a veil-pierce from the ACRIS record that registration-based
-  grouping cannot see. Toggle to watch two next-door houses that read as two owners resolve to one.
 - **[Correcting an over-merge — one office, seven owners](https://bobflagg.github.io/WatchlineNYC/docs/maps/miller.html):**
   Who Owns What groups 27 buildings as a single owner because they share one registration
   office in Lakewood, NJ; Watchline **separates** them into the seven distinct owners they
