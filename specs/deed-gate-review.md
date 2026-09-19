@@ -328,9 +328,12 @@ Splink-clusters; same ACRIS grantor/grantee + name method applied to the cross-c
 | **public/co-op residual** | 0 | cleared by §5 ✓ |
 
 The bridge groups **mirror the deed-only picture** — dominated by ordinary co-ownership (41 held-since)
-and Splink recall-backstop (12 name-variant), with only **5** genuine veil-pierce-style recoveries (which
-need the same WoW-gate scrutiny as AXL/Citadel). So across all **130** deed-critical groups, the deed's
-concealed-ownership payoff stays small; most of its work is ordinary co-ownership and Splink backstopping.
+and Splink recall-backstop (12 name-variant), with only **5** linked-successor recoveries — all WoW-gated
+(2026-09-19), **none a clean deed-beats-WoW veil-pierce**: the two with scale (37, 10 bldgs) are subsets of
+WoW *soft-aggregator* portfolios (100+ bldgs / 11–16 landlords — a hard >25-landlord cutoff is too loose to
+catch these), the three small ones are family / name-variant transfers; **AXL stays the only clean
+example.** So across all **130** deed-critical groups, the deed's concealed-ownership payoff stays small;
+most of its work is ordinary co-ownership and Splink backstopping.
 
 **Institutional over-merge — RESOLVED (widened held-since exclusion).** The §5 held-since guard screened
 only housing-program names (`_HELD_PUBLIC_KW`), so it missed **institutional** conveyances: a single
