@@ -85,7 +85,7 @@ nyc-landlord-resolution/
       run_eval.py           #   "
       run_loop.py           #   "
       scorer.py             # verbatim — pure
-      gold_set.csv          # the 87-record artifact — travels as-is
+      gold_set.csv          # the 105-record artifact — travels as-is
   pyproject.toml            # standalone; splink/psycopg2/duckdb are MAIN deps now
   README.md                 # load data -> run -> eval -> export
   CLAUDE.md                 # copy the working notes; drop the KG-diff paragraphs
