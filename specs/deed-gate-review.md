@@ -335,6 +335,22 @@ catch these), the three small ones are family / name-variant transfers; **AXL st
 example.** So across all **130** deed-critical groups, the deed's concealed-ownership payoff stays small;
 most of its work is ordinary co-ownership and Splink backstopping.
 
+**The WoW gate — hardened (2026-09-19).** The gate that produced the ruling above ("do the group's
+member BBLs land in ≥2 distinct real WoW portfolios, none an aggregator lump?") used a **hard cutoff: a
+WoW portfolio with >25 distinct landlords**. That cliff is too loose — it wrongly PASSED all five bridge
+candidates, the tell being OG-10150 (35 of 37 buildings already in `#28596`, 121 bldgs / 16 landlords)
+and OG-33260 (5 of 10 in `#3357`, 102 bldgs / 11 landlords): 16 and 11 are < 25, so a 121-building
+over-lump slipped through. The hardened gate lives in
+[`watchline/discovery/ingest/portfolio/eval/wow_gate.py`](../watchline/discovery/ingest/portfolio/eval/wow_gate.py)
+(importable + unit-tested, `tests/test_wow_gate.py`) and adds two complementary checks: (1) **graded
+soft-aggregator detection** — a portfolio is an aggregator if `>25` landlords *or* (large *and*
+multi-landlord: `≥20` bldgs and `≥4` landlords), so an over-lump is caught well below 25; and (2) a
+**dominant-portfolio-share** backstop — FAIL when `≥50%` of the group's member buildings already sit in
+one large/multi-landlord portfolio, which catches both soft-aggregator cases regardless of the exact
+landlord threshold. AXL still PASSES (two small distinct portfolios `#14133` 1 bldg + `#55695` 3 bldgs,
+a *distributed* split); Citadel, OG-10150, OG-33260 (and Roubeni) FAIL. See
+[`review-tool-contract.md`](review-tool-contract.md) for the thresholds and rationale.
+
 **Institutional over-merge — RESOLVED (widened held-since exclusion).** The §5 held-since guard screened
 only housing-program names (`_HELD_PUBLIC_KW`), so it missed **institutional** conveyances: a single
 government→university land transfer, read as shared private ownership, fused two unrelated operators into

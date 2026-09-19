@@ -184,6 +184,59 @@ Total ~530. Notes on what changed from the proposal:
 Recall anchors (not sampled) per §5 — **re-vetted** for co-op/condo / institutional / nonprofit
 contamination before use (see [`recall-anchors.md`](recall-anchors.md)).
 
+### WoW veil-pierce gate (analysis tooling, not production)
+
+`eval/wow_gate.py` is the *verification* criterion used to decide whether a candidate
+`CONNECTED_BY_DEED` owner group is a **genuine deed veil-pierce** (real JustFix WoW *splits* the owner
+across distinct portfolios; only the deed reunites them — AXL) versus a **WoW over-lump** (WoW already
+groups most of the buildings via a shared aggregator/back-office address — Citadel, OG-10150, OG-33260).
+It is import-only and unit-tested (`tests/test_wow_gate.py`); it does **not** touch `deed_edges.py` /
+`owner_groups.py` / `pipeline.py` — the live graph does not use it. Full failure analysis:
+[`deed-gate-review.md`](deed-gate-review.md) §6.
+
+The gate reasons over `wow.wow_portfolios` metadata only (`orig_id`, building count = distinct `bbls`,
+landlord count = distinct `landlord_names`). It PASSES iff the group's member BBLs span **≥2 distinct WoW
+portfolios, none an aggregator**, and **no single large/multi-landlord portfolio holds a dominant
+share**. Two complementary checks (the earlier gate had only a hard landlord cutoff, which was too loose
+— see below):
+
+1. **Graded soft-aggregator detection.** A portfolio is an aggregator/over-lump when it clears the hard
+   address-level landlord threshold (`AGG_LANDLORD_HARD` = `aggregator_audit.MIN_DEGREE` = **25**, kept
+   as one source of truth with the address mask) **or** is a *soft* aggregator: **large and
+   multi-landlord** — `≥ SOFT_MIN_BUILDINGS` (**20**) buildings **and** `≥ SOFT_MIN_LANDLORDS` (**4**)
+   landlords. This recognizes an over-lump well below 25 landlords (a 121-bldg / 16-landlord portfolio
+   is plainly a lump). Ideally the primitive would be the *degree of the business address WoW merged
+   on* (`aggregator_audit.py` classifies that on the discovery graph), but `wow.wow_portfolios` does not
+   expose the merge address, so the graded landlord-count / building-count proxy — computed directly
+   from the dump and tuned to the regression cases — is used instead.
+2. **Dominant-portfolio-share check.** FAIL when `≥ DOMINANT_SHARE` (**50%**, inclusive) of the group's
+   member buildings already sit in **one** portfolio that is itself large/multi-landlord. This is a
+   threshold-*independent* backstop: it asks the right question directly ("does WoW already group most
+   of these?") and catches both soft-aggregator cases regardless of the exact landlord threshold. A
+   genuine split (AXL) is distributed across comparable *small* portfolios, so its dominant portfolio is
+   small and this check does not fire.
+
+**Why the old cutoff was too loose (verified 2026-09-19).** Aggregator = a hard `>25` distinct landlords
+in the resulting portfolio. It wrongly PASSED all five bridge linked-successor candidates; the tell:
+**OG-10150** (35 of 37 buildings already in `#28596`, **121 bldgs / 16 landlords**) and **OG-33260** (5
+of 10 in `#3357`, **102 bldgs / 11 landlords**) — 16 and 11 are `<25`, so the cliff called them "not an
+aggregator."
+
+**Regression table** (pinned in `tests/test_wow_gate.py`; keyed on BBLs / WoW portfolios, since OG ids
+renumber):
+
+| Case | member BBLs → WoW | hardened gate | why |
+|---|---|---|---|
+| **AXL** | `4054210059`,`4054210061` → `#14133` (1 bldg) + `#55695` (3 bldgs) | **PASS** | two small distinct non-aggregator portfolios — a distributed split |
+| **Citadel** | 15 bbls → all in `#161` (83 / 33) | **FAIL** | single aggregator lump |
+| **OG-10150** | 35 of 37 in `#28596` (121 / 16) | **FAIL** | soft aggregator + dominant share (94%) |
+| **OG-33260** | 5 of 10 in `#3357` (102 / 11) | **FAIL** | soft aggregator + dominant share (50%) |
+| **Roubeni** (optional) | all 10 in `#4045` (32 / 15) | **FAIL** | soft aggregator, single portfolio |
+
+`legacy_hard_gate()` is retained for the regression demonstration (it PASSES OG-10150 / OG-33260, the
+hardened gate FAILs them). `portfolio_placements()` / `gate_bbls()` are the read-only Postgres loaders
+for real use (integration-only; need `PG*`).
+
 ---
 
 **Build order.** The two repos can proceed in parallel once this contract is frozen: `owner-review`
