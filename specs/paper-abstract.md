@@ -32,7 +32,7 @@ once. We recover these with a **linked-successor guard** — a superseded joint 
 co-ownership when its grantee is the *grantor* of each parcel's later single-purpose-LLC deed
 (restructuring, not an arms-length sale). Precision is held by a latest-deed staleness rule, a
 co-investor hub cap, aggregator-address masking, and co-op/condo exclusion. On the live graph the
-layers are provably non-redundant: **479** portfolios hold more than one owner, **157** owners span
+layers are provably non-redundant: **616** portfolios hold more than one owner, **760** owners span
 more than one portfolio, **1,461** managers cross portfolios. Worked, WoW-verified example: two
 rent-stabilized Queens buildings co-bought in 2018, then split into `BBGT` / `CHERRY 168 LLC` — WoW
 places them in separate portfolios; our deed guard unifies them. A formal head-to-head on adjudicated
@@ -48,7 +48,7 @@ counts and the worked example carry it.)*
 
 1. **A three-layer decomposition of "landlord portfolio"** into *operational nexus*, *disclosed
    management*, and *beneficial-owner identity* — each with a distinct reliability class — and a
-   divergence measurement (**479 / 157 / 1,461**) showing the layers are non-redundant on real data.
+   divergence measurement (**616 / 760 / 1,461**) showing the layers are non-redundant on real data.
    *(realized)*
 
 2. **A multi-signal ownership-resolution ladder** composing probabilistic record linkage with

@@ -32,7 +32,7 @@ claim reads as an investigative lead, not a legal determination — a transparen
 mechanism, not a disclaimer. We treat the merge-vs-split (recall-vs-precision) tradeoff as an
 explicit, documented design decision rather than a hidden threshold, and exclude structures the
 resolution should not touch (co-ops/condos are owned by shareholders, not a landlord). On the live
-NYC graph the layers measurably diverge (479 portfolios hide >1 owner; 157 owners cross portfolios). We contribute an evaluation protocol with an INDETERMINATE
+NYC graph the layers measurably diverge (616 portfolios hide >1 owner; 760 owners cross portfolios). We contribute an evaluation protocol with an INDETERMINATE
 class and a paired comparison to registration clustering that refuses to claim ownership the public
 record cannot support, and reflect on the dual-use tension of infrastructure that names people —
 arguing that typed provenance and contestability, not accuracy alone, are what make such systems
@@ -133,7 +133,7 @@ are what make the system responsible, not accuracy alone.**
 
 ---
 
-*Divergence counts (479 / 157) and design details reflect the rebuilt `entity-linking-prototype`
+*Divergence counts (616 / 760) and design details reflect the rebuilt `entity-linking-prototype`
 snapshot (co-op/condo excluded; linked-successor deed guard applied). The capability-gating claim
 refers to the trust-level control on the deep investigative tier; the contestation channel is future
 work, stated as such.*
