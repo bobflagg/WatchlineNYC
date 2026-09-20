@@ -29,7 +29,7 @@ into separate shells.
 A verified example: two rent-stabilized Queens apartment buildings, bought together on one 2018
 deed, then moved into "BBGT Property LLC" and "Cherry 168 LLC." WoW places them in *separate*
 portfolios — a reporter pulling one would never find the other. Our deed layer reunites them. On the
-live graph the layers measurably disagree: **479** portfolios hide more than one owner; **157**
+live graph the layers measurably disagree: **616** portfolios hide more than one owner; **760**
 owners cross portfolios.
 
 Honest scope: WoW already handles landlords who register consistently; the veil-pierce reaches the
@@ -53,7 +53,7 @@ toward a collaboration with JustFix, for measuring what the layered graph adds.
 **Notes for the submitter.**
 - JustFix collaboration is framed as aspirational ("toward a collaboration") — keep it that way
   unless something is confirmed; they may be in the room.
-- Divergence counts (479 / 157) and the Queens example are from the rebuilt `entity-linking-prototype`
+- Divergence counts (616 / 760) and the Queens example are from the rebuilt `entity-linking-prototype`
   snapshot; the example was verified against WoW's *live* site (both buildings still resolve to
   separate portfolios there) — spot-check again before submitting, as WoW's data updates.
 - Companion materials: [`paper-abstract.md`](paper-abstract.md) (fuller writeup),

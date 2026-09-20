@@ -165,7 +165,7 @@ ablation and safety studies (§9), not left open.
 - **Materialized layer** = the `:OwnerGroup` nodes in the graph *after* the co-op/condo drop, from the
   last `--step ownergroup` rebuild: **6,540 groups**. Composition over these: **6,402 `identity` · 105
   `deed_only` · 33 `deed_bridged`** (138 deed-derived). This is the universe for the distribution and the
-  divergence counts (479 / 157 / 28%).
+  divergence counts (616 / 760 / 28%).
 - **Raw current-edge union-find** = `classify_composition` over `CONNECTED_BY_SPLINK ∪ CONNECTED_BY_DEED`
   at read time, size ≥ 2, *before* the co-op/condo drop: **6,770 groups** (6,618 / 118 / 34). It is larger
   because (a) it precedes the co-op/condo-dominated-group drop and (b) edges shifted since the last

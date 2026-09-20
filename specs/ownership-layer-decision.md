@@ -164,7 +164,7 @@ Three findings:
    larger beneficial owner spanning N landlords").
    *(Clarifier: "aggregation above" holds only against `APPARENT_CONTROL` (the per-building control
    edge). Against the `Portfolio` layer, `OwnerGroup` is not merely an aggregation — it independently
-   **subdivides** (479 portfolios) and **crosses** (157 groups) WoW clusters; see
+   **subdivides** (616 portfolios) and **crosses** (760 groups) WoW clusters; see
    [`ownership-model-spec.md`](ownership-model-spec.md) §3. The two comparisons are different and both stand.)*
 2. **`OwnerGroup` is a specialist rollup.** It fires for only 28% of controlled buildings (the
    multi-landlord owners the signal ladder unified); the other 72% have a singleton controller that
