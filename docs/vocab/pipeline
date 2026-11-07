@@ -1,0 +1,55 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix ontp: <https://bobflagg.github.io/WatchlineNYC/vocab/pipeline#> .
+
+# Project vocabulary for the ontology pipeline's registry files.
+# Publish this file at https://bobflagg.github.io/WatchlineNYC/vocab/pipeline so that
+# the ontp: namespace resolves. Terms here are the ones the registry files use.
+
+<https://bobflagg.github.io/WatchlineNYC/vocab/pipeline>
+    a owl:Ontology ;
+    dcterms:title "Ontology pipeline vocabulary"@en ;
+    dcterms:description "Project terms used by the registry files: status, steward, and external reuse entries."@en ;
+    dcterms:created "2026-11-07"^^xsd:date ;
+    owl:versionInfo "0.1.0" .
+
+ontp:ReuseEntry
+    a owl:Class ;
+    rdfs:label "Reuse entry"@en ;
+    rdfs:comment "One record in the external vocabulary reuse registry: an outside vocabulary, code list or standard that the project reuses, with its version, licence and any adaptation."@en .
+
+ontp:status
+    a owl:DatatypeProperty ;
+    rdfs:label "status"@en ;
+    rdfs:comment "Whether a concept, scheme or reuse entry has been accepted by its steward. Values: proposed, accepted."@en ;
+    rdfs:range xsd:string .
+
+ontp:steward
+    a owl:DatatypeProperty ;
+    rdfs:label "steward"@en ;
+    rdfs:comment "The person accountable for a concept, scheme or reuse entry. SKOS has no steward property."@en ;
+    rdfs:range xsd:string .
+
+ontp:licence
+    a owl:DatatypeProperty ;
+    rdfs:label "licence"@en ;
+    rdfs:comment "The licence or terms recorded for an outside source, or 'unverified' until its publisher's terms have been read."@en ;
+    rdfs:domain ontp:ReuseEntry ;
+    rdfs:range xsd:string .
+
+ontp:adaptation
+    a owl:DatatypeProperty ;
+    rdfs:label "adaptation"@en ;
+    rdfs:comment "How the project changed an outside source when reusing it: relabelling, added definitions, subsets, or interpretation."@en ;
+    rdfs:domain ontp:ReuseEntry ;
+    rdfs:range xsd:string .
+
+ontp:reusedAs
+    a owl:DatatypeProperty ;
+    rdfs:label "reused as"@en ;
+    rdfs:comment "Where in the project an outside source is used: a registry file, a set of fields, or codes."@en ;
+    rdfs:domain ontp:ReuseEntry ;
+    rdfs:range xsd:string .
